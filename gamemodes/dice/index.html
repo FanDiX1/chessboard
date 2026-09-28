@@ -594,7 +594,7 @@
       var mpRoom = null;
       var mpConnState = "offline"; // offline|connecting|connected|waiting|playing|error
       var mpApplyingRemote = false;
-      var mpServerUrl = "http://localhost:3001";
+      var mpServerUrl = "https://chessboard-ulhg.onrender.com";
 
       function getOrCreateClientId() {
         var id = null;
@@ -614,7 +614,7 @@
           if (s.indexOf("://") === -1) s = "http://" + s;
           return s.replace(/\/$/, "");
         }
-        return "http://localhost:3001";
+        return "https://chessboard-ulhg.onrender.com";
       }
 
       function isMultiplayer() {
@@ -636,7 +636,7 @@
       function buildShareLink(code) {
         var u = new URL(window.location.href);
         u.searchParams.set("room", code);
-        if (mpServerUrl && mpServerUrl !== "http://localhost:3001") {
+        if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") {
           u.searchParams.set("server", mpServerUrl);
         } else {
           u.searchParams.delete("server");
