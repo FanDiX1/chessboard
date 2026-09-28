@@ -1289,13 +1289,179 @@
         $("#diceAllowedHint").text(hint);
       }
 
-      /** True only if chess.js reports a real legal move for this piece type. */
+      /**
+       * Dice mode: chess.js FIDE-legal moves hide anything that leaves/ignores check.
+       * Use pseudo-legal (geometry) moves when legal:false — still piece-correct,
+       * but not filtered by check/mate. Classic mode keeps default legal:true.
+       */
+      function getModeMoves(extra) {
+        var opts = { verbose: true };
+        if (isDiceMode()) opts.legal = false;
+        if (extra) {
+          for (var k in extra) {
+            if (Object.prototype.hasOwnProperty.call(extra, k)) opts[k] = extra[k];
+          }
+        }
+        return game.moves(opts);
+      }
+
+      /** True if this piece type has a geometry (dice) / legal (classic) move now. */
       function hasLegalForType(pieceType) {
-        var all = game.moves({ verbose: true });
+        var all = getModeMoves();
         for (var i = 0; i < all.length; i++) {
           if (all[i].piece === pieceType) return true;
         }
         return false;
+      }
+
+      function findGeometryMove(from, to, promotion) {
+        promotion = promotion || "q";
+        var dirty = getModeMoves();
+        for (var i = 0; i < dirty.length; i++) {
+          var m = dirty[i];
+          if (m.from !== from || m.to !== to) continue;
+          if (m.promotion && m.promotion !== promotion) continue;
+          return m;
+        }
+        return null;
+      }
+
+      /**
+       * Apply a pseudo-legal verbose move that chess.js move() would reject
+       * (leaves own king in check). Rebuilds FEN after geometric board edits.
+       */
+      function applyGeometryMove(vm) {
+        if (!vm || !vm.from || !vm.to) return null;
+        var from = vm.from;
+        var to = vm.to;
+        var fenBefore = game.fen();
+        var parts = fenBefore.split(" ");
+        if (parts.length < 6) return null;
+        var turn = parts[1];
+        var castling = parts[2];
+        var half = parseInt(parts[4], 10) || 0;
+        var full = parseInt(parts[5], 10) || 1;
+        var flags = vm.flags || "";
+
+        if (flags.indexOf("e") !== -1) {
+          game.remove(to.charAt(0) + from.charAt(1));
+        } else if (vm.captured) {
+          game.remove(to);
+        }
+
+        var piece = game.remove(from);
+        if (!piece) {
+          game.load(fenBefore);
+          return null;
+        }
+
+        if (flags.indexOf("k") !== -1) {
+          if (turn === "w") {
+            game.remove("h1");
+            game.put({ type: "r", color: "w" }, "f1");
+          } else {
+            game.remove("h8");
+            game.put({ type: "r", color: "b" }, "f8");
+          }
+        } else if (flags.indexOf("q") !== -1) {
+          if (turn === "w") {
+            game.remove("a1");
+            game.put({ type: "r", color: "w" }, "d1");
+          } else {
+            game.remove("a8");
+            game.put({ type: "r", color: "b" }, "d8");
+          }
+        }
+
+        game.put(
+          { type: vm.promotion || piece.type, color: piece.color },
+          to
+        );
+
+        var nc = castling;
+        function stripCastle(ch) {
+          nc = nc.replace(ch, "");
+        }
+        if (piece.type === "k") {
+          if (turn === "w") {
+            stripCastle("K");
+            stripCastle("Q");
+          } else {
+            stripCastle("k");
+            stripCastle("q");
+          }
+        }
+        if (from === "a1" || to === "a1") stripCastle("Q");
+        if (from === "h1" || to === "h1") stripCastle("K");
+        if (from === "a8" || to === "a8") stripCastle("q");
+        if (from === "h8" || to === "h8") stripCastle("k");
+        if (!nc) nc = "-";
+
+        var newEp = "-";
+        if (flags.indexOf("b") !== -1) {
+          var fr = parseInt(from.charAt(1), 10);
+          var tr = parseInt(to.charAt(1), 10);
+          newEp = from.charAt(0) + String((fr + tr) / 2);
+        }
+
+        var newHalf =
+          piece.type === "p" || vm.captured || flags.indexOf("e") !== -1
+            ? 0
+            : half + 1;
+        var newFull = turn === "b" ? full + 1 : full;
+        var newTurn = turn === "w" ? "b" : "w";
+        var boardPart = game.fen().split(" ")[0];
+        var newFen = [boardPart, newTurn, nc, newEp, String(newHalf), String(newFull)].join(
+          " "
+        );
+        if (!game.load(newFen)) {
+          game.load(fenBefore);
+          return null;
+        }
+        return {
+          color: piece.color,
+          from: from,
+          to: to,
+          piece: piece.type,
+          captured: vm.captured,
+          promotion: vm.promotion,
+          flags: flags,
+          san: vm.san || from + to
+        };
+      }
+
+      /**
+       * Make a move: FIDE-legal via chess.js when possible; in dice mode fall back
+       * to geometry apply so check/mate does not block.
+       */
+      function applyGameMove(moveInput) {
+        var from;
+        var to;
+        var promotion = "q";
+        if (typeof moveInput === "string") {
+          var moved = game.move(moveInput);
+          if (moved) return moved;
+          if (!isDiceMode() || moveInput.length < 4) return null;
+          from = moveInput.slice(0, 2);
+          to = moveInput.slice(2, 4);
+          if (moveInput.length > 4) promotion = moveInput.charAt(4).toLowerCase();
+        } else if (moveInput && typeof moveInput === "object") {
+          from = moveInput.from;
+          to = moveInput.to;
+          if (moveInput.promotion) promotion = moveInput.promotion;
+          var movedObj = game.move({
+            from: from,
+            to: to,
+            promotion: promotion
+          });
+          if (movedObj) return movedObj;
+          if (!isDiceMode()) return null;
+        } else {
+          return null;
+        }
+        var vm = findGeometryMove(from, to, promotion);
+        if (!vm) return null;
+        return applyGeometryMove(vm);
       }
 
       function countKingsOnBoard() {
@@ -1314,7 +1480,9 @@
       }
 
       /**
-       * After every ply: king missing, checkmate, stalemate, or other game_over.
+       * After every ply: king missing, (classic) checkmate/stalemate, or draws.
+       * Dice mode ignores FIDE checkmate/stalemate — geometry moves may still exist;
+       * king capture remains the decisive check-like win.
        * Clears dice multi-move state. Returns true if play must stop.
        */
       function applyGameEndFromPosition() {
@@ -1332,26 +1500,29 @@
           return true;
         }
 
-        if (game.in_checkmate()) {
-          gameOver = true;
-          remainingDice = [];
-          diceSide = null;
-          var loserLabel = isMultiplayer() ? t("winnerOpp") : t("winnerBot");
-          var wMate = game.turn() === userColor ? loserLabel : t("winnerYou");
-          setStatus(t("checkmateWin").replace("{winner}", wMate), "danger");
-          $turnLabel.text(t("turnOver"));
-          updateDiceUI();
-          return true;
-        }
+        // Dice: do not end on FIDE mate/stalemate (move gen ignores check).
+        if (!isDiceMode()) {
+          if (game.in_checkmate()) {
+            gameOver = true;
+            remainingDice = [];
+            diceSide = null;
+            var loserLabelMate = isMultiplayer() ? t("winnerOpp") : t("winnerBot");
+            var wMate = game.turn() === userColor ? loserLabelMate : t("winnerYou");
+            setStatus(t("checkmateWin").replace("{winner}", wMate), "danger");
+            $turnLabel.text(t("turnOver"));
+            updateDiceUI();
+            return true;
+          }
 
-        if (game.in_stalemate()) {
-          gameOver = true;
-          remainingDice = [];
-          diceSide = null;
-          setStatus(t("stalemate"), "warn");
-          $turnLabel.text(t("turnDraw"));
-          updateDiceUI();
-          return true;
+          if (game.in_stalemate()) {
+            gameOver = true;
+            remainingDice = [];
+            diceSide = null;
+            setStatus(t("stalemate"), "warn");
+            $turnLabel.text(t("turnDraw"));
+            updateDiceUI();
+            return true;
+          }
         }
 
         if (game.in_threefold_repetition()) {
@@ -1374,7 +1545,19 @@
           return true;
         }
 
-        if (game.in_draw() || game.game_over()) {
+        // 50-move draw (halfmove clock) — valid in both modes; skip mate/stale via in_draw
+        var halfMove = parseInt(game.fen().split(" ")[4], 10) || 0;
+        if (halfMove >= 100) {
+          gameOver = true;
+          remainingDice = [];
+          diceSide = null;
+          setStatus(t("draw"), "warn");
+          $turnLabel.text(t("turnDraw"));
+          updateDiceUI();
+          return true;
+        }
+
+        if (!isDiceMode() && (game.in_draw() || game.game_over())) {
           gameOver = true;
           remainingDice = [];
           diceSide = null;
@@ -1388,11 +1571,11 @@
       }
 
       function getDiceFilteredMoves() {
-        if (!isDiceMode()) return game.moves({ verbose: true });
+        if (!isDiceMode()) return getModeMoves();
         if (!remainingDice.length) return [];
         var set = {};
         for (var i = 0; i < remainingDice.length; i++) set[remainingDice[i].type] = true;
-        var all = game.moves({ verbose: true });
+        var all = getModeMoves();
         var out = [];
         for (var j = 0; j < all.length; j++) {
           if (set[all[j].piece]) out.push(all[j]);
@@ -1407,7 +1590,7 @@
         return false;
       }
 
-      /** May select/move this type only if it remains on dice AND has a legal move now. */
+      /** May select/move this type only if it remains on dice AND has a geometry/legal move now. */
       function pieceAllowedByDice(pieceType) {
         if (!isDiceMode()) return true;
         return dieTypeRemaining(pieceType) && hasLegalForType(pieceType);
@@ -1580,7 +1763,7 @@
       }
 
       /**
-       * Pass only when NO remaining die type has a legal move right now.
+       * Pass only when NO remaining die type has a geometry (dice) move right now.
        * Keep blocked types while at least one remaining type is playable
        * (e.g. pawn move may later free a bishop).
        * Returns true when this side's dice turn is over.
@@ -1615,7 +1798,7 @@
 
       function rollDiceForSide(side) {
         lastSkipMsg = "";
-        if (!isDiceMode() || game.game_over()) {
+        if (!isDiceMode() || gameOver) {
           clearDiceState();
           return;
         }
@@ -1733,18 +1916,19 @@
         lastSkipMsg = s.lastSkipMsg || "";
       }
 
-      // Standard chess.js move (includes O-O / O-O-O); castling needs king on dice
+      // chess.js move (O-O / O-O-O); dice may use geometry when in check/mate
       function tryMakeUserMove(from, to) {
         var piece = game.get(from);
         if (piece && !pieceAllowedByDice(piece.type)) return false;
         snapshotPush();
-        var move = game.move({ from: from, to: to, promotion: "q" });
+        var snap = undoStack[undoStack.length - 1];
+        var move = applyGameMove({ from: from, to: to, promotion: "q" });
         if (move === null) {
           undoStack.pop();
           return false;
         }
         if (isDiceMode() && !dieTypeRemaining(move.piece)) {
-          game.undo();
+          restoreSnapshot(snap);
           undoStack.pop();
           return false;
         }
@@ -1805,7 +1989,7 @@
         }
         rollDiceForSide(side);
         if (opts.deferResolve) return true;
-        // If no remaining type has a legal move, pass turn immediately
+        // If no remaining type has a geometry move, pass turn immediately
         if (endTurnIfNoPlayableDice(side)) {
           consecutiveSkipPasses++;
           return false;
@@ -1819,7 +2003,7 @@
         if (!fromSquare) return;
         var piece = game.get(fromSquare);
         if (piece && !pieceAllowedByDice(piece.type)) return;
-        var moves = game.moves({ square: fromSquare, verbose: true });
+        var moves = getModeMoves({ square: fromSquare });
         for (var i = 0; i < moves.length; i++) {
           var m = moves[i];
           if (!pieceAllowedByDice(m.piece)) continue;
@@ -1846,18 +2030,61 @@
         showLegalMoves(sq);
       }
 
+      /** Prefer king capture, then any capture, else first geometry/legal move. */
+      function pickDiceFallbackMove(moves) {
+        if (!moves || !moves.length) return null;
+        var i;
+        for (i = 0; i < moves.length; i++) {
+          if (moves[i].captured === "k") return moves[i];
+        }
+        for (i = 0; i < moves.length; i++) {
+          if (moves[i].captured) return moves[i];
+        }
+        return moves[0];
+      }
+
       function findBestMoveStockfish(done) {
-        var legal = getDiceFilteredMoves();
-        if (!legal.length) {
+        var pool = getDiceFilteredMoves();
+        if (!pool.length) {
           done(null);
           return;
         }
+        // Dice: king capture wins immediately — do not wait on Stockfish
+        if (isDiceMode()) {
+          for (var ki = 0; ki < pool.length; ki++) {
+            if (pool[ki].captured === "k") {
+              done(pool[ki]);
+              return;
+            }
+          }
+        }
+
         var fen = game.fen();
         var searchUci = null;
+        var searchPool = pool;
         if (isDiceMode()) {
+          // Stockfish only accepts FIDE-legal moves; geometry-only escapes stay local
+          var fide = game.moves({ verbose: true });
+          searchPool = [];
           searchUci = [];
-          for (var i = 0; i < legal.length; i++) {
-            searchUci.push(BoardHackStockfish.moveToUci(legal[i]));
+          for (var i = 0; i < pool.length; i++) {
+            var pm = pool[i];
+            for (var f = 0; f < fide.length; f++) {
+              var fm = fide[f];
+              if (
+                fm.from === pm.from &&
+                fm.to === pm.to &&
+                (!pm.promotion || fm.promotion === pm.promotion)
+              ) {
+                searchPool.push(pm);
+                searchUci.push(BoardHackStockfish.moveToUci(pm));
+                break;
+              }
+            }
+          }
+          if (!searchUci.length) {
+            done(pickDiceFallbackMove(pool));
+            return;
           }
         }
         var genAtStart = botSchedGen;
@@ -1869,11 +2096,11 @@
             }
             var parsed = BoardHackStockfish.parseUci(uci);
             if (!parsed) {
-              done(legal[0] || null);
+              done(pickDiceFallbackMove(isDiceMode() ? pool : searchPool));
               return;
             }
-            for (var j = 0; j < legal.length; j++) {
-              var m = legal[j];
+            for (var j = 0; j < pool.length; j++) {
+              var m = pool[j];
               if (m.from === parsed.from && m.to === parsed.to) {
                 if (!parsed.promotion || m.promotion === parsed.promotion) {
                   done(m);
@@ -1881,7 +2108,7 @@
                 }
               }
             }
-            // Fallback: try chess.js apply
+            // Fallback: try apply (dice geometry if needed)
             var tryMove = { from: parsed.from, to: parsed.to };
             if (parsed.promotion) tryMove.promotion = parsed.promotion;
             done(tryMove);
@@ -1896,7 +2123,7 @@
               return;
             }
             console.warn("Stockfish search failed:", err && err.message ? err.message : err);
-            done(legal[0] || null);
+            done(pickDiceFallbackMove(isDiceMode() ? pool : searchPool));
           });
       }
 
@@ -2107,11 +2334,12 @@
             }
 
             snapshotPush();
-            var moved = game.move(best);
+            var botSnap = undoStack[undoStack.length - 1];
+            var moved = applyGameMove(best);
             if (moved) {
               // Sanity: never accept a move of the user's color
               if (moved.color === userColor) {
-                game.undo();
+                restoreSnapshot(botSnap);
                 undoStack.pop();
                 finishBotThinking();
                 setSideToMove(userColor);
