@@ -19,28 +19,6 @@
         </a>
       </div>
       <div class="topbar-actions">
-        <div class="mode-menu" id="modeMenu">
-          <button type="button" class="mode-menu-btn" id="modeMenuBtn" aria-haspopup="true" aria-expanded="false">
-            <span id="modeMenuLabel">Режим</span>
-            <span class="chev">▾</span>
-          </button>
-          <div class="mode-menu-panel" id="modeMenuPanel" role="menu">
-            <a href="gamemodes/classic/index.html" data-mode="classic">
-              <span>♟</span>
-              <span>
-                <span id="menuClassic">Классика</span>
-                <span class="mode-desc" id="menuClassicDesc">Стандартные шахматы</span>
-              </span>
-            </a>
-            <a href="gamemodes/dice/index.html" data-mode="dice">
-              <span>🎲</span>
-              <span>
-                <span id="menuDice">Кости</span>
-                <span class="mode-desc" id="menuDiceDesc">Ходы по броску костей</span>
-              </span>
-            </a>
-          </div>
-        </div>
         <div class="lang-switch" role="group" aria-label="Language">
           <button type="button" id="langRu" data-lang="ru">RU</button>
           <span class="lang-sep">|</span>
@@ -50,18 +28,74 @@
     </div>
   </header>
 
-  <main class="main">
-    <div class="mode-cards">
-      <a class="mode-card" href="gamemodes/classic/index.html">
-        <h2>♟ <span id="cardClassicTitle">Классика</span></h2>
-        <p id="cardClassicDesc">Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.</p>
-        <div class="go" id="cardClassicGo">Открыть →</div>
-      </a>
-      <a class="mode-card" href="gamemodes/dice/index.html">
-        <h2>🎲 <span id="cardDiceTitle">Кости</span></h2>
-        <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
-        <div class="go" id="cardDiceGo">Открыть →</div>
-      </a>
+  <main class="main hub-main">
+    <section class="hero">
+      <h1 id="heroTitle">Взломай доску. <span class="accent">Захвати флаг.</span></h1>
+      <p id="heroDesc">Тёмная лаборатория настольных игр. Выберите игру и режим — затем переиграйте бота или друга.</p>
+    </section>
+
+    <div class="hub-tabs" role="tablist" aria-label="Games">
+      <button type="button" class="hub-tab active" role="tab" id="tabChess" data-game="chess" aria-selected="true" aria-controls="panelChess">
+        <span class="hub-tab-icon">♟</span>
+        <span id="tabChessLabel">Шахматы</span>
+      </button>
+      <button type="button" class="hub-tab" role="tab" id="tabCheckers" data-game="checkers" aria-selected="false" aria-controls="panelCheckers">
+        <span class="hub-tab-icon">⬤</span>
+        <span id="tabCheckersLabel">Шашки</span>
+      </button>
+      <button type="button" class="hub-tab" role="tab" id="tabMahjong" data-game="mahjong" aria-selected="false" aria-controls="panelMahjong">
+        <span class="hub-tab-icon">🀄</span>
+        <span id="tabMahjongLabel">Маджонг</span>
+      </button>
+    </div>
+
+    <div class="hub-panels">
+      <section class="hub-panel active" id="panelChess" role="tabpanel" aria-labelledby="tabChess" data-game="chess">
+        <div class="hub-panel-head">
+          <h2 id="panelChessTitle">Шахматы</h2>
+          <p class="hub-panel-desc" id="panelChessDesc">Классика и кости — локальный Stockfish и мультиплеер.</p>
+        </div>
+        <div class="mode-cards">
+          <a class="mode-card" href="gamemodes/chess/classic/index.html">
+            <h2>♟ <span id="cardClassicTitle">Классика</span></h2>
+            <p id="cardClassicDesc">Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.</p>
+            <div class="go" id="cardClassicGo">Открыть →</div>
+          </a>
+          <a class="mode-card" href="gamemodes/chess/dice/index.html">
+            <h2>🎲 <span id="cardDiceTitle">Кости</span></h2>
+            <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
+            <div class="go" id="cardDiceGo">Открыть →</div>
+          </a>
+        </div>
+      </section>
+
+      <section class="hub-panel" id="panelCheckers" role="tabpanel" aria-labelledby="tabCheckers" data-game="checkers" hidden>
+        <div class="hub-panel-head">
+          <h2 id="panelCheckersTitle">Шашки</h2>
+          <p class="hub-panel-desc" id="panelCheckersDesc">Режимы шашек появятся здесь.</p>
+        </div>
+        <div class="mode-cards">
+          <div class="mode-card mode-card--soon" aria-disabled="true">
+            <h2>⬤ <span id="cardCheckersSoonTitle">Скоро</span></h2>
+            <p id="cardCheckersSoonDesc">Режимы шашек в разработке. Загляните позже.</p>
+            <div class="go go-muted" id="cardCheckersSoonGo">Coming soon</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="hub-panel" id="panelMahjong" role="tabpanel" aria-labelledby="tabMahjong" data-game="mahjong" hidden>
+        <div class="hub-panel-head">
+          <h2 id="panelMahjongTitle">Маджонг</h2>
+          <p class="hub-panel-desc" id="panelMahjongDesc">Режимы маджонга появятся здесь.</p>
+        </div>
+        <div class="mode-cards">
+          <div class="mode-card mode-card--soon" aria-disabled="true">
+            <h2>🀄 <span id="cardMahjongSoonTitle">Скоро</span></h2>
+            <p id="cardMahjongSoonDesc">Режимы маджонга в разработке. Загляните позже.</p>
+            <div class="go go-muted" id="cardMahjongSoonGo">Coming soon</div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <footer class="footer">BoardHack</footer>
@@ -71,39 +105,59 @@
     (function () {
       "use strict";
       var LANG_KEY = "boardhack-lang";
-      var MODE_KEY = "boardhack-mode";
+      var GAME_KEY = "boardhack-hub-game";
       var I18N = {
         ru: {
           docTitle: "BoardHack — Взломай доску",
           heroTitleHtml: 'Взломай доску. <span class="accent">Захвати флаг.</span>',
-          heroDesc: "Тёмная шахматная лаборатория. Выберите режим, сторону и сложность — затем переиграйте бота.",
-          menuLabel: "Режим",
-          menuClassic: "Классика",
-          menuClassicDesc: "Стандартные шахматы",
-          menuDice: "Кости",
-          menuDiceDesc: "Ходы по броску костей",
+          heroDesc: "Тёмная лаборатория настольных игр. Выберите игру и режим — затем переиграйте бота или друга.",
+          tabChess: "Шахматы",
+          tabCheckers: "Шашки",
+          tabMahjong: "Маджонг",
+          panelChessTitle: "Шахматы",
+          panelChessDesc: "Классика и кости — локальный Stockfish и мультиплеер.",
+          panelCheckersTitle: "Шашки",
+          panelCheckersDesc: "Режимы шашек появятся здесь.",
+          panelMahjongTitle: "Маджонг",
+          panelMahjongDesc: "Режимы маджонга появятся здесь.",
           cardClassicTitle: "Классика",
           cardClassicDesc: "Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.",
           cardClassicGo: "Открыть →",
           cardDiceTitle: "Кости",
           cardDiceDesc: "Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.",
-          cardDiceGo: "Открыть →"
+          cardDiceGo: "Открыть →",
+          cardCheckersSoonTitle: "Скоро",
+          cardCheckersSoonDesc: "Режимы шашек в разработке. Загляните позже.",
+          cardCheckersSoonGo: "Скоро",
+          cardMahjongSoonTitle: "Скоро",
+          cardMahjongSoonDesc: "Режимы маджонга в разработке. Загляните позже.",
+          cardMahjongSoonGo: "Скоро"
         },
         en: {
           docTitle: "BoardHack — Hack the Board",
           heroTitleHtml: 'Breach the board. <span class="accent">Capture the flag.</span>',
-          heroDesc: "Dark-ops chess lab. Pick a mode, side, and difficulty — then outsmart the bot.",
-          menuLabel: "Mode",
-          menuClassic: "Classic",
-          menuClassicDesc: "Standard chess",
-          menuDice: "Dice Chess",
-          menuDiceDesc: "Move by dice rolls",
+          heroDesc: "Dark-ops board-game lab. Pick a game and mode — then outsmart the bot or a friend.",
+          tabChess: "Chess",
+          tabCheckers: "Checkers",
+          tabMahjong: "Mahjong",
+          panelChessTitle: "Chess",
+          panelChessDesc: "Classic and dice — local Stockfish and multiplayer.",
+          panelCheckersTitle: "Checkers",
+          panelCheckersDesc: "Checkers modes will land here.",
+          panelMahjongTitle: "Mahjong",
+          panelMahjongDesc: "Mahjong modes will land here.",
           cardClassicTitle: "Classic",
           cardClassicDesc: "Standard FIDE chess. Move by move, no piece restrictions.",
           cardClassicGo: "Open →",
           cardDiceTitle: "Dice Chess",
           cardDiceDesc: "Each turn rolls dice — move only the rolled piece types. 1–3 dice.",
-          cardDiceGo: "Open →"
+          cardDiceGo: "Open →",
+          cardCheckersSoonTitle: "Coming soon",
+          cardCheckersSoonDesc: "Checkers modes are in the works. Check back later.",
+          cardCheckersSoonGo: "Coming soon",
+          cardMahjongSoonTitle: "Coming soon",
+          cardMahjongSoonDesc: "Mahjong modes are in the works. Check back later.",
+          cardMahjongSoonGo: "Coming soon"
         }
       };
 
@@ -111,6 +165,12 @@
       try {
         var saved = localStorage.getItem(LANG_KEY);
         if (saved === "en" || saved === "ru") lang = saved;
+      } catch (e) {}
+
+      var game = "chess";
+      try {
+        var savedGame = localStorage.getItem(GAME_KEY);
+        if (savedGame === "chess" || savedGame === "checkers" || savedGame === "mahjong") game = savedGame;
       } catch (e) {}
 
       function t(key) {
@@ -121,17 +181,29 @@
       function applyLang() {
         document.documentElement.lang = lang;
         document.title = t("docTitle");
-        document.getElementById("modeMenuLabel").textContent = t("menuLabel");
-        document.getElementById("menuClassic").textContent = t("menuClassic");
-        document.getElementById("menuClassicDesc").textContent = t("menuClassicDesc");
-        document.getElementById("menuDice").textContent = t("menuDice");
-        document.getElementById("menuDiceDesc").textContent = t("menuDiceDesc");
+        document.getElementById("heroTitle").innerHTML = t("heroTitleHtml");
+        document.getElementById("heroDesc").textContent = t("heroDesc");
+        document.getElementById("tabChessLabel").textContent = t("tabChess");
+        document.getElementById("tabCheckersLabel").textContent = t("tabCheckers");
+        document.getElementById("tabMahjongLabel").textContent = t("tabMahjong");
+        document.getElementById("panelChessTitle").textContent = t("panelChessTitle");
+        document.getElementById("panelChessDesc").textContent = t("panelChessDesc");
+        document.getElementById("panelCheckersTitle").textContent = t("panelCheckersTitle");
+        document.getElementById("panelCheckersDesc").textContent = t("panelCheckersDesc");
+        document.getElementById("panelMahjongTitle").textContent = t("panelMahjongTitle");
+        document.getElementById("panelMahjongDesc").textContent = t("panelMahjongDesc");
         document.getElementById("cardClassicTitle").textContent = t("cardClassicTitle");
         document.getElementById("cardClassicDesc").textContent = t("cardClassicDesc");
         document.getElementById("cardClassicGo").textContent = t("cardClassicGo");
         document.getElementById("cardDiceTitle").textContent = t("cardDiceTitle");
         document.getElementById("cardDiceDesc").textContent = t("cardDiceDesc");
         document.getElementById("cardDiceGo").textContent = t("cardDiceGo");
+        document.getElementById("cardCheckersSoonTitle").textContent = t("cardCheckersSoonTitle");
+        document.getElementById("cardCheckersSoonDesc").textContent = t("cardCheckersSoonDesc");
+        document.getElementById("cardCheckersSoonGo").textContent = t("cardCheckersSoonGo");
+        document.getElementById("cardMahjongSoonTitle").textContent = t("cardMahjongSoonTitle");
+        document.getElementById("cardMahjongSoonDesc").textContent = t("cardMahjongSoonDesc");
+        document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");
         document.getElementById("langRu").classList.toggle("active", lang === "ru");
         document.getElementById("langEn").classList.toggle("active", lang === "en");
       }
@@ -143,32 +215,38 @@
         applyLang();
       }
 
-      var menu = document.getElementById("modeMenu");
-      var btn = document.getElementById("modeMenuBtn");
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var open = !menu.classList.contains("open");
-        menu.classList.toggle("open", open);
-        btn.setAttribute("aria-expanded", open ? "true" : "false");
-      });
-      document.addEventListener("click", function () {
-        menu.classList.remove("open");
-        btn.setAttribute("aria-expanded", "false");
-      });
-      menu.addEventListener("click", function (e) { e.stopPropagation(); });
+      function setGame(next) {
+        if (next !== "chess" && next !== "checkers" && next !== "mahjong") return;
+        game = next;
+        try { localStorage.setItem(GAME_KEY, game); } catch (e) {}
+        var tabs = document.querySelectorAll(".hub-tab");
+        var panels = document.querySelectorAll(".hub-panel");
+        for (var i = 0; i < tabs.length; i++) {
+          var on = tabs[i].getAttribute("data-game") === game;
+          tabs[i].classList.toggle("active", on);
+          tabs[i].setAttribute("aria-selected", on ? "true" : "false");
+        }
+        for (var j = 0; j < panels.length; j++) {
+          var show = panels[j].getAttribute("data-game") === game;
+          panels[j].classList.toggle("active", show);
+          if (show) panels[j].removeAttribute("hidden");
+          else panels[j].setAttribute("hidden", "");
+        }
+      }
 
       document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
       document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
 
-      // Remember last mode for convenience (optional deep-link hint only)
-      try {
-        var last = localStorage.getItem(MODE_KEY);
-        if (last === "classic" || last === "dice") {
-          /* no auto-redirect — shell stays as chooser */
-        }
-      } catch (e) {}
+      var tabEls = document.querySelectorAll(".hub-tab");
+      for (var k = 0; k < tabEls.length; k++) {
+        tabEls[k].addEventListener("click", function (e) {
+          var g = e.currentTarget.getAttribute("data-game");
+          setGame(g);
+        });
+      }
 
       applyLang();
+      setGame(game);
     })();
   </script>
 </body>

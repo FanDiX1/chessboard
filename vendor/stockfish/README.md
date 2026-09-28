@@ -8,7 +8,7 @@ Vendored from npm `stockfish@18.0.0` (nmrugg/stockfish.js):
 
 ## Loading
 
-Pages start a Worker at a relative URL, e.g. `../../vendor/stockfish/stockfish-18-lite-single.js`.
+Pages start a Worker at a relative URL, e.g. `../../../vendor/stockfish/stockfish-18-lite-single.js`.
 The worker resolves the `.wasm` next to the `.js` file automatically.
 
 ## file:// caveat
@@ -22,4 +22,4 @@ npx --yes serve -p 8080
 # or: python -m http.server 8080
 ```
 
-Then open `http://localhost:8080/gamemodes/classic/` (or dice).
+Then open `http://localhost:8080/gamemodes/chess/classic/` (or dice).

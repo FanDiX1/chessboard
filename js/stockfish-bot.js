@@ -1,13 +1,13 @@
 /**
  * BoardHack Stockfish bot — Web Worker wrapper (UCI).
- * Expects vendor files under ../vendor/stockfish/ relative to this script's
- * usual page location: ../../vendor/stockfish/stockfish-18-lite-single.js
+ * Expects vendor files under ../../../vendor/stockfish/ relative to the page's
+ * usual page location: ../../../vendor/stockfish/stockfish-18-lite-single.js
  */
 (function (global) {
   "use strict";
 
   var DEFAULT_WORKER =
-    "../../vendor/stockfish/stockfish-18-lite-single.js";
+    "../../../vendor/stockfish/stockfish-18-lite-single.js";
 
   /** @type {Record<string, {skill:number, limitStrength:boolean, elo:number, movetime:number, labelKey:string}>} */
   var SKILLS = {

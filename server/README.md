@@ -18,10 +18,10 @@ Health check: `GET http://localhost:3001/health`
 
 Open classic mode in a browser:
 
-- Static site: open `gamemodes/classic/index.html` (or serve the repo root with any static server).
+- Static site: open `gamemodes/chess/classic/index.html` (or serve the repo root with any static server).
 - Default server URL: `http://localhost:3001`
 - Override via query: `?server=http://HOST:3001`
-- Join link: `gamemodes/classic/index.html?room=ABC123` (optional `&server=...`)
+- Join link: `gamemodes/chess/classic/index.html?room=ABC123` (optional `&server=...`)
 
 Flow:
 
