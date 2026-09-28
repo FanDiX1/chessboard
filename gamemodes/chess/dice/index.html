@@ -103,6 +103,7 @@
             <div class="btn-row" id="spGameBtns">
               <button type="button" class="btn btn-primary" id="newGameBtn"></button>
               <button type="button" class="btn btn-ghost" id="undoBtn"></button>
+              <button type="button" class="btn btn-ghost" id="rulesBtn"></button>
             </div>
           </div>
         </section>
@@ -179,6 +180,14 @@
     <footer class="footer">BoardHack</footer>
   </main>
 
+  <dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+    <div class="rules-dialog-head">
+      <h2 class="card-title" id="rulesTitle"></h2>
+      <button type="button" class="rules-dialog-close" id="rulesCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="rules-box" id="rulesBox"></div>
+  </dialog>
+
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
@@ -205,6 +214,10 @@
           mission: "Управление",
           session: "Сессия",
           history: "История ходов",
+          rulesButton: "Правила",
+          rulesTitle: "Правила шахмат с костями",
+          rulesClose: "Закрыть правила",
+          rulesHtml: "<ul><li><strong>Цель:</strong> поставить мат; в этом режиме взятие короля также завершает партию.</li><li><strong>Бросок:</strong> в начале хода бросьте 1–3 кости: 1 — пешка, 2 — конь, 3 — слон, 4 — ладья, 5 — ферзь, 6 — король.</li><li><strong>Ходы:</strong> сделайте по одному ходу каждого выпавшего типа; одинаковая грань даёт несколько ходов.</li><li><strong>Ограничение:</strong> ходить можно только выпавшими типами. Если тип не имеет хода, он пропускается; если ходов нет — ход переходит сопернику.</li><li><strong>Шахматные правила:</strong> обычные ходы, взятия и превращение пешки сохраняются.</li></ul>",
           sideSelectLabel: "Играть за",
           diffLabel: "Сложность бота",
           diffEasy: "Легко",
@@ -317,6 +330,10 @@
           mission: "Mission control",
           session: "Session",
           history: "Move history",
+          rulesButton: "Rules",
+          rulesTitle: "Dice chess rules",
+          rulesClose: "Close rules",
+          rulesHtml: "<ul><li><strong>Goal:</strong> checkmate; in this mode, capturing the king also ends the game.</li><li><strong>Roll:</strong> at the start of a turn roll 1–3 dice: 1 — pawn, 2 — knight, 3 — bishop, 4 — rook, 5 — queen, 6 — king.</li><li><strong>Moves:</strong> make one move for each rolled type; duplicate faces grant multiple moves.</li><li><strong>Restriction:</strong> only rolled piece types may move. A type with no legal move is skipped; if none can move, the turn passes.</li><li><strong>Chess rules:</strong> normal moves, captures, and pawn promotion still apply.</li></ul>",
           sideSelectLabel: "Play as",
           diffLabel: "Bot difficulty",
           diffEasy: "Easy",
@@ -441,6 +458,10 @@
         $("#missionTitle").text(t("mission"));
         $("#sessionTitle").text(t("session"));
         $("#historyTitle").text(t("history"));
+        $("#rulesBtn").text(t("rulesButton"));
+        $("#rulesTitle").text(t("rulesTitle"));
+        $("#rulesCloseBtn").attr("aria-label", t("rulesClose"));
+        $("#rulesBox").html(t("rulesHtml"));
         $("#sideSelectLabel").text(t("sideSelectLabel"));
         $("#sideSelect option[value='w']").text(t("sideWhite"));
         $("#sideSelect option[value='b']").text(t("sideBlack"));
@@ -2896,6 +2917,14 @@
 
         $("#newGameBtn").on("click", newGame);
         $("#undoBtn").on("click", undoMove);
+        var rulesDialog = document.getElementById("rulesDialog");
+        $("#rulesBtn").on("click", function () {
+          if (!rulesDialog.open) rulesDialog.showModal();
+        });
+        $("#rulesCloseBtn").on("click", function () { rulesDialog.close(); });
+        $(rulesDialog).on("click", function (e) {
+          if (e.target === rulesDialog) rulesDialog.close();
+        });
         $("#sideSelect").on("change", onSideChange);
         if ($("#modeSelect").length) $("#modeSelect").on("change", onModeChange);
         if ($("#diceCount").length) $("#diceCount").on("change", onDiceCountChange);

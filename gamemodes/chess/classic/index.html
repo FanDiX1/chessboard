@@ -90,6 +90,7 @@
             <div class="btn-row">
               <button type="button" class="btn btn-primary" id="newGameBtn"></button>
               <button type="button" class="btn btn-ghost" id="undoBtn"></button>
+              <button type="button" class="btn btn-ghost" id="rulesBtn"></button>
             </div>
           </div>
         </section>
@@ -166,6 +167,14 @@
     <footer class="footer">BoardHack</footer>
   </main>
 
+  <dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+    <div class="rules-dialog-head">
+      <h2 class="card-title" id="rulesTitle"></h2>
+      <button type="button" class="rules-dialog-close" id="rulesCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="rules-box" id="rulesBox"></div>
+  </dialog>
+
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
@@ -192,6 +201,10 @@
           mission: "Управление",
           session: "Сессия",
           history: "История ходов",
+          rulesButton: "Правила",
+          rulesTitle: "Правила шахмат",
+          rulesClose: "Закрыть правила",
+          rulesHtml: "<ul><li><strong>Цель:</strong> поставить мат королю соперника.</li><li><strong>Ход:</strong> белые начинают; фигуры ходят по своим правилам. Нельзя оставлять своего короля под шахом.</li><li><strong>Шах и мат:</strong> шах нужно снять; мат завершает партию.</li><li><strong>Особые ходы:</strong> рокировка, взятие на проходе и превращение пешки.</li><li><strong>Ничья:</strong> пат, повторение позиции, недостаток материала или соглашение.</li></ul>",
           sideSelectLabel: "Играть за",
           diffLabel: "Сложность бота",
           diffEasy: "Легко",
@@ -296,6 +309,10 @@
           mission: "Mission control",
           session: "Session",
           history: "Move history",
+          rulesButton: "Rules",
+          rulesTitle: "Chess rules",
+          rulesClose: "Close rules",
+          rulesHtml: "<ul><li><strong>Goal:</strong> checkmate the opponent’s king.</li><li><strong>Moves:</strong> White moves first; each piece follows its standard move. You may not leave your king in check.</li><li><strong>Check and mate:</strong> answer check; checkmate ends the game.</li><li><strong>Special moves:</strong> castling, en passant, and pawn promotion.</li><li><strong>Draw:</strong> stalemate, repeated position, insufficient material, or agreement.</li></ul>",
           sideSelectLabel: "Play as",
           diffLabel: "Bot difficulty",
           diffEasy: "Easy",
@@ -412,6 +429,10 @@
         $("#missionTitle").text(t("mission"));
         $("#sessionTitle").text(t("session"));
         $("#historyTitle").text(t("history"));
+        $("#rulesBtn").text(t("rulesButton"));
+        $("#rulesTitle").text(t("rulesTitle"));
+        $("#rulesCloseBtn").attr("aria-label", t("rulesClose"));
+        $("#rulesBox").html(t("rulesHtml"));
         $("#sideSelectLabel").text(t("sideSelectLabel"));
         $("#sideSelect option[value='w']").text(t("sideWhite"));
         $("#sideSelect option[value='b']").text(t("sideBlack"));
@@ -2171,6 +2192,14 @@
 
         $("#newGameBtn").on("click", newGame);
         $("#undoBtn").on("click", undoMove);
+        var rulesDialog = document.getElementById("rulesDialog");
+        $("#rulesBtn").on("click", function () {
+          if (!rulesDialog.open) rulesDialog.showModal();
+        });
+        $("#rulesCloseBtn").on("click", function () { rulesDialog.close(); });
+        $(rulesDialog).on("click", function (e) {
+          if (e.target === rulesDialog) rulesDialog.close();
+        });
         $("#sideSelect").on("change", onSideChange);
         if ($("#modeSelect").length) $("#modeSelect").on("change", onModeChange);
         if ($("#diceCount").length) $("#diceCount").on("change", onDiceCountChange);

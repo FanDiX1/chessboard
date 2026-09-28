@@ -1087,3 +1087,61 @@ button.btn:disabled {
   color: var(--warn);
   margin-top: 0.35rem;
 }
+
+
+/* Shared rules dialog */
+.rules-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: min(80vh, 36rem);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.rules-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.rules-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem 0.8rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.rules-dialog-close {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rules-dialog-close:hover { color: var(--text); border-color: var(--accent); }
+
+.rules-box {
+  max-height: calc(min(80vh, 36rem) - 4.5rem);
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.15rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.rules-box ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.55rem; }
+.rules-box li::marker { color: var(--accent); }
+.rules-box strong { color: var(--text); font-weight: 500; }
