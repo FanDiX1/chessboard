@@ -7,13 +7,14 @@ Dark-themed multi-game hub (TryHackMe-ish UI): chess first, more board games pla
 - **Hub** — game tabs (Chess / Checkers / Mahjong) with mode cards
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
+- **Checkers → Classic** — Russian draughts (шашки) vs local bot or hotseat
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
 - **Multiplayer** — room codes via Socket.IO server (`server/`)
 - **i18n** — Russian / English UI
 
 ## Quick start (static site)
 
-Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` in a browser.
+Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/classic/index.html` in a browser.
 
 Stockfish needs HTTP(S) (not `file://`) for WASM workers.
 
@@ -39,6 +40,7 @@ index.html                 # multi-game hub
 css/                       # BoardHack styles
 gamemodes/chess/classic/   # classic chess
 gamemodes/chess/dice/      # dice chess
+gamemodes/checkers/classic/# Russian draughts
 js/                        # Stockfish bot helper
 vendor/stockfish/          # Stockfish 18 lite WASM
 server/                    # Express + Socket.IO rooms (no node_modules in git)

@@ -72,14 +72,14 @@
       <section class="hub-panel" id="panelCheckers" role="tabpanel" aria-labelledby="tabCheckers" data-game="checkers" hidden>
         <div class="hub-panel-head">
           <h2 id="panelCheckersTitle">Шашки</h2>
-          <p class="hub-panel-desc" id="panelCheckersDesc">Режимы шашек появятся здесь.</p>
+          <p class="hub-panel-desc" id="panelCheckersDesc">Русские шашки — локальный бот или игра вдвоём.</p>
         </div>
         <div class="mode-cards">
-          <div class="mode-card mode-card--soon" aria-disabled="true">
-            <h2>⬤ <span id="cardCheckersSoonTitle">Скоро</span></h2>
-            <p id="cardCheckersSoonDesc">Режимы шашек в разработке. Загляните позже.</p>
-            <div class="go go-muted" id="cardCheckersSoonGo">Coming soon</div>
-          </div>
+          <a class="mode-card" href="gamemodes/checkers/classic/index.html">
+            <h2>⬤ <span id="cardCheckersClassicTitle">Классика</span></h2>
+            <p id="cardCheckersClassicDesc">Русские шашки 8×8: дамка, обязательное взятие, бот или hotseat.</p>
+            <div class="go" id="cardCheckersClassicGo">Открыть →</div>
+          </a>
         </div>
       </section>
 
@@ -117,7 +117,7 @@
           panelChessTitle: "Шахматы",
           panelChessDesc: "Классика и кости — локальный Stockfish и мультиплеер.",
           panelCheckersTitle: "Шашки",
-          panelCheckersDesc: "Режимы шашек появятся здесь.",
+          panelCheckersDesc: "Русские шашки — локальный бот или игра вдвоём.",
           panelMahjongTitle: "Маджонг",
           panelMahjongDesc: "Режимы маджонга появятся здесь.",
           cardClassicTitle: "Классика",
@@ -126,9 +126,9 @@
           cardDiceTitle: "Кости",
           cardDiceDesc: "Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.",
           cardDiceGo: "Открыть →",
-          cardCheckersSoonTitle: "Скоро",
-          cardCheckersSoonDesc: "Режимы шашек в разработке. Загляните позже.",
-          cardCheckersSoonGo: "Скоро",
+          cardCheckersClassicTitle: "Классика",
+          cardCheckersClassicDesc: "Русские шашки 8×8: дамка, обязательное взятие, бот или hotseat.",
+          cardCheckersClassicGo: "Открыть →",
           cardMahjongSoonTitle: "Скоро",
           cardMahjongSoonDesc: "Режимы маджонга в разработке. Загляните позже.",
           cardMahjongSoonGo: "Скоро"
@@ -143,7 +143,7 @@
           panelChessTitle: "Chess",
           panelChessDesc: "Classic and dice — local Stockfish and multiplayer.",
           panelCheckersTitle: "Checkers",
-          panelCheckersDesc: "Checkers modes will land here.",
+          panelCheckersDesc: "Russian draughts — local bot or hotseat.",
           panelMahjongTitle: "Mahjong",
           panelMahjongDesc: "Mahjong modes will land here.",
           cardClassicTitle: "Classic",
@@ -152,9 +152,9 @@
           cardDiceTitle: "Dice Chess",
           cardDiceDesc: "Each turn rolls dice — move only the rolled piece types. 1–3 dice.",
           cardDiceGo: "Open →",
-          cardCheckersSoonTitle: "Coming soon",
-          cardCheckersSoonDesc: "Checkers modes are in the works. Check back later.",
-          cardCheckersSoonGo: "Coming soon",
+          cardCheckersClassicTitle: "Classic",
+          cardCheckersClassicDesc: "Russian draughts 8×8: flying kings, mandatory captures, bot or hotseat.",
+          cardCheckersClassicGo: "Open →",
           cardMahjongSoonTitle: "Coming soon",
           cardMahjongSoonDesc: "Mahjong modes are in the works. Check back later.",
           cardMahjongSoonGo: "Coming soon"
@@ -198,9 +198,9 @@
         document.getElementById("cardDiceTitle").textContent = t("cardDiceTitle");
         document.getElementById("cardDiceDesc").textContent = t("cardDiceDesc");
         document.getElementById("cardDiceGo").textContent = t("cardDiceGo");
-        document.getElementById("cardCheckersSoonTitle").textContent = t("cardCheckersSoonTitle");
-        document.getElementById("cardCheckersSoonDesc").textContent = t("cardCheckersSoonDesc");
-        document.getElementById("cardCheckersSoonGo").textContent = t("cardCheckersSoonGo");
+        document.getElementById("cardCheckersClassicTitle").textContent = t("cardCheckersClassicTitle");
+        document.getElementById("cardCheckersClassicDesc").textContent = t("cardCheckersClassicDesc");
+        document.getElementById("cardCheckersClassicGo").textContent = t("cardCheckersClassicGo");
         document.getElementById("cardMahjongSoonTitle").textContent = t("cardMahjongSoonTitle");
         document.getElementById("cardMahjongSoonDesc").textContent = t("cardMahjongSoonDesc");
         document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");

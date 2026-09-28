@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoardHack — Шашки</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../../css/boardhack.css" />
+  <style>
+    /* Russian draughts board (page-local) */
+    .ck-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      width: 100%;
+      aspect-ratio: 1;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px var(--border-soft), 0 12px 40px rgba(0, 0, 0, 0.45);
+      user-select: none;
+    }
+    .ck-board.flipped { transform: rotate(180deg); }
+    .ck-board.flipped .ck-piece { transform: rotate(180deg); }
+    .ck-sq {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+    }
+    .ck-sq.light { background: #c8cdd5; }
+    .ck-sq.dark { background: #4a5564; }
+    .ck-sq.selected { box-shadow: inset 0 0 0 3px var(--accent); }
+    .ck-sq.legal::after {
+      content: "";
+      width: 22%;
+      height: 22%;
+      border-radius: 50%;
+      background: rgba(159, 239, 0, 0.55);
+      position: absolute;
+      pointer-events: none;
+    }
+    .ck-sq.legal-capture::after {
+      width: 78%;
+      height: 78%;
+      background: transparent;
+      border: 3px solid rgba(255, 62, 62, 0.75);
+      box-sizing: border-box;
+    }
+    .ck-sq.last-from, .ck-sq.last-to {
+      box-shadow: inset 0 0 0 3px rgba(159, 239, 0, 0.45);
+    }
+    .ck-piece {
+      width: 72%;
+      height: 72%;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 1;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.18);
+      transition: transform 0.12s ease;
+    }
+    .ck-piece:hover { transform: scale(1.05); }
+    .ck-piece.w {
+      background: radial-gradient(circle at 35% 30%, #f5f7fa, #d0d5dd 55%, #9aa3b0);
+      border: 2px solid #e8edf2;
+    }
+    .ck-piece.b {
+      background: radial-gradient(circle at 35% 30%, #3a4048, #1a1d21 55%, #0b0e11);
+      border: 2px solid #2a2f36;
+    }
+    .ck-piece.king::before {
+      content: "♛";
+      display: grid;
+      place-items: center;
+      height: 100%;
+      font-size: clamp(0.7rem, 3.2vw, 1.15rem);
+      line-height: 1;
+      color: var(--accent);
+      text-shadow: 0 0 6px var(--accent-glow);
+    }
+    .ck-piece.b.king::before { color: var(--accent); }
+    .rules-box {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.75rem;
+    }
+    .rules-box strong { color: var(--text); font-weight: 500; }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <a href="../../../index.html">
+        <div class="brand-mark">♞</div>
+        <div>Board<span class="accent">Hack</span></div>
+      </a>
+      <span class="mode-badge" id="modeBadge">checkers</span>
+    </div>
+    <div class="topbar-actions">
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" id="langRu" data-lang="ru">RU</button>
+        <span class="lang-sep">|</span>
+        <button type="button" id="langEn" data-lang="en">EN</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="layout">
+    <section class="card">
+      <div class="card-title" id="playAreaTitle"></div>
+      <div class="status-bar" id="statusBar">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText"></span>
+      </div>
+      <div class="board-wrap">
+        <div id="board" class="ck-board" aria-label="Checkers board"></div>
+        <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
+      </div>
+    </section>
+
+    <aside class="side-stack">
+      <section class="card">
+        <div class="card-title" id="missionTitle"></div>
+        <div class="controls">
+          <div>
+            <label class="field-label" for="oppSelect" id="oppSelectLabel"></label>
+            <select id="oppSelect">
+              <option value="bot" selected></option>
+              <option value="hotseat"></option>
+            </select>
+          </div>
+          <div id="sideSelectWrap">
+            <label class="field-label" for="sideSelect" id="sideSelectLabel"></label>
+            <select id="sideSelect">
+              <option value="w" selected></option>
+              <option value="b"></option>
+            </select>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="newGameBtn"></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title" id="sessionTitle"></div>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="k" id="metaSideK"></div>
+            <div class="v" id="sideLabel"></div>
+          </div>
+          <div class="meta-item">
+            <div class="k" id="metaTurnK"></div>
+            <div class="v" id="turnLabel"></div>
+          </div>
+          <div class="meta-item">
+            <div class="k" id="metaMovesK"></div>
+            <div class="v" id="moveCount">0</div>
+          </div>
+          <div class="meta-item">
+            <div class="k" id="metaOppK"></div>
+            <div class="v" id="oppLabel"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title" id="historyTitle"></div>
+        <div class="move-list" id="moveList"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-title" id="rulesTitle"></div>
+        <div class="rules-box" id="rulesBox"></div>
+      </section>
+    </aside>
+  </div>
+  <footer class="footer">BoardHack</footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var LANG_KEY = "boardhack-lang";
+  var COLOR_KEY = "boardhack-checkers-color";
+  var OPP_KEY = "boardhack-checkers-opp";
+
+  var I18N = {
+    ru: {
+      docTitle: "BoardHack — Русские шашки",
+      modeBadge: "шашки · классика",
+      playArea: "Игровая зона",
+      mission: "Управление",
+      session: "Сессия",
+      history: "История ходов",
+      rulesTitle: "Правила",
+      rulesHtml: "<strong>Русские шашки</strong> (8×8). Простые ходят вперёд по диагонали; рубят вперёд и назад. Взятие обязательно (выбор любой цепочки). Дамка ходит и рубит на любое число клеток. Бой продолжается, пока есть взятия. Выигрыш — нет шашек или ходов у соперника.",
+      oppSelectLabel: "Соперник",
+      oppBot: "Бот (локальный)",
+      oppHotseat: "Вдвоём (один экран)",
+      sideSelectLabel: "Играть за",
+      sideWhite: "Белые",
+      sideBlack: "Чёрные",
+      newGame: "Новая игра",
+      metaSide: "Сторона",
+      metaTurn: "Ход",
+      metaMoves: "Ходы",
+      metaOpp: "Режим",
+      turnWhite: "Белые",
+      turnBlack: "Чёрные",
+      statusYour: "Ваш ход",
+      statusOpp: "Ход соперника",
+      statusHotseat: "Ход — ",
+      statusMustCapture: "Нужно взять",
+      statusThinking: "Бот думает…",
+      statusWinW: "Белые победили",
+      statusWinB: "Чёрные победили",
+      statusDraw: "Ничья",
+      thinking: "Думаю…",
+      noMoves: "Пока нет ходов"
+    },
+    en: {
+      docTitle: "BoardHack — Russian draughts",
+      modeBadge: "checkers · classic",
+      playArea: "Play area",
+      mission: "Controls",
+      session: "Session",
+      history: "Move history",
+      rulesTitle: "Rules",
+      rulesHtml: "<strong>Russian draughts</strong> (8×8). Men move forward diagonally; capture forward and backward. Captures are mandatory (any chain if several). Flying kings move/capture any distance. Multi-jumps continue while captures remain. Win: opponent has no pieces or no moves.",
+      oppSelectLabel: "Opponent",
+      oppBot: "Bot (local)",
+      oppHotseat: "Hotseat (same screen)",
+      sideSelectLabel: "Play as",
+      sideWhite: "White",
+      sideBlack: "Black",
+      newGame: "New game",
+      metaSide: "Side",
+      metaTurn: "Turn",
+      metaMoves: "Moves",
+      metaOpp: "Mode",
+      turnWhite: "White",
+      turnBlack: "Black",
+      statusYour: "Your turn",
+      statusOpp: "Opponent's turn",
+      statusHotseat: "Turn — ",
+      statusMustCapture: "Capture required",
+      statusThinking: "Bot thinking…",
+      statusWinW: "White wins",
+      statusWinB: "Black wins",
+      statusDraw: "Draw",
+      thinking: "Thinking…",
+      noMoves: "No moves yet"
+    }
+  };
+
+  var lang = "ru";
+  try {
+    var saved = localStorage.getItem(LANG_KEY);
+    if (saved === "en" || saved === "ru") lang = saved;
+  } catch (e) {}
+
+  function t(key) {
+    var pack = I18N[lang] || I18N.ru;
+    return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+  }
+
+  /* ---- Board model ---- */
+  // Rows 0..7 top→bottom (black side at top). Dark squares: (r+c) odd.
+  // White at bottom (rows 5–7), Black at top (rows 0–2). White moves first.
+
+  function emptyBoard() {
+    var b = [];
+    for (var r = 0; r < 8; r++) {
+      b[r] = [];
+      for (var c = 0; c < 8; c++) b[r][c] = null;
+    }
+    return b;
+  }
+
+  function initialBoard() {
+    var b = emptyBoard();
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 8; c++) {
+        if ((r + c) % 2 !== 1) continue;
+        if (r <= 2) b[r][c] = { color: "b", king: false };
+        else if (r >= 5) b[r][c] = { color: "w", king: false };
+      }
+    }
+    return b;
+  }
+
+  function cloneBoard(b) {
+    var n = emptyBoard();
+    for (var r = 0; r < 8; r++)
+      for (var c = 0; c < 8; c++) {
+        var p = b[r][c];
+        n[r][c] = p ? { color: p.color, king: p.king } : null;
+      }
+    return n;
+  }
+
+  function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+
+  var DIRS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+  function manForwardDirs(color) {
+    return color === "w" ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
+  }
+
+  function keySq(r, c) { return r + "," + c; }
+
+  /** Collect all capture sequences from (r,c). Each seq: { from, to, path:[{r,c}], captures:[{r,c}], promote } */
+  function captureSequencesFrom(board, r, c, piece, capturedSet) {
+    var results = [];
+    var enemy = piece.color === "w" ? "b" : "w";
+
+    function dfs(brd, cr, cc, isKing, caps, path) {
+      var extended = false;
+
+      for (var di = 0; di < 4; di++) {
+        var dr = DIRS[di][0], dc = DIRS[di][1];
+
+        if (!isKing) {
+          var mr = cr + dr, mc = cc + dc;
+          var lr = cr + 2 * dr, lc = cc + 2 * dc;
+          if (!inBounds(lr, lc)) continue;
+          var mid = brd[mr] && brd[mr][mc];
+          if (!mid || mid.color !== enemy) continue;
+          if (brd[lr][lc]) continue;
+          var ck = keySq(mr, mc);
+          if (caps[ck]) continue;
+
+          var nb = cloneBoard(brd);
+          nb[cr][cc] = null;
+          nb[mr][mc] = null;
+          var nk = isKing;
+          if (!nk && ((piece.color === "w" && lr === 0) || (piece.color === "b" && lr === 7))) nk = true;
+          nb[lr][lc] = { color: piece.color, king: nk };
+          var nc = Object.assign({}, caps); nc[ck] = true;
+          var np = path.concat([{ r: lr, c: lc }]);
+          extended = true;
+          dfs(nb, lr, lc, nk, nc, np);
+        } else {
+          var sr = cr + dr, sc = cc + dc;
+          while (inBounds(sr, sc) && !brd[sr][sc]) { sr += dr; sc += dc; }
+          if (!inBounds(sr, sc)) continue;
+          var vic = brd[sr][sc];
+          if (!vic || vic.color !== enemy) continue;
+          var vk = keySq(sr, sc);
+          if (caps[vk]) continue;
+          var lr2 = sr + dr, lc2 = sc + dc;
+          while (inBounds(lr2, lc2) && !brd[lr2][lc2]) {
+            var nb2 = cloneBoard(brd);
+            nb2[cr][cc] = null;
+            nb2[sr][sc] = null;
+            nb2[lr2][lc2] = { color: piece.color, king: true };
+            var nc2 = Object.assign({}, caps); nc2[vk] = true;
+            var np2 = path.concat([{ r: lr2, c: lc2 }]);
+            extended = true;
+            dfs(nb2, lr2, lc2, true, nc2, np2);
+            lr2 += dr; lc2 += dc;
+          }
+        }
+      }
+
+      if (!extended && path.length > 0) {
+        var capList = Object.keys(caps).map(function (k) {
+          var parts = k.split(",");
+          return { r: +parts[0], c: +parts[1] };
+        });
+        var last = path[path.length - 1];
+        results.push({
+          from: { r: r, c: c },
+          to: { r: last.r, c: last.c },
+          path: path.slice(),
+          captures: capList,
+          promote: false
+        });
+      }
+    }
+
+    dfs(board, r, c, !!piece.king, capturedSet || {}, []);
+    return results;
+  }
+
+  function quietMovesFrom(board, r, c, piece) {
+    var moves = [];
+    if (piece.king) {
+      for (var di = 0; di < 4; di++) {
+        var dr = DIRS[di][0], dc = DIRS[di][1];
+        var nr = r + dr, nc = c + dc;
+        while (inBounds(nr, nc) && !board[nr][nc]) {
+          moves.push({
+            from: { r: r, c: c },
+            to: { r: nr, c: nc },
+            path: [{ r: nr, c: nc }],
+            captures: [],
+            promote: false
+          });
+          nr += dr; nc += dc;
+        }
+      }
+    } else {
+      var fds = manForwardDirs(piece.color);
+      for (var i = 0; i < fds.length; i++) {
+        var nr2 = r + fds[i][0], nc2 = c + fds[i][1];
+        if (!inBounds(nr2, nc2) || board[nr2][nc2]) continue;
+        var promo = (piece.color === "w" && nr2 === 0) || (piece.color === "b" && nr2 === 7);
+        moves.push({
+          from: { r: r, c: c },
+          to: { r: nr2, c: nc2 },
+          path: [{ r: nr2, c: nc2 }],
+          captures: [],
+          promote: promo
+        });
+      }
+    }
+    return moves;
+  }
+
+  function allMoves(board, color) {
+    var captures = [];
+    var quiets = [];
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 8; c++) {
+        var p = board[r][c];
+        if (!p || p.color !== color) continue;
+        var caps = captureSequencesFrom(board, r, c, p, {});
+        for (var i = 0; i < caps.length; i++) captures.push(caps[i]);
+        if (captures.length === 0) {
+          // defer quiets until we know no captures exist globally
+        }
+      }
+    }
+    if (captures.length > 0) return captures;
+    for (var r2 = 0; r2 < 8; r2++) {
+      for (var c2 = 0; c2 < 8; c2++) {
+        var p2 = board[r2][c2];
+        if (!p2 || p2.color !== color) continue;
+        var q = quietMovesFrom(board, r2, c2, p2);
+        for (var j = 0; j < q.length; j++) quiets.push(q[j]);
+      }
+    }
+    return quiets;
+  }
+
+  function applyMove(board, move) {
+    var nb = cloneBoard(board);
+    var piece = nb[move.from.r][move.from.c];
+    nb[move.from.r][move.from.c] = null;
+    for (var i = 0; i < move.captures.length; i++) {
+      var cap = move.captures[i];
+      nb[cap.r][cap.c] = null;
+    }
+    var last = move.path[move.path.length - 1];
+    var king = piece.king;
+    if (!king && ((piece.color === "w" && last.r === 0) || (piece.color === "b" && last.r === 7))) king = true;
+    // Mid-sequence promotion already handled in capture gen for continuing as king;
+    // final piece is king if any landing was on last rank or started as king.
+    if (!king) {
+      for (var k = 0; k < move.path.length; k++) {
+        var sq = move.path[k];
+        if ((piece.color === "w" && sq.r === 0) || (piece.color === "b" && sq.r === 7)) king = true;
+      }
+    }
+    nb[last.r][last.c] = { color: piece.color, king: king };
+    return nb;
+  }
+
+  function countPieces(board, color) {
+    var n = 0, kings = 0;
+    for (var r = 0; r < 8; r++)
+      for (var c = 0; c < 8; c++) {
+        var p = board[r][c];
+        if (p && p.color === color) { n++; if (p.king) kings++; }
+      }
+    return { n: n, kings: kings };
+  }
+
+  function evaluate(board, color) {
+    var me = countPieces(board, color);
+    var opp = countPieces(board, color === "w" ? "b" : "w");
+    var score = (me.n - opp.n) * 10 + (me.kings - opp.kings) * 6;
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 8; c++) {
+        var p = board[r][c];
+        if (!p || p.king) continue;
+        if (p.color === color) {
+          score += color === "w" ? (7 - r) * 0.3 : r * 0.3;
+        } else {
+          score -= p.color === "w" ? (7 - r) * 0.3 : r * 0.3;
+        }
+      }
+    }
+    return score;
+  }
+
+  function pickBotMove(board, color) {
+    var moves = allMoves(board, color);
+    if (moves.length === 0) return null;
+    // Prefer longer captures; then evaluate 1-ply with light lookahead
+    var best = null;
+    var bestScore = -Infinity;
+    for (var i = 0; i < moves.length; i++) {
+      var m = moves[i];
+      var nb = applyMove(board, m);
+      var s = evaluate(nb, color) + m.captures.length * 4 + Math.random() * 0.5;
+      // one-ply reply
+      var replies = allMoves(nb, color === "w" ? "b" : "w");
+      if (replies.length === 0) s += 50;
+      else {
+        var worst = Infinity;
+        var lim = Math.min(replies.length, 12);
+        for (var j = 0; j < lim; j++) {
+          var rb = applyMove(nb, replies[j]);
+          var rs = evaluate(rb, color);
+          if (rs < worst) worst = rs;
+        }
+        s = s * 0.35 + worst * 0.65;
+      }
+      if (s > bestScore) { bestScore = s; best = m; }
+    }
+    return best;
+  }
+
+  /* ---- UI state ---- */
+  var board = initialBoard();
+  var turn = "w";
+  var userColor = "w";
+  var oppMode = "bot";
+  var selected = null;
+  var legalForSelected = [];
+  var moveHistory = [];
+  var lastMove = null;
+  var gameOver = null; // 'w' | 'b' | 'draw' | null
+  var botThinking = false;
+
+  try {
+    var sc = localStorage.getItem(COLOR_KEY);
+    if (sc === "w" || sc === "b") userColor = sc;
+    var so = localStorage.getItem(OPP_KEY);
+    if (so === "bot" || so === "hotseat") oppMode = so;
+  } catch (e) {}
+
+  function isUserTurn() {
+    if (gameOver) return false;
+    if (oppMode === "hotseat") return true;
+    return turn === userColor;
+  }
+
+  function sqLabel(r, c) {
+    var file = String.fromCharCode(97 + c);
+    var rank = 8 - r;
+    return file + rank;
+  }
+
+  function moveNotation(m) {
+    var sep = m.captures.length ? ":" : "-";
+    var s = sqLabel(m.from.r, m.from.c);
+    for (var i = 0; i < m.path.length; i++) s += sep + sqLabel(m.path[i].r, m.path[i].c);
+    return s;
+  }
+
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.title = t("docTitle");
+    document.getElementById("modeBadge").textContent = t("modeBadge");
+    document.getElementById("playAreaTitle").textContent = t("playArea");
+    document.getElementById("missionTitle").textContent = t("mission");
+    document.getElementById("sessionTitle").textContent = t("session");
+    document.getElementById("historyTitle").textContent = t("history");
+    document.getElementById("rulesTitle").textContent = t("rulesTitle");
+    document.getElementById("rulesBox").innerHTML = t("rulesHtml");
+    document.getElementById("oppSelectLabel").textContent = t("oppSelectLabel");
+    document.getElementById("sideSelectLabel").textContent = t("sideSelectLabel");
+    document.getElementById("newGameBtn").textContent = t("newGame");
+    document.getElementById("metaSideK").textContent = t("metaSide");
+    document.getElementById("metaTurnK").textContent = t("metaTurn");
+    document.getElementById("metaMovesK").textContent = t("metaMoves");
+    document.getElementById("metaOppK").textContent = t("metaOpp");
+    document.getElementById("thinkingText").textContent = t("thinking");
+
+    var oppSel = document.getElementById("oppSelect");
+    oppSel.options[0].textContent = t("oppBot");
+    oppSel.options[1].textContent = t("oppHotseat");
+    var sideSel = document.getElementById("sideSelect");
+    sideSel.options[0].textContent = t("sideWhite");
+    sideSel.options[1].textContent = t("sideBlack");
+
+    document.getElementById("langRu").classList.toggle("active", lang === "ru");
+    document.getElementById("langEn").classList.toggle("active", lang === "en");
+    updateMeta();
+    updateStatus();
+    renderHistory();
+  }
+
+  function setLang(next) {
+    if (next !== "ru" && next !== "en") return;
+    lang = next;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    applyLang();
+  }
+
+  function updateMeta() {
+    document.getElementById("sideLabel").textContent =
+      oppMode === "hotseat" ? (lang === "ru" ? "Оба" : "Both") :
+      (userColor === "w" ? t("sideWhite") : t("sideBlack"));
+    document.getElementById("turnLabel").textContent = turn === "w" ? t("turnWhite") : t("turnBlack");
+    document.getElementById("moveCount").textContent = String(moveHistory.length);
+    document.getElementById("oppLabel").textContent = oppMode === "bot" ? t("oppBot") : t("oppHotseat");
+    document.getElementById("sideSelectWrap").style.display = oppMode === "bot" ? "" : "none";
+  }
+
+  function updateStatus() {
+    var dot = document.getElementById("statusDot");
+    var text = document.getElementById("statusText");
+    dot.className = "status-dot";
+    if (gameOver) {
+      dot.classList.add(gameOver === "draw" ? "warn" : "danger");
+      text.textContent = gameOver === "w" ? t("statusWinW") : gameOver === "b" ? t("statusWinB") : t("statusDraw");
+      return;
+    }
+    if (botThinking) {
+      dot.classList.add("info");
+      text.textContent = t("statusThinking");
+      return;
+    }
+    var moves = allMoves(board, turn);
+    var mustCap = moves.length > 0 && moves[0].captures.length > 0;
+    if (oppMode === "hotseat") {
+      text.textContent = t("statusHotseat") + (turn === "w" ? t("turnWhite") : t("turnBlack")) +
+        (mustCap ? " · " + t("statusMustCapture") : "");
+    } else if (turn === userColor) {
+      text.textContent = t("statusYour") + (mustCap ? " · " + t("statusMustCapture") : "");
+    } else {
+      text.textContent = t("statusOpp");
+      dot.classList.add("info");
+    }
+  }
+
+  function renderHistory() {
+    var el = document.getElementById("moveList");
+    if (!moveHistory.length) {
+      el.textContent = t("noMoves");
+      return;
+    }
+    var html = "";
+    for (var i = 0; i < moveHistory.length; i += 2) {
+      var n = (i / 2) + 1;
+      html += "<div>" + n + ". " + moveHistory[i];
+      if (moveHistory[i + 1]) html += " &nbsp; " + moveHistory[i + 1];
+      html += "</div>";
+    }
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function renderBoard() {
+    var el = document.getElementById("board");
+    var flip = oppMode === "bot" && userColor === "b";
+    el.classList.toggle("flipped", flip);
+    el.innerHTML = "";
+
+    var legalTargets = {};
+    for (var i = 0; i < legalForSelected.length; i++) {
+      var m = legalForSelected[i];
+      var k = keySq(m.to.r, m.to.c);
+      legalTargets[k] = m;
+    }
+
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 8; c++) {
+        var sq = document.createElement("div");
+        var dark = (r + c) % 2 === 1;
+        sq.className = "ck-sq " + (dark ? "dark" : "light");
+        sq.dataset.r = r;
+        sq.dataset.c = c;
+
+        if (selected && selected.r === r && selected.c === c) sq.classList.add("selected");
+        if (lastMove) {
+          if (lastMove.from.r === r && lastMove.from.c === c) sq.classList.add("last-from");
+          if (lastMove.to.r === r && lastMove.to.c === c) sq.classList.add("last-to");
+        }
+        var tk = keySq(r, c);
+        if (legalTargets[tk]) {
+          sq.classList.add(legalTargets[tk].captures.length ? "legal-capture" : "legal");
+        }
+
+        var p = board[r][c];
+        if (p) {
+          var piece = document.createElement("div");
+          piece.className = "ck-piece " + p.color + (p.king ? " king" : "");
+          piece.dataset.r = r;
+          piece.dataset.c = c;
+          sq.appendChild(piece);
+        }
+
+        sq.addEventListener("click", onSquareClick);
+        el.appendChild(sq);
+      }
+    }
+  }
+
+  function movesFromSquare(r, c) {
+    var all = allMoves(board, turn);
+    return all.filter(function (m) { return m.from.r === r && m.from.c === c; });
+  }
+
+  function onSquareClick(ev) {
+    if (gameOver || botThinking || !isUserTurn()) return;
+    var sq = ev.currentTarget;
+    var r = +sq.dataset.r, c = +sq.dataset.c;
+
+    // Try play legal target
+    if (selected) {
+      var opts = legalForSelected.filter(function (m) { return m.to.r === r && m.to.c === c; });
+      if (opts.length === 1) {
+        playMove(opts[0]);
+        return;
+      }
+      if (opts.length > 1) {
+        // Prefer longest capture if ambiguous landing
+        opts.sort(function (a, b) { return b.captures.length - a.captures.length || b.path.length - a.path.length; });
+        playMove(opts[0]);
+        return;
+      }
+    }
+
+    var p = board[r][c];
+    if (p && p.color === turn) {
+      var ms = movesFromSquare(r, c);
+      if (ms.length) {
+        selected = { r: r, c: c };
+        legalForSelected = ms;
+        renderBoard();
+        return;
+      }
+    }
+    selected = null;
+    legalForSelected = [];
+    renderBoard();
+  }
+
+  function checkGameOver() {
+    var w = countPieces(board, "w");
+    var b = countPieces(board, "b");
+    if (w.n === 0) { gameOver = "b"; return; }
+    if (b.n === 0) { gameOver = "w"; return; }
+    var moves = allMoves(board, turn);
+    if (moves.length === 0) {
+      gameOver = turn === "w" ? "b" : "w";
+    }
+  }
+
+  function playMove(move) {
+    board = applyMove(board, move);
+    moveHistory.push(moveNotation(move));
+    lastMove = { from: move.from, to: move.to };
+    selected = null;
+    legalForSelected = [];
+    turn = turn === "w" ? "b" : "w";
+    gameOver = null;
+    checkGameOver();
+    updateMeta();
+    updateStatus();
+    renderHistory();
+    renderBoard();
+    maybeBotTurn();
+  }
+
+  function maybeBotTurn() {
+    if (gameOver || oppMode !== "bot") return;
+    if (turn === userColor) return;
+    botThinking = true;
+    document.getElementById("thinking").classList.add("show");
+    updateStatus();
+    setTimeout(function () {
+      var m = pickBotMove(board, turn);
+      botThinking = false;
+      document.getElementById("thinking").classList.remove("show");
+      if (m) playMove(m);
+      else {
+        checkGameOver();
+        updateStatus();
+        renderBoard();
+      }
+    }, 280 + Math.random() * 220);
+  }
+
+  function newGame() {
+    board = initialBoard();
+    turn = "w";
+    selected = null;
+    legalForSelected = [];
+    moveHistory = [];
+    lastMove = null;
+    gameOver = null;
+    botThinking = false;
+    document.getElementById("thinking").classList.remove("show");
+    updateMeta();
+    updateStatus();
+    renderHistory();
+    renderBoard();
+    maybeBotTurn();
+  }
+
+  document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
+  document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
+  document.getElementById("newGameBtn").addEventListener("click", newGame);
+  document.getElementById("oppSelect").addEventListener("change", function (e) {
+    oppMode = e.target.value;
+    try { localStorage.setItem(OPP_KEY, oppMode); } catch (err) {}
+    newGame();
+  });
+  document.getElementById("sideSelect").addEventListener("change", function (e) {
+    userColor = e.target.value;
+    try { localStorage.setItem(COLOR_KEY, userColor); } catch (err) {}
+    newGame();
+  });
+
+  document.getElementById("oppSelect").value = oppMode;
+  document.getElementById("sideSelect").value = userColor;
+  applyLang();
+  newGame();
+})();
+</script>
+</body>
+</html>
