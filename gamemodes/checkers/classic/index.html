@@ -116,15 +116,49 @@
       color: var(--accent);
       text-shadow: 0 0 6px var(--accent-glow);
     }
-    .rules-box {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      line-height: 1.45;
-      background: var(--bg-elevated);
+    .rules-dialog {
+      width: min(32rem, calc(100vw - 2rem));
+      max-height: min(80vh, 36rem);
+      padding: 0;
+      color: var(--text);
+      background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.65rem 0.75rem;
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
     }
+    .rules-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.68);
+      backdrop-filter: blur(3px);
+    }
+    .rules-dialog-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.1rem 0.8rem;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .rules-dialog-close {
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .rules-dialog-close:hover { color: var(--text); border-color: var(--accent); }
+    .rules-box {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding: 1rem 1.25rem 1.15rem;
+      overflow-y: auto;
+    }
+    .rules-box ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.55rem; }
+    .rules-box li::marker { color: var(--accent); }
     .rules-box strong { color: var(--text); font-weight: 500; }
   </style>
 </head>
@@ -183,6 +217,7 @@
           </div>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="newGameBtn"></button>
+            <button type="button" class="btn btn-ghost" id="rulesBtn"></button>
           </div>
         </div>
       </section>
@@ -253,16 +288,20 @@
         <div class="move-list" id="moveList"></div>
       </section>
 
-      <section class="card">
-        <div class="card-title" id="rulesTitle"></div>
-        <div class="rules-box" id="rulesBox"></div>
-      </section>
     </aside>
   </div>
   <footer class="footer">BoardHack</footer>
 </main>
 
 <div id="ckGhost" class="ck-ghost" aria-hidden="true"></div>
+
+<dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+  <div class="rules-dialog-head">
+    <h2 class="card-title" id="rulesTitle"></h2>
+    <button type="button" class="rules-dialog-close" id="rulesCloseBtn" aria-label="Close">×</button>
+  </div>
+  <div class="rules-box" id="rulesBox"></div>
+</dialog>
 
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <script>
@@ -286,8 +325,10 @@
       mission: "Управление",
       session: "Сессия",
       history: "История ходов",
-      rulesTitle: "Правила",
-      rulesHtml: "<strong>Русские шашки</strong> (8×8). Простые ходят вперёд по диагонали; рубят вперёд и назад. Взятие обязательно (выбор любой цепочки). Дамка ходит и рубит на любое число клеток. Бой продолжается, пока есть взятия. Выигрыш — нет шашек или ходов у соперника.",
+      rulesButton: "Правила",
+      rulesTitle: "Правила русских шашек",
+      rulesClose: "Закрыть правила",
+      rulesHtml: "<ul><li><strong>Обычная шашка:</strong> ходит по диагонали вперёд.</li><li><strong>Взятие обязательно:</strong> можно бить вперёд и назад. Если есть несколько цепочек, выбирайте любую.</li><li><strong>Дамка:</strong> ходит и бьёт на любое расстояние по диагонали.</li><li><strong>Серия взятий:</strong> продолжайте бой, пока есть следующий прыжок.</li><li><strong>Победа:</strong> у соперника не осталось шашек или ходов.</li></ul>",
       sideSelectLabel: "Играть за",
       sideWhite: "Белые",
       sideBlack: "Чёрные",
@@ -348,8 +389,10 @@
       mission: "Controls",
       session: "Session",
       history: "Move history",
-      rulesTitle: "Rules",
-      rulesHtml: "<strong>Russian draughts</strong> (8×8). Men move forward diagonally; capture forward and backward. Captures are mandatory (any chain if several). Flying kings move/capture any distance. Multi-jumps continue while captures remain. Win: opponent has no pieces or no moves.",
+      rulesButton: "Rules",
+      rulesTitle: "Russian draughts rules",
+      rulesClose: "Close rules",
+      rulesHtml: "<ul><li><strong>Man:</strong> moves diagonally forward.</li><li><strong>Capture is mandatory:</strong> capture forward or backward. If several chains are available, choose any.</li><li><strong>King:</strong> moves and captures any distance diagonally.</li><li><strong>Multi-capture:</strong> keep jumping while another capture is available.</li><li><strong>Win:</strong> the opponent has no pieces or no legal moves.</li></ul>",
       sideSelectLabel: "Play as",
       sideWhite: "White",
       sideBlack: "Black",
@@ -1192,7 +1235,9 @@
     document.getElementById("missionTitle").textContent = t("mission");
     document.getElementById("sessionTitle").textContent = t("session");
     document.getElementById("historyTitle").textContent = t("history");
+    document.getElementById("rulesBtn").textContent = t("rulesButton");
     document.getElementById("rulesTitle").textContent = t("rulesTitle");
+    document.getElementById("rulesCloseBtn").setAttribute("aria-label", t("rulesClose"));
     document.getElementById("rulesBox").innerHTML = t("rulesHtml");
     document.getElementById("sideSelectLabel").textContent = t("sideSelectLabel");
     document.getElementById("diffLabel").textContent = t("diffLabel");
@@ -1596,6 +1641,13 @@
     document.getElementById("mpLeaveBtn").addEventListener("click", function () { leaveMultiplayer(); });
     document.getElementById("mpResetBtn").addEventListener("click", newGame);
   }
+
+  var rulesDialog = document.getElementById("rulesDialog");
+  document.getElementById("rulesBtn").addEventListener("click", function () { rulesDialog.showModal(); });
+  document.getElementById("rulesCloseBtn").addEventListener("click", function () { rulesDialog.close(); });
+  rulesDialog.addEventListener("click", function (e) {
+    if (e.target === rulesDialog) rulesDialog.close();
+  });
 
   document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
   document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
