@@ -69,11 +69,70 @@ function uniqueCode() {
   throw new Error("Could not allocate room code");
 }
 
+function sanitizeNick(raw) {
+  let n = String(raw == null ? "" : raw)
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 24);
+  return n;
+}
+
+function seatPublic(seat) {
+  if (!seat) return { occupied: false, connected: false, nick: "" };
+  return {
+    occupied: true,
+    connected: !!seat.connected,
+    nick: sanitizeNick(seat.nick || ""),
+  };
+}
+
+function findSpectator(room, clientId) {
+  if (!room.spectators || !clientId) return null;
+  return room.spectators.get(clientId) || null;
+}
+
+function addSpectator(room, clientId, socketId, nick) {
+  if (!room.spectators) room.spectators = new Map();
+  room.spectators.set(clientId, {
+    clientId,
+    socketId,
+    connected: true,
+    nick: sanitizeNick(nick),
+  });
+  touch(room);
+}
+
+function removeSpectator(room, clientId) {
+  if (!room.spectators || !clientId) return false;
+  const had = room.spectators.delete(clientId);
+  if (had) touch(room);
+  return had;
+}
+
+function spectatorCount(room) {
+  if (!room.spectators) return 0;
+  let n = 0;
+  for (const s of room.spectators.values()) {
+    if (s && s.connected) n++;
+  }
+  return n;
+}
+
+
 function publicRoom(room, forClientId) {
   let yourSeat = null;
+  let yourRole = null;
   if (forClientId) {
-    if (room.seats.w && room.seats.w.clientId === forClientId) yourSeat = "w";
-    if (room.seats.b && room.seats.b.clientId === forClientId) yourSeat = "b";
+    if (room.seats.w && room.seats.w.clientId === forClientId) {
+      yourSeat = "w";
+      yourRole = "player";
+    } else if (room.seats.b && room.seats.b.clientId === forClientId) {
+      yourSeat = "b";
+      yourRole = "player";
+    } else if (findSpectator(room, forClientId)) {
+      yourRole = "spectator";
+    }
   }
   const turn = isBgMode(room.mode) && room.bg && room.bg.turn
     ? room.bg.turn
@@ -86,17 +145,15 @@ function publicRoom(room, forClientId) {
     plySans: room.plySans.slice(),
     diceTurnLog: Array.isArray(room.diceTurnLog) ? room.diceTurnLog : [],
     seats: {
-      w: room.seats.w
-        ? { occupied: true, connected: !!room.seats.w.connected }
-        : { occupied: false, connected: false },
-      b: room.seats.b
-        ? { occupied: true, connected: !!room.seats.b.connected }
-        : { occupied: false, connected: false },
+      w: seatPublic(room.seats.w),
+      b: seatPublic(room.seats.b),
     },
     hostId: room.hostId,
     status: room.status,
     turn,
     yourSeat,
+    yourRole,
+    spectatorCount: spectatorCount(room),
     dice: room.dice || null,
     diceCount: room.diceCount === 1 || room.diceCount === 3 ? room.diceCount : 2,
     chain: room.checkersChain || null,
@@ -116,11 +173,19 @@ function findSeatByClient(room, clientId) {
 
 function emitRoom(room) {
   io.to(room.code).emit("roomState", { room: publicRoom(room, null) });
-  // Also send personalized copies to each connected seat
+  // Personalized copies for seated players
   for (const color of ["w", "b"]) {
     const seat = room.seats[color];
     if (seat && seat.socketId) {
       io.to(seat.socketId).emit("roomState", { room: publicRoom(room, seat.clientId) });
+    }
+  }
+  // Personalized copies for spectators
+  if (room.spectators) {
+    for (const spec of room.spectators.values()) {
+      if (spec && spec.socketId) {
+        io.to(spec.socketId).emit("roomState", { room: publicRoom(room, spec.clientId) });
+      }
     }
   }
 }
@@ -248,6 +313,7 @@ function createRoom(clientId, mode) {
     plySans: [],
     diceTurnLog: [],
     seats: { w: null, b: null },
+    spectators: new Map(),
     hostId: clientId,
     status: "waiting",
     updatedAt: Date.now(),
@@ -260,8 +326,18 @@ function createRoom(clientId, mode) {
   return room;
 }
 
-function seatPlayer(room, color, clientId, socketId) {
-  room.seats[color] = { clientId, socketId, connected: true };
+function seatPlayer(room, color, clientId, socketId, nick) {
+  const prevNick = room.seats[color] && room.seats[color].clientId === clientId
+    ? room.seats[color].nick
+    : "";
+  room.seats[color] = {
+    clientId,
+    socketId,
+    connected: true,
+    nick: sanitizeNick(nick) || sanitizeNick(prevNick),
+  };
+  // Seated players leave spectator list
+  removeSpectator(room, clientId);
   touch(room);
   if (room.seats.w && room.seats.b) {
     room.status = room.status === "finished" ? room.status : "playing";
@@ -276,6 +352,13 @@ function freeSocketFromOtherRooms(socketId, keepCode) {
       if (s && s.socketId === socketId) {
         s.socketId = null;
         s.connected = false;
+      }
+    }
+    if (room.spectators) {
+      for (const [cid, spec] of [...room.spectators.entries()]) {
+        if (spec && spec.socketId === socketId) {
+          room.spectators.delete(cid);
+        }
       }
     }
   }
@@ -296,15 +379,18 @@ io.on("connection", (socket) => {
       const room = createRoom(clientId, mode);
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
-      seatPlayer(room, preferred, clientId, socket.id);
+      const nick = sanitizeNick(payload && payload.nick);
+      seatPlayer(room, preferred, clientId, socket.id, nick);
       socket.data.clientId = clientId;
       socket.data.roomCode = room.code;
+      socket.data.role = "player";
       socket.join(room.code);
 
       const out = {
         ok: true,
         code: room.code,
         seat: preferred,
+        role: "player",
         room: publicRoom(room, clientId),
       };
       if (typeof ack === "function") ack(out);
@@ -339,15 +425,18 @@ io.on("connection", (socket) => {
       }
 
       freeSocketFromOtherRooms(socket.id, code);
-      seatPlayer(room, seat, clientId, socket.id);
+      const nick = sanitizeNick(payload && payload.nick);
+      seatPlayer(room, seat, clientId, socket.id, nick);
       socket.data.clientId = clientId;
       socket.data.roomCode = code;
+      socket.data.role = "player";
       socket.join(code);
 
       const out = {
         ok: true,
         code,
         seat,
+        role: "player",
         room: publicRoom(room, clientId),
       };
       if (typeof ack === "function") ack(out);
@@ -374,15 +463,20 @@ io.on("connection", (socket) => {
       freeSocketFromOtherRooms(socket.id, code);
       room.seats[seat].socketId = socket.id;
       room.seats[seat].connected = true;
+      const nick = sanitizeNick(payload && payload.nick);
+      if (nick) room.seats[seat].nick = nick;
+      removeSpectator(room, clientId);
       touch(room);
       socket.data.clientId = clientId;
       socket.data.roomCode = code;
+      socket.data.role = "player";
       socket.join(code);
 
       const out = {
         ok: true,
         code,
         seat,
+        role: "player",
         room: publicRoom(room, clientId),
       };
       if (typeof ack === "function") ack(out);
@@ -390,6 +484,68 @@ io.on("connection", (socket) => {
       socket.to(code).emit("opponentReconnected", { seat });
     } catch (e) {
       if (typeof ack === "function") ack({ ok: false, error: e.message || "reconnect failed" });
+    }
+  });
+
+
+  socket.on("spectateRoom", (payload, ack) => {
+    try {
+      const clientId = String((payload && payload.clientId) || "");
+      const code = String((payload && payload.code) || "").toUpperCase().trim();
+      if (!clientId) return ack && ack({ ok: false, error: "clientId required" });
+      if (!code) return ack && ack({ ok: false, error: "code required" });
+
+      const room = rooms.get(code);
+      if (!room) return ack && ack({ ok: false, error: "room_not_found" });
+
+      const wantMode = payload && payload.mode;
+      if (wantMode && room.mode && normalizeMode(wantMode) !== room.mode) {
+        return ack && ack({ ok: false, error: "wrong_mode" });
+      }
+
+      // If already seated in this room, reconnect as player instead
+      const existingSeat = findSeatByClient(room, clientId);
+      if (existingSeat) {
+        freeSocketFromOtherRooms(socket.id, code);
+        const nick = sanitizeNick(payload && payload.nick);
+        seatPlayer(room, existingSeat, clientId, socket.id, nick);
+        socket.data.clientId = clientId;
+        socket.data.roomCode = code;
+        socket.data.role = "player";
+        socket.join(code);
+        const asPlayer = {
+          ok: true,
+          code,
+          seat: existingSeat,
+          role: "player",
+          room: publicRoom(room, clientId),
+        };
+        if (typeof ack === "function") ack(asPlayer);
+        emitRoom(room);
+        return;
+      }
+
+      freeSocketFromOtherRooms(socket.id, code);
+      // Clear any seat this client held elsewhere already handled; ensure not seated here
+      const nick = sanitizeNick(payload && payload.nick);
+      addSpectator(room, clientId, socket.id, nick);
+      socket.data.clientId = clientId;
+      socket.data.roomCode = code;
+      socket.data.role = "spectator";
+      socket.join(code);
+
+      const out = {
+        ok: true,
+        code,
+        seat: null,
+        role: "spectator",
+        room: publicRoom(room, clientId),
+      };
+      if (typeof ack === "function") ack(out);
+      else socket.emit("roomSpectating", out);
+      emitRoom(room);
+    } catch (e) {
+      if (typeof ack === "function") ack({ ok: false, error: e.message || "spectate failed" });
     }
   });
 
@@ -427,6 +583,8 @@ io.on("connection", (socket) => {
       if (seatObj) {
         seatObj.socketId = socket.id;
         seatObj.connected = true;
+        const nick = sanitizeNick(payload && payload.nick);
+        if (nick) seatObj.nick = nick;
       }
       room.status = "waiting";
       touch(room);
@@ -435,6 +593,7 @@ io.on("connection", (socket) => {
         ok: true,
         code,
         seat: want,
+        role: "player",
         room: publicRoom(room, clientId),
       };
       if (typeof ack === "function") ack(out);
@@ -611,9 +770,13 @@ io.on("connection", (socket) => {
         socket.leave(code);
         socket.to(code).emit("opponentLeft", { seat });
         emitRoom(room);
+      } else if (removeSpectator(room, clientId)) {
+        socket.leave(code);
+        emitRoom(room);
       }
     }
     socket.data.roomCode = null;
+    socket.data.role = null;
     if (typeof ack === "function") ack({ ok: true });
   });
 
@@ -624,13 +787,20 @@ io.on("connection", (socket) => {
     const room = rooms.get(code);
     if (!room) return;
     const seat = findSeatByClient(room, clientId);
-    if (!seat) return;
-    const s = room.seats[seat];
-    if (s && s.socketId === socket.id) {
-      s.socketId = null;
-      s.connected = false;
-      touch(room);
-      socket.to(code).emit("opponentDisconnected", { seat });
+    if (seat) {
+      const s = room.seats[seat];
+      if (s && s.socketId === socket.id) {
+        s.socketId = null;
+        s.connected = false;
+        touch(room);
+        socket.to(code).emit("opponentDisconnected", { seat });
+        emitRoom(room);
+      }
+      return;
+    }
+    const spec = findSpectator(room, clientId);
+    if (spec && spec.socketId === socket.id) {
+      removeSpectator(room, clientId);
       emitRoom(room);
     }
   });

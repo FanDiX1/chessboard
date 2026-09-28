@@ -30,14 +30,16 @@ Flow:
 2. Player A opens classic → **Создать комнату** → shares the code/link.
 3. Player B opens classic → **Войти** and enters the code (or opens the share link).
 4. Both play; bot is disabled in multiplayer. Reconnect uses `localStorage` `clientId` + room code.
+5. Optional: set a nickname (persisted locally) shown on seats; **Наблюдать / Spectate** joins by code as read-only (multiple spectators; not counted for “both ready”).
 
 ## Protocol (socket.io)
 
 | Event | Direction | Purpose |
 |-------|-----------|---------|
-| `createRoom` | C→S | `{ clientId, mode?, preferredSeat? }` → `{ ok, code, seat, room }` |
-| `joinRoom` | C→S | `{ clientId, code }` → `{ ok, code, seat, room }` |
-| `reconnectRoom` | C→S | `{ clientId, code }` reclaim seat after refresh |
+| `createRoom` | C→S | `{ clientId, mode?, preferredSeat?, nick? }` → `{ ok, code, seat, role, room }` |
+| `joinRoom` | C→S | `{ clientId, code, mode?, nick? }` → `{ ok, code, seat, role, room }` |
+| `spectateRoom` | C→S | `{ clientId, code, mode?, nick? }` → join as spectator (no seat) |
+| `reconnectRoom` | C→S | `{ clientId, code, nick? }` reclaim seat after refresh |
 | `makeMove` | C→S | `{ clientId, code, from, to, fen, san, plySans?, gameOver?, bg?, stateSync? }` |
 | `resetGame` | C→S | host only — back to start FEN |
 | `leaveRoom` | C→S | leave seat |

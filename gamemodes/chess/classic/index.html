@@ -102,15 +102,26 @@
             <span class="mp-conn-dot" id="mpConnDot"></span>
             <span id="mpConnText">офлайн</span>
           </div>
+          <div class="mp-nick-row" id="mpNickRow">
+            <label class="field-label" for="mpNick" id="mpNickLabel">Ник</label>
+            <input type="text" id="mpNick" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="" />
+          </div>
           <div id="mpLobby">
             <div class="btn-row">
               <button type="button" class="btn btn-primary" id="mpCreateBtn">Создать комнату</button>
               <button type="button" class="btn btn-ghost" id="mpJoinToggleBtn">Войти</button>
+              <button type="button" class="btn btn-ghost" id="mpSpectateToggleBtn">Наблюдать</button>
             </div>
             <div id="mpJoinPanel" class="mp-hidden" style="margin-top:0.65rem">
               <div class="mp-join-row">
                 <input type="text" id="mpJoinCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
                 <button type="button" class="btn btn-primary" id="mpJoinBtn">OK</button>
+              </div>
+            </div>
+            <div id="mpSpectatePanel" class="mp-hidden" style="margin-top:0.65rem">
+              <div class="mp-join-row">
+                <input type="text" id="mpSpectateCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
+                <button type="button" class="btn btn-primary" id="mpSpectateBtn">OK</button>
               </div>
             </div>
             <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
@@ -131,6 +142,8 @@
               <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
               <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn"></button>
             </div>
+            <p class="mp-hint mp-hidden" id="mpSpectateBanner"></p>
+            <p class="mp-hint" id="mpSpectatorCount"></p>
             <p class="mp-hint" id="mpActiveHint"></p>
           </div>
         </section>
@@ -285,6 +298,7 @@
           mpConnected: "на сервере",
           mpWaiting: "ожидание соперника…",
           mpPlaying: "игра идёт",
+          mpOpponent: "Соперник",
           mpOpponentGone: "соперник отключился",
           mpError: "ошибка связи",
           mpSeatEmpty: "свободно",
@@ -393,6 +407,7 @@
           mpConnected: "on server",
           mpWaiting: "waiting for opponent…",
           mpPlaying: "match live",
+          mpOpponent: "Opponent",
           mpOpponentGone: "opponent disconnected",
           mpError: "connection error",
           mpSeatEmpty: "open",
@@ -460,10 +475,14 @@
         $("#undoBtn").text(t("undo"));
         $("#mpTitle").text(t("mpTitle"));
         $("#missionTitle").closest("section.card").toggleClass("mp-hidden", isMultiplayer());
-        $("#mpResetBtn").toggleClass("mp-hidden", !isMultiplayer() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
+        $("#mpResetBtn").toggleClass("mp-hidden", !canMpAct() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
         $("#mpCreateBtn").text(t("mpCreate"));
         $("#mpJoinToggleBtn").text(t("mpJoin"));
         $("#mpJoinBtn").text(t("mpJoinOk"));
+        $("#mpSpectateToggleBtn").text(t("mpSpectate"));
+        $("#mpSpectateBtn").text(t("mpSpectateOk"));
+        $("#mpNickLabel").text(t("mpNickLabel"));
+        loadNickIntoInput();
         $("#mpHint").text(t("mpHint"));
         $("#mpCodeLabel").text(t("mpCodeLabel"));
         $("#mpCopyBtn").text(t("mpCopy"));
@@ -590,6 +609,47 @@
       var mpRoom = null;
       var mpConnState = "offline"; // offline|connecting|connected|waiting|playing|error
       var mpApplyingRemote = false;
+
+      var NICK_KEY = "boardhack-nick";
+      var mpSpectating = false;
+
+      function sanitizeNickClient(raw) {
+        return String(raw == null ? "" : raw)
+          .replace(/[\u0000-\u001f\u007f]/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 24);
+      }
+
+      function getNick() {
+        var el = document.getElementById("mpNick");
+        var n = sanitizeNickClient(el ? el.value : "");
+        if (!n) {
+          try { n = sanitizeNickClient(localStorage.getItem(NICK_KEY) || ""); } catch (e) {}
+        }
+        if (el && el.value !== n) el.value = n;
+        try { if (n) localStorage.setItem(NICK_KEY, n); } catch (e) {}
+        return n;
+      }
+
+      function loadNickIntoInput() {
+        var el = document.getElementById("mpNick");
+        if (!el) return;
+        try {
+          var saved = sanitizeNickClient(localStorage.getItem(NICK_KEY) || "");
+          if (saved && !el.value) el.value = saved;
+        } catch (e) {}
+        el.setAttribute("placeholder", t("mpNickPlaceholder"));
+      }
+
+      function persistNickFromInput() {
+        var el = document.getElementById("mpNick");
+        if (!el) return;
+        var n = sanitizeNickClient(el.value);
+        el.value = n;
+        try { localStorage.setItem(NICK_KEY, n); } catch (e) {}
+      }
+
       var mpServerUrl = "https://chessboard-ulhg.onrender.com";
 
       function getOrCreateClientId() {
@@ -614,7 +674,13 @@
       }
 
       function isMultiplayer() {
-        return mpActive && !!mpSeat;
+        return mpActive && (!!mpSeat || mpSpectating);
+      }
+      function isSpectating() {
+        return mpActive && mpSpectating;
+      }
+      function canMpAct() {
+        return mpActive && !!mpSeat && !mpSpectating;
       }
 
       function mpOpponentConnected() {
@@ -658,8 +724,10 @@
         if (!mpRoom || !mpRoom.seats) return t("mpSeatEmpty");
         var s = mpRoom.seats[color];
         if (!s || !s.occupied) return t("mpSeatEmpty");
-        if (mpSeat === color) return t("mpSeatYou");
-        return s.connected ? t("mpSeatOpp") : t("mpSeatOffline");
+        var nick = sanitizeNickClient(s.nick || "");
+        if (mpSeat === color) return nick ? (nick + " (" + t("mpSeatYou") + ")") : t("mpSeatYou");
+        if (!s.connected) return nick ? (nick + " (" + t("mpSeatOffline") + ")") : t("mpSeatOffline");
+        return nick || t("mpSeatOpp");
       }
 
 
@@ -692,7 +760,7 @@
       function updateMpUI() {
         $("#mpTitle").text(t("mpTitle"));
         $("#missionTitle").closest("section.card").toggleClass("mp-hidden", isMultiplayer());
-        $("#mpResetBtn").toggleClass("mp-hidden", !isMultiplayer() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
+        $("#mpResetBtn").toggleClass("mp-hidden", !canMpAct() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
         if (!mpActive) {
           $("#mpLobby").removeClass("mp-hidden");
           $("#mpActive").addClass("mp-hidden");
@@ -735,6 +803,17 @@
         $(".sp-disabled-note").remove();
         $("#sideSelect").val(userColor);
         $("#sideLabel").text(userColor === "w" ? t("sideWhite") : t("sideBlack"));
+        var specN = (mpRoom && typeof mpRoom.spectatorCount === "number") ? mpRoom.spectatorCount : 0;
+        if (specN > 0) {
+          $("#mpSpectatorCount").removeClass("mp-hidden").text(t("mpSpectatorCount").replace("{n}", String(specN)));
+        } else {
+          $("#mpSpectatorCount").addClass("mp-hidden").text("");
+        }
+        if (mpSpectating) {
+          $("#mpSpectateBanner").removeClass("mp-hidden").text(t("mpYouSpectate"));
+        } else {
+          $("#mpSpectateBanner").addClass("mp-hidden").text("");
+        }
         updateOpponentLabel();
       }
 
@@ -763,7 +842,7 @@
         mpSocket.on("connect", function () {
           setMpConn(mpBothSeated() ? "playing" : (mpActive ? "waiting" : "connected"));
           if (mpActive && mpRoomCode) {
-            mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }, function (res) {
+            mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }, function (res) {
               if (res && res.ok) applyMpRoom(res);
             });
           }
@@ -816,14 +895,22 @@
         if (!res) return;
         if (res.room) mpRoom = res.room;
         if (res.code) mpRoomCode = res.code;
-        if (res.seat) {
+        var role = res.role || (res.room && res.room.yourRole) || null;
+        if (role === "spectator" || res.role === "spectator") {
+          mpSpectating = true;
+          mpSeat = null;
+        } else if (res.seat) {
+          mpSpectating = false;
           mpSeat = res.seat;
           userColor = res.seat;
           saveUserColor();
         } else if (res.room && res.room.yourSeat) {
+          mpSpectating = false;
           mpSeat = res.room.yourSeat;
           userColor = mpSeat;
           saveUserColor();
+        } else {
+          mpSpectating = false;
         }
         mpActive = true;
         try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
@@ -883,11 +970,12 @@
       }
 
       function enterMpFromCreate() {
+        persistNickFromInput();
         ensureMpSocket(function (err) {
           if (err) return;
           mpSocket.emit(
             "createRoom",
-            { clientId: getOrCreateClientId(), mode: "classic", preferredSeat: (userColor === "b" ? "b" : "w") },
+            { clientId: getOrCreateClientId(), mode: "classic", preferredSeat: (userColor === "b" ? "b" : "w"), nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 setMpConn("error", (res && res.error) || t("mpError"));
@@ -902,11 +990,12 @@
       function enterMpFromJoin(code) {
         code = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
         if (!code) return;
+        persistNickFromInput();
         ensureMpSocket(function (err) {
           if (err) return;
           mpSocket.emit(
             "joinRoom",
-            { clientId: getOrCreateClientId(), code: code },
+            { clientId: getOrCreateClientId(), code: code, nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 var errKey = res && res.error;
@@ -922,11 +1011,37 @@
         });
       }
 
+
+      function enterMpFromSpectate(code) {
+        code = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+        if (!code) return;
+        persistNickFromInput();
+        ensureMpSocket(function (err) {
+          if (err) return;
+          mpSocket.emit(
+            "spectateRoom",
+            { clientId: getOrCreateClientId(), code: code, mode: "classic", nick: getNick() },
+            function (res) {
+              if (!res || !res.ok) {
+                var errKey = res && res.error;
+                var msg = t("mpError");
+                if (errKey === "room_not_found") msg = t("mpNotFound");
+                if (errKey === "wrong_mode") msg = t("mpWrongMode");
+                setMpConn("error", msg);
+                return;
+              }
+              applyMpRoom(res);
+            }
+          );
+        });
+      }
+
       function leaveMultiplayer() {
         if (mpSocket && mpRoomCode) {
-          try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }); } catch (e) {}
+          try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
         }
         mpActive = false;
+        mpSpectating = false;
         mpRoomCode = null;
         mpSeat = null;
         mpRoom = null;
@@ -942,7 +1057,7 @@
       }
 
       function publishMpMove(from, to, san) {
-        if (!isMultiplayer() || !mpSocket) return;
+        if (!canMpAct() || !mpSocket) return;
         mpSocket.emit("makeMove", {
           clientId: getOrCreateClientId(),
           code: mpRoomCode,
@@ -972,7 +1087,7 @@
           if (err) return;
           mpSocket.emit(
             "reconnectRoom",
-            { clientId: getOrCreateClientId(), code: code },
+            { clientId: getOrCreateClientId(), code: code, nick: getNick() },
             function (res) {
               if (res && res.ok) {
                 applyMpRoom(res);
@@ -981,7 +1096,7 @@
               // fall back to join if seat not claimed yet
               mpSocket.emit(
                 "joinRoom",
-                { clientId: getOrCreateClientId(), code: code },
+                { clientId: getOrCreateClientId(), code: code, nick: getNick() },
                 function (res2) {
                   if (res2 && res2.ok) applyMpRoom(res2);
                   else if (roomParam) setMpConn("error", t("mpNotFound"));
@@ -1006,9 +1121,22 @@
 
       function updateOpponentLabel() {
         $("#metaBotK").text(t("metaOpp"));
-        $botLabel.text(isMultiplayer()
-          ? ""
-          : t("metaBot") + " \u2014 " + skillLabel(getSkillKey()));
+        if (!isMultiplayer()) {
+          $botLabel.text(t("metaBot") + " \u2014 " + skillLabel(getSkillKey()));
+          return;
+        }
+        var oppColor = mpSeat === "w" ? "b" : (mpSeat === "b" ? "w" : null);
+        var nick = "";
+        if (oppColor && mpRoom && mpRoom.seats && mpRoom.seats[oppColor] && mpRoom.seats[oppColor].occupied) {
+          nick = sanitizeNickClient(mpRoom.seats[oppColor].nick || "");
+        }
+        if (mpSpectating) {
+          var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? sanitizeNickClient(mpRoom.seats.w.nick || "") : "";
+          var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? sanitizeNickClient(mpRoom.seats.b.nick || "") : "";
+          $botLabel.text((wn || t("sideWhite")) + " vs " + (bn || t("sideBlack")));
+        } else {
+          $botLabel.text(nick || t("mpOpponent") || t("metaOpp"));
+        }
       }
 
       function isDiceMode() {
@@ -1950,9 +2078,9 @@
       function onDragStart(source, piece) {
         if (gameOver || botThinking || applyGameEndFromPosition()) return false;
         if (isMultiplayer()) {
-          if (!mpBothSeated()) return false;
+          if (!canMpAct() || !mpBothSeated()) return false;
           cancelScheduledBot();
-          if (game.turn() !== userColor) return false;
+          if (game.turn() !== userColor || game.turn() !== mpSeat) return false;
         } else {
           cancelScheduledBot();
           if (isHumanDiceTurnActive() || userHasRemainingDice()) {
@@ -1978,6 +2106,7 @@
         updateMoveList();
         updateDiceUI();
         if (isMultiplayer()) {
+          if (!canMpAct()) return "snapback";
           var san = plySans[plySans.length - 1];
           publishMpMove(source, target, san);
           updateStatus();
@@ -2070,7 +2199,7 @@
         cancelScheduledBot();
         if (isMultiplayer()) {
           if (mpSocket && mpRoom && mpRoom.hostId === getOrCreateClientId()) {
-            mpSocket.emit("resetGame", { clientId: getOrCreateClientId(), code: mpRoomCode });
+            mpSocket.emit("resetGame", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() });
           }
           // optimistic local reset; server will broadcast gameReset
           undoStack = [];
@@ -2228,12 +2357,23 @@
         $("#mpCreateBtn").on("click", function () { enterMpFromCreate(); });
         $("#mpJoinToggleBtn").on("click", function () {
           $("#mpJoinPanel").toggleClass("mp-hidden");
+          $("#mpSpectatePanel").addClass("mp-hidden");
           if (!$("#mpJoinPanel").hasClass("mp-hidden")) $("#mpJoinCode").trigger("focus");
         });
         $("#mpJoinBtn").on("click", function () { enterMpFromJoin($("#mpJoinCode").val()); });
         $("#mpJoinCode").on("keydown", function (e) {
           if (e.key === "Enter") enterMpFromJoin($("#mpJoinCode").val());
         });
+        $("#mpSpectateToggleBtn").on("click", function () {
+          $("#mpSpectatePanel").toggleClass("mp-hidden");
+          $("#mpJoinPanel").addClass("mp-hidden");
+          if (!$("#mpSpectatePanel").hasClass("mp-hidden")) $("#mpSpectateCode").trigger("focus");
+        });
+        $("#mpSpectateBtn").on("click", function () { enterMpFromSpectate($("#mpSpectateCode").val()); });
+        $("#mpSpectateCode").on("keydown", function (e) {
+          if (e.key === "Enter") enterMpFromSpectate($("#mpSpectateCode").val());
+        });
+        $("#mpNick").on("change blur", persistNickFromInput);
         $("#mpCopyBtn").on("click", function () {
           var link = buildShareLink(mpRoomCode);
           var done = function () {

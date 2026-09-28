@@ -340,15 +340,26 @@
           <span class="mp-conn-dot" id="mpConnDot"></span>
           <span id="mpConnText">офлайн</span>
         </div>
+        <div class="mp-nick-row" id="mpNickRow">
+          <label class="field-label" for="mpNick" id="mpNickLabel">Ник</label>
+          <input type="text" id="mpNick" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="" />
+        </div>
         <div id="mpLobby">
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="mpCreateBtn">Создать комнату</button>
             <button type="button" class="btn btn-ghost" id="mpJoinToggleBtn">Войти</button>
+            <button type="button" class="btn btn-ghost" id="mpSpectateToggleBtn">Наблюдать</button>
           </div>
           <div id="mpJoinPanel" class="mp-hidden" style="margin-top:0.65rem">
             <div class="mp-join-row">
               <input type="text" id="mpJoinCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
               <button type="button" class="btn btn-primary" id="mpJoinBtn">OK</button>
+            </div>
+          </div>
+          <div id="mpSpectatePanel" class="mp-hidden" style="margin-top:0.65rem">
+            <div class="mp-join-row">
+              <input type="text" id="mpSpectateCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
+              <button type="button" class="btn btn-primary" id="mpSpectateBtn">OK</button>
             </div>
           </div>
           <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
@@ -369,6 +380,8 @@
             <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
             <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn"></button>
           </div>
+          <p class="mp-hint mp-hidden" id="mpSpectateBanner"></p>
+          <p class="mp-hint" id="mpSpectatorCount"></p>
           <p class="mp-hint" id="mpActiveHint"></p>
         </div>
       </section>
@@ -973,6 +986,47 @@
   var mpApplyingRemote = false;
   var mpPublishTimer = null;
 
+  var NICK_KEY = "boardhack-nick";
+  var mpSpectating = false;
+
+  function sanitizeNickClient(raw) {
+    return String(raw == null ? "" : raw)
+      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 24);
+  }
+
+  function getNick() {
+    var el = document.getElementById("mpNick");
+    var n = sanitizeNickClient(el ? el.value : "");
+    if (!n) {
+      try { n = sanitizeNickClient(localStorage.getItem(NICK_KEY) || ""); } catch (e) {}
+    }
+    if (el && el.value !== n) el.value = n;
+    try { if (n) localStorage.setItem(NICK_KEY, n); } catch (e) {}
+    return n;
+  }
+
+  function loadNickIntoInput() {
+    var el = document.getElementById("mpNick");
+    if (!el) return;
+    try {
+      var saved = sanitizeNickClient(localStorage.getItem(NICK_KEY) || "");
+      if (saved && !el.value) el.value = saved;
+    } catch (e) {}
+    el.setAttribute("placeholder", t("mpNickPlaceholder"));
+  }
+
+  function persistNickFromInput() {
+    var el = document.getElementById("mpNick");
+    if (!el) return;
+    var n = sanitizeNickClient(el.value);
+    el.value = n;
+    try { localStorage.setItem(NICK_KEY, n); } catch (e) {}
+  }
+
+
   function getOrCreateClientId() {
     var id = null;
     try { id = localStorage.getItem(CLIENT_ID_KEY); } catch (e) {}
@@ -994,7 +1048,9 @@
     return DEFAULT_SERVER;
   }
 
-  function isMultiplayer() { return mpActive && !!mpSeat; }
+  function isMultiplayer() { return mpActive && (!!mpSeat || mpSpectating); }
+  function isSpectating() { return mpActive && mpSpectating; }
+  function canMpAct() { return mpActive && !!mpSeat && !mpSpectating; }
 
   function mpBothSeated() {
     if (!mpRoom || !mpRoom.seats) return false;
@@ -1028,8 +1084,10 @@
     if (!mpRoom || !mpRoom.seats) return t("mpSeatEmpty");
     var s = mpRoom.seats[color];
     if (!s || !s.occupied) return t("mpSeatEmpty");
-    if (mpSeat === color) return t("mpSeatYou");
-    return s.connected ? t("mpSeatOpp") : t("mpSeatOffline");
+    var nick = sanitizeNickClient(s.nick || "");
+    if (mpSeat === color) return nick ? (nick + " (" + t("mpSeatYou") + ")") : t("mpSeatYou");
+    if (!s.connected) return nick ? (nick + " (" + t("mpSeatOffline") + ")") : t("mpSeatOffline");
+    return nick || t("mpSeatOpp");
   }
 
   function mpAloneCanSwitch() {
@@ -1061,9 +1119,24 @@
 
   function updateOpponentLabel() {
     document.getElementById("metaOppK").textContent = t("metaOpp");
-    document.getElementById("oppLabel").textContent = isMultiplayer()
-      ? t("mpOpponent")
-      : (t("metaBot") + " — " + t(diffLabelKey()));
+    var label;
+    if (isMultiplayer()) {
+      var oppColor = mpSeat === "w" ? "b" : (mpSeat === "b" ? "w" : null);
+      var nick = "";
+      if (oppColor && mpRoom && mpRoom.seats && mpRoom.seats[oppColor] && mpRoom.seats[oppColor].occupied) {
+        nick = sanitizeNickClient(mpRoom.seats[oppColor].nick || "");
+      }
+      if (mpSpectating) {
+        var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? sanitizeNickClient(mpRoom.seats.w.nick || "") : "";
+        var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? sanitizeNickClient(mpRoom.seats.b.nick || "") : "";
+        label = (wn || t("sideWhite")) + " vs " + (bn || t("sideBlack"));
+      } else {
+        label = nick || t("mpOpponent");
+      }
+    } else {
+      label = t("metaBot") + " — " + t(diffLabelKey());
+    }
+    document.getElementById("oppLabel").textContent = label;
   }
 
   function updateMpUI() {
@@ -1071,7 +1144,7 @@
     if (!title) return;
     title.textContent = t("mpTitle");
     toggleClass(document.getElementById("missionCard"), "mp-hidden", isMultiplayer());
-    var showReset = isMultiplayer() && mpRoom && mpRoom.hostId === getOrCreateClientId();
+    var showReset = canMpAct() && mpRoom && mpRoom.hostId === getOrCreateClientId();
     toggleClass(document.getElementById("mpResetBtn"), "mp-hidden", !showReset);
     if (!mpActive) {
       toggleClass(document.getElementById("mpLobby"), "mp-hidden", false);
@@ -1106,6 +1179,17 @@
     ah.textContent = both ? "" : t("mpWaitingHint");
     document.getElementById("sideSelect").value = userColor;
     document.getElementById("sideLabel").textContent = userColor === "w" ? t("sideWhite") : t("sideBlack");
+    var specN = (mpRoom && typeof mpRoom.spectatorCount === "number") ? mpRoom.spectatorCount : 0;
+    var sc = document.getElementById("mpSpectatorCount");
+    if (sc) {
+      if (specN > 0) { toggleClass(sc, "mp-hidden", false); sc.textContent = t("mpSpectatorCount").replace("{n}", String(specN)); }
+      else { toggleClass(sc, "mp-hidden", true); sc.textContent = ""; }
+    }
+    var ban = document.getElementById("mpSpectateBanner");
+    if (ban) {
+      if (mpSpectating) { toggleClass(ban, "mp-hidden", false); ban.textContent = t("mpYouSpectate"); }
+      else { toggleClass(ban, "mp-hidden", true); ban.textContent = ""; }
+    }
     updateOpponentLabel();
   }
 
@@ -1171,7 +1255,7 @@
   }
 
   function publishBgState(extra) {
-    if (!isMultiplayer() || !mpSocket || mpApplyingRemote) return;
+    if (!canMpAct() || !mpSocket || mpApplyingRemote) return;
     extra = extra || {};
     var bg = serializeBgState();
     var payload = {
@@ -1208,7 +1292,7 @@
     mpSocket.on("connect", function () {
       setMpConn(mpBothSeated() ? "playing" : (mpActive ? "waiting" : "connected"));
       if (mpActive && mpRoomCode) {
-        mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }, function (res) {
+        mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }, function (res) {
           if (res && res.ok) applyMpRoom(res);
         });
       }
@@ -1279,10 +1363,19 @@
     if (!res) return;
     if (res.room) mpRoom = res.room;
     if (res.code) mpRoomCode = res.code;
-    if (res.seat) { mpSeat = res.seat; userColor = res.seat; try { localStorage.setItem(SIDE_KEY, userColor); } catch (e) {} }
-    else if (res.room && res.room.yourSeat) {
+    var role = res.role || (res.room && res.room.yourRole) || null;
+    if (role === "spectator" || res.role === "spectator") {
+      mpSpectating = true;
+      mpSeat = null;
+    } else if (res.seat) {
+      mpSpectating = false;
+      mpSeat = res.seat; userColor = res.seat; try { localStorage.setItem(SIDE_KEY, userColor); } catch (e) {}
+    } else if (res.room && res.room.yourSeat) {
+      mpSpectating = false;
       mpSeat = res.room.yourSeat; userColor = mpSeat;
       try { localStorage.setItem(SIDE_KEY, userColor); } catch (e) {}
+    } else {
+      mpSpectating = false;
     }
     mpActive = true;
     try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
@@ -1303,10 +1396,12 @@
     ensureMpSocket(function (err) {
       if (err) return;
       clearTurnTimers();
+      persistNickFromInput();
       mpSocket.emit("createRoom", {
         clientId: getOrCreateClientId(),
         mode: GAME_MODE,
-        preferredSeat: userColor === "b" ? "b" : "w"
+        preferredSeat: userColor === "b" ? "b" : "w",
+        nick: getNick()
       }, function (res) {
         if (!res || !res.ok) { setMpConn("error", (res && res.error) || t("mpError")); return; }
         applyMpRoom(res);
@@ -1320,10 +1415,12 @@
     ensureMpSocket(function (err) {
       if (err) return;
       clearTurnTimers();
+      persistNickFromInput();
       mpSocket.emit("joinRoom", {
         clientId: getOrCreateClientId(),
         code: code,
-        mode: GAME_MODE
+        mode: GAME_MODE,
+        nick: getNick()
       }, function (res) {
         if (!res || !res.ok) {
           var errKey = res && res.error;
@@ -1339,11 +1436,39 @@
     });
   }
 
+
+  function enterMpFromSpectate(code) {
+    code = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if (!code) return;
+    persistNickFromInput();
+    ensureMpSocket(function (err) {
+      if (err) return;
+      if (typeof clearTurnTimers === "function") clearTurnTimers();
+      mpSocket.emit("spectateRoom", {
+        clientId: getOrCreateClientId(),
+        code: code,
+        mode: GAME_MODE,
+        nick: getNick()
+      }, function (res) {
+        if (!res || !res.ok) {
+          var errKey = res && res.error;
+          var msg = t("mpError");
+          if (errKey === "room_not_found") msg = t("mpNotFound");
+          if (errKey === "wrong_mode" && t("mpWrongMode") !== "mpWrongMode") msg = t("mpWrongMode");
+          setMpConn("error", msg);
+          return;
+        }
+        applyMpRoom(res);
+      });
+    });
+  }
+
   function leaveMultiplayer() {
     if (mpSocket && mpRoomCode) {
       try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }); } catch (e) {}
     }
     mpActive = false;
+    mpSpectating = false;
     mpRoomCode = null;
     mpSeat = null;
     mpRoom = null;
@@ -1366,9 +1491,9 @@
     if (!code) return;
     ensureMpSocket(function (err) {
       if (err) return;
-      mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: code }, function (res) {
+      mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: code, nick: getNick() }, function (res) {
         if (res && res.ok) { applyMpRoom(res); return; }
-        mpSocket.emit("joinRoom", { clientId: getOrCreateClientId(), code: code, mode: GAME_MODE }, function (res2) {
+        mpSocket.emit("joinRoom", { clientId: getOrCreateClientId(), code: code, mode: GAME_MODE, nick: getNick() }, function (res2) {
           if (res2 && res2.ok) applyMpRoom(res2);
           else if (roomParam) setMpConn("error", t("mpNotFound"));
         });
@@ -1380,7 +1505,9 @@
     document.getElementById("mpCreateBtn").addEventListener("click", function () { enterMpFromCreate(); });
     document.getElementById("mpJoinToggleBtn").addEventListener("click", function () {
       var panel = document.getElementById("mpJoinPanel");
+      var sp = document.getElementById("mpSpectatePanel");
       panel.classList.toggle("mp-hidden");
+      if (sp) sp.classList.add("mp-hidden");
       if (!panel.classList.contains("mp-hidden")) document.getElementById("mpJoinCode").focus();
     });
     document.getElementById("mpJoinBtn").addEventListener("click", function () {
@@ -1389,6 +1516,24 @@
     document.getElementById("mpJoinCode").addEventListener("keydown", function (e) {
       if (e.key === "Enter") enterMpFromJoin(document.getElementById("mpJoinCode").value);
     });
+    document.getElementById("mpSpectateToggleBtn").addEventListener("click", function () {
+      var panel = document.getElementById("mpSpectatePanel");
+      var jp = document.getElementById("mpJoinPanel");
+      panel.classList.toggle("mp-hidden");
+      if (jp) jp.classList.add("mp-hidden");
+      if (!panel.classList.contains("mp-hidden")) document.getElementById("mpSpectateCode").focus();
+    });
+    document.getElementById("mpSpectateBtn").addEventListener("click", function () {
+      enterMpFromSpectate(document.getElementById("mpSpectateCode").value);
+    });
+    document.getElementById("mpSpectateCode").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") enterMpFromSpectate(document.getElementById("mpSpectateCode").value);
+    });
+    var nickEl = document.getElementById("mpNick");
+    if (nickEl) {
+      nickEl.addEventListener("change", persistNickFromInput);
+      nickEl.addEventListener("blur", persistNickFromInput);
+    }
     document.getElementById("mpCopyBtn").addEventListener("click", function () {
       var link = buildShareLink(mpRoomCode);
       var btn = document.getElementById("mpCopyBtn");
@@ -1676,6 +1821,13 @@
     document.getElementById("mpCreateBtn").textContent = t("mpCreate");
     document.getElementById("mpJoinToggleBtn").textContent = t("mpJoin");
     document.getElementById("mpJoinBtn").textContent = t("mpJoinOk");
+    var stBtn = document.getElementById("mpSpectateToggleBtn");
+    if (stBtn) stBtn.textContent = t("mpSpectate");
+    var sbBtn = document.getElementById("mpSpectateBtn");
+    if (sbBtn) sbBtn.textContent = t("mpSpectateOk");
+    var nl = document.getElementById("mpNickLabel");
+    if (nl) nl.textContent = t("mpNickLabel");
+    loadNickIntoInput();
     document.getElementById("mpHint").textContent = t("mpHint");
     document.getElementById("mpCodeLabel").textContent = t("mpCodeLabel");
     document.getElementById("mpCopyBtn").textContent = t("mpCopy");
@@ -2088,11 +2240,19 @@
   wireMp();
   setMpConn("offline");
 
-  // Paint board immediately — applyLang also renders and needs state
+  // Paint board immediately on load (hard-refresh safe).
+  // State must exist before applyLang/renderAll; never leave bgBoard empty.
   state = initialState();
   phase = "roll";
   headLeft = 1;
+  remainingDice = [];
+  rolledDice = [];
+  selectedFrom = null;
+  moveHistory = [];
+  botThinking = false;
+  turnPlays = [];
   applyLang();
+  renderAll();
 
   var paramsEarly = new URLSearchParams(window.location.search);
   var maybeMp = !!(paramsEarly.get("room") || (function () {
@@ -2103,6 +2263,11 @@
   if (!isMultiplayer() && !maybeMp) {
     newGameLocal(); // render + schedule auto-roll
   } else {
+    if (!state) {
+      state = initialState();
+      phase = "roll";
+      headLeft = 1;
+    }
     renderAll(); // board visible while MP lobby / rejoin
   }
 })();

@@ -11,7 +11,7 @@ Dark-themed multi-game hub: chess, checkers, and backgammon. Local bots and mult
 - **Backgammon → Classic** — Russian long nardy vs local bot or online multiplayer (same direction, no hitting, head rule)
 - **Backgammon → Short** — short/Western backgammon vs local bot or online multiplayer (hitting, bar, bearing off)
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
-- **Multiplayer** — room codes via Socket.IO server (`server/`)
+- **Multiplayer** — room codes via Socket.IO server (`server/`); nicknames + spectate by code
 - **i18n** — Russian / English UI
 
 ## Quick start (static site)

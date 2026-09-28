@@ -1146,3 +1146,30 @@ button.btn:disabled {
 .rules-box ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.55rem; }
 .rules-box li::marker { color: var(--accent); }
 .rules-box strong { color: var(--text); font-weight: 500; }
+
+
+.mp-nick-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.mp-nick-row input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+.mp-nick-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+#mpSpectateBanner {
+  color: var(--warn);
+  font-weight: 500;
+}
