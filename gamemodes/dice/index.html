@@ -569,7 +569,7 @@
       var diceSide = null;
       var lastSkipMsg = "";
       var consecutiveSkipPasses = 0;
-      var DICE_REVEAL_MS = 500;
+      var DICE_REVEAL_MS = 750;
       var diceRevealUntil = 0;
       var diceRevealTimerId = null;
       var mpIgnoreDiceCountChange = false;
@@ -1975,7 +1975,7 @@
 
       /**
        * Roll dice for side and show UI immediately.
-       * opts.deferResolve: skip auto-pass so caller can wait ~500ms (dice reveal) first.
+       * opts.deferResolve: skip auto-pass so caller can wait ~750ms (dice reveal) first.
        */
       function beginDiceTurnFor(side, opts) {
         opts = opts || {};
