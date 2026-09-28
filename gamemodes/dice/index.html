@@ -979,7 +979,10 @@
           if (board) board.position(game.fen());
           clearSelection();
           updateMoveList();
-          updateDiceUI();
+          if (msg.dice && msg.dice.diceSide && msg.dice.remainingDice && msg.dice.remainingDice.length) {
+            setSideToMove(msg.dice.diceSide);
+          }
+          refreshDiceHighlights();
           if (msg.status === "finished" || applyGameEndFromPosition()) {
             /* status updated inside */
           } else {
@@ -1346,6 +1349,11 @@
         return names;
       }
 
+      /** Re-classify die playability (green/red/dim). Call after every ply, not only on roll. */
+      function refreshDiceHighlights() {
+        updateDiceUI();
+      }
+
       function updateDiceUI() {
         syncModeSelects();
         if (!isDiceMode()) {
@@ -1357,6 +1365,13 @@
         var html = "";
         var colorChar = diceSide || game.turn() || "w";
         var evalSide = diceSide || game.turn() || "w";
+        // After a ply FEN turn flips, but diceSide still owns remaining dice.
+        // Classify geometry for evalSide or blocked dice falsely look playable (opp moves).
+        if (diceSide && remainingDice.length > 0 && game.turn() !== diceSide) {
+          setSideToMove(diceSide);
+          evalSide = diceSide;
+          colorChar = diceSide;
+        }
         for (var i = 0; i < diceRoll.length; i++) {
           var d = diceRoll[i];
           var cls = "die";
@@ -1372,7 +1387,7 @@
             var onBoard = sideHasPieceType(evalSide, d.type);
             if (!onBoard) {
               cls += " missing";
-            } else if (hasLegalForType(d.type)) {
+            } else if (hasLegalForType(d.type, evalSide)) {
               cls += " playable";
             } else {
               cls += " blocked";
@@ -1416,8 +1431,18 @@
         return game.moves(opts);
       }
 
-      /** True if this piece type has a geometry (dice) / legal (classic) move now. */
-      function hasLegalForType(pieceType) {
+      /**
+       * True if this piece type has a geometry (dice) / legal (classic) move now
+       * for the given side (defaults to active diceSide, else game.turn()).
+       * Must not use a flipped post-ply turn — that scores the opponent and paints
+       * blocked dice green.
+       */
+      function hasLegalForType(pieceType, side) {
+        side = side || diceSide || game.turn();
+        if (side && game.turn() !== side) {
+          setSideToMove(side);
+        }
+        if (side && game.turn() !== side) return false;
         var all = getModeMoves();
         for (var i = 0; i < all.length; i++) {
           if (all[i].piece === pieceType) return true;
@@ -1722,6 +1747,9 @@
         var prev = parts[1];
         if (prev === color) return true;
         parts[1] = color;
+        // EP square is only valid for the side that did not just double-push.
+        // Clearing it lets chess.js accept a mid dice-turn side restore.
+        parts[3] = "-";
         // chess.js increments fullmove when Black moves → White; undo that if restoring Black
         if (color === "b" && prev === "w") {
           var fm = parseInt(parts[5], 10) || 1;
@@ -2555,10 +2583,10 @@
               }
               board.position(game.fen());
               updateMoveList();
-              updateDiceUI();
 
               // End before any multi-move side restore (mate / king capture)
               if (applyGameEndFromPosition()) {
+                refreshDiceHighlights();
                 finishBotThinking();
                 return;
               }
@@ -2566,11 +2594,12 @@
               if (isDiceMode() && remainingDice.length > 0) {
                 setSideToMove(botColor());
                 if (!endTurnIfNoPlayableDice(botColor())) {
+                  refreshDiceHighlights();
                   window.setTimeout(botPly, 180);
                   return;
                 }
               }
-              updateDiceUI();
+              refreshDiceHighlights();
               startUserTurnAfterBot();
             } else {
               undoStack.pop();
@@ -2629,8 +2658,8 @@
         if (!tryMakeUserMove(source, target)) return "snapback";
         board.position(game.fen());
         updateMoveList();
-        updateDiceUI();
         var handOff = afterUserDicePly();
+        refreshDiceHighlights();
         if (isMultiplayer()) {
           var san = plySans[plySans.length - 1];
           publishMpMove(source, target, san);
@@ -2695,8 +2724,8 @@
 
         board.position(game.fen());
         updateMoveList();
-        updateDiceUI();
         var handOff = afterUserDicePly();
+        refreshDiceHighlights();
         if (isMultiplayer()) {
           var san = plySans[plySans.length - 1];
           publishMpMove(from, square, san);

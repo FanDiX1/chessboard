@@ -499,24 +499,31 @@ button.btn:disabled {
   box-shadow: none;
 }
 
-/* Dice playability: green = geometry move available, red = on board but blocked, dim = missing */
-.die.playable {
+/* Dice playability: green = geometry move available, red = on board but blocked, dim = missing.
+   Scoped under #diceFaces with explicit colors so .die / .used / .skipped cannot win. */
+#diceFaces .die.playable {
   border-color: #9fef00;
   box-shadow: 0 0 14px rgba(159, 239, 0, 0.45);
-  background: rgba(159, 239, 0, 0.08);
+  background: rgba(159, 239, 0, 0.12);
+  opacity: 1;
+  filter: none;
 }
 
-.die.blocked {
-  border-color: var(--danger);
-  box-shadow: 0 0 14px rgba(255, 62, 62, 0.4);
-  background: rgba(255, 62, 62, 0.08);
+#diceFaces .die.blocked {
+  border-color: #ff3e3e;
+  box-shadow: 0 0 16px rgba(255, 62, 62, 0.55);
+  background: rgba(255, 62, 62, 0.2);
+  opacity: 1;
+  filter: none;
+  color: #ff3e3e;
 }
 
-.die.missing {
+#diceFaces .die.missing {
   opacity: 0.35;
   filter: grayscale(0.35);
   box-shadow: none;
   border-color: var(--border);
+  background: var(--bg-elevated);
 }
 
 /* Dice-mode turn-grouped history */
