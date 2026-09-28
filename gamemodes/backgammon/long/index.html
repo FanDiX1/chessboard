@@ -301,7 +301,7 @@
         <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
       </div>
       <div class="bg-dice-row" id="diceRow" style="margin-top:0.85rem">
-        <button type="button" class="btn btn-primary" id="rollBtn"></button>
+        <button type="button" class="btn btn-primary" id="rollBtn" style="display:none" hidden aria-hidden="true"></button>
         <div id="diceDisplay" class="bg-dice-row"></div>
         <span class="bg-pip" id="pipInfo"></span>
       </div>
@@ -419,7 +419,7 @@
       turnWhite: "Белые",
       turnBlack: "Чёрные",
       thinking: "Бот думает…",
-      statusRoll: "Бросьте кости",
+      statusRoll: "Бросок костей…",
       statusMove: "Сходите шашкой",
       statusWaitBotRoll: "Бот бросает кости…",
       statusWaitBotMove: "Бот ходит…",
@@ -461,7 +461,7 @@
       turnWhite: "White",
       turnBlack: "Black",
       thinking: "Bot thinking…",
-      statusRoll: "Roll the dice",
+      statusRoll: "Rolling…",
       statusMove: "Move a checker",
       statusWaitBotRoll: "Bot is rolling…",
       statusWaitBotMove: "Bot is moving…",
@@ -488,6 +488,8 @@
   var moveHistory = [];
   var botThinking = false;
   var turnPlays = [];
+  var rollTimer = null;
+  var passTimer = null;
   var headLeft = 1;
 
   try {
@@ -999,9 +1001,8 @@
       }
     }
     el.innerHTML = html;
-    var canRoll = phase === "roll" && isUserTurn() && !botThinking && !state.winner;
-    document.getElementById("rollBtn").disabled = !canRoll;
-    document.getElementById("rollBtn").style.display = (phase === "over") ? "none" : "";
+    // Auto-roll: hide manual roll button from primary flow
+    document.getElementById("rollBtn").style.display = "none";
   }
 
   function renderHistory() {
@@ -1108,6 +1109,11 @@
     return [a, b];
   }
 
+  function clearTurnTimers() {
+    if (rollTimer) { clearTimeout(rollTimer); rollTimer = null; }
+    if (passTimer) { clearTimeout(passTimer); passTimer = null; }
+  }
+
   function startTurnRoll(values) {
     rolledDice = values.slice();
     remainingDice = values.slice();
@@ -1116,7 +1122,16 @@
     headLeft = 1;
     refreshTurnPlays();
     if (!turnPlays.length || (turnPlays.length === 1 && !turnPlays[0].moves.length)) {
-      endTurnPass();
+      botThinking = false;
+      renderAll();
+      document.getElementById("statusText").textContent = t("statusNoMove");
+      document.getElementById("thinking").classList.remove("show");
+      clearTurnTimers();
+      passTimer = setTimeout(function () {
+        passTimer = null;
+        if (state.winner) return;
+        endTurnPass();
+      }, 900);
       return;
     }
     renderAll();
@@ -1140,7 +1155,7 @@
     state.turn = opp(state.turn);
     phase = "roll";
     renderAll();
-    maybeBotRoll();
+    scheduleAutoRoll();
   }
 
   function endTurnAfterMoves() {
@@ -1157,7 +1172,7 @@
     phase = "roll";
     rolledDice = [];
     renderAll();
-    maybeBotRoll();
+    scheduleAutoRoll();
   }
 
   function consumeDie(die) {
@@ -1262,22 +1277,33 @@
   }
 
   function doRoll() {
-    if (phase !== "roll" || !isUserTurn() || botThinking || state.winner) return;
+    // Kept for compatibility; normal play uses scheduleAutoRoll
+    if (phase !== "roll" || botThinking || state.winner) return;
+    clearTurnTimers();
     var vals = rollDiceValues();
+    if (!isUserTurn()) botThinking = false;
     startTurnRoll(vals);
   }
 
-  function maybeBotRoll() {
+  function scheduleAutoRoll() {
     if (state.winner || phase !== "roll") return;
-    if (isUserTurn()) return;
-    botThinking = true;
-    updateStatus();
-    document.getElementById("thinking").classList.add("show");
-    setTimeout(function () {
+    clearTurnTimers();
+    var delay = 400 + Math.floor(Math.random() * 301); // ~400–700ms
+    if (!isUserTurn()) {
+      botThinking = true;
+      updateStatus();
+      document.getElementById("thinking").classList.add("show");
+    } else {
+      botThinking = false;
+      updateStatus();
+    }
+    rollTimer = setTimeout(function () {
+      rollTimer = null;
+      if (state.winner || phase !== "roll") return;
       var vals = rollDiceValues();
       botThinking = false;
       startTurnRoll(vals);
-    }, difficulty === "easy" ? 280 : difficulty === "hard" ? 500 : 380);
+    }, delay);
   }
 
   function applyBotStep(move) {
@@ -1347,6 +1373,7 @@
   }
 
   function newGame() {
+    clearTurnTimers();
     state = initialState();
     remainingDice = [];
     rolledDice = [];
@@ -1357,7 +1384,7 @@
     turnPlays = [];
     headLeft = 1;
     renderAll();
-    maybeBotRoll();
+    scheduleAutoRoll();
   }
 
   var dragFrom = null;
@@ -1398,7 +1425,7 @@
   document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
   document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
   document.getElementById("newGameBtn").addEventListener("click", newGame);
-  document.getElementById("rollBtn").addEventListener("click", doRoll);
+  // rollBtn hidden; dice auto-roll via scheduleAutoRoll
   document.getElementById("rulesBtn").addEventListener("click", function () {
     document.getElementById("rulesDialog").showModal();
   });
