@@ -36,6 +36,7 @@ Flow:
 
 | Event | Direction | Purpose |
 |-------|-----------|---------|
+| `listRooms` | C→S | `{ mode? }` → `{ mode, rooms[] }` (public lobby: code, seats nicks, spectators, joinable); also pushed as `roomList` |
 | `createRoom` | C→S | `{ clientId, mode?, preferredSeat?, nick? }` → `{ ok, code, seat, role, room }` |
 | `joinRoom` | C→S | `{ clientId, code, mode?, nick? }` → `{ ok, code, seat, role, room }` |
 | `spectateRoom` | C→S | `{ clientId, code, mode?, nick? }` → join as spectator (no seat) |

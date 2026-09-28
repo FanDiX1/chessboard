@@ -1173,3 +1173,79 @@ button.btn:disabled {
   color: var(--warn);
   font-weight: 500;
 }
+
+
+/* Public multiplayer room list (lobby) */
+.mp-room-list {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-soft);
+}
+.mp-room-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.mp-room-list-title {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.mp-rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.mp-room-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+.mp-room-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 8rem;
+}
+.mp-room-code {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+.mp-room-seats {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+.mp-room-specs {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.9;
+}
+.mp-room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.mp-room-actions .btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+}
+#mpRoomsEmpty {
+  margin: 0.25rem 0 0;
+}

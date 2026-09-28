@@ -316,6 +316,7 @@ function createRoom(clientId, mode) {
     spectators: new Map(),
     hostId: clientId,
     status: "waiting",
+    createdAt: Date.now(),
     updatedAt: Date.now(),
     dice: null,
     diceCount: 2,
@@ -364,9 +365,90 @@ function freeSocketFromOtherRooms(socketId, keepCode) {
   }
 }
 
+
+function roomIsNonEmpty(room) {
+  if (room.seats && (room.seats.w || room.seats.b)) return true;
+  if (spectatorCount(room) > 0) return true;
+  // Keep rooms that still have disconnected seated players (reconnect window)
+  return false;
+}
+
+function roomListEntry(room) {
+  const w = room.seats && room.seats.w;
+  const b = room.seats && room.seats.b;
+  const openSeats = (w ? 0 : 1) + (b ? 0 : 1);
+  return {
+    code: room.code,
+    mode: room.mode,
+    seats: {
+      w: w ? sanitizeNick(w.nick || "") : "",
+      b: b ? sanitizeNick(b.nick || "") : "",
+    },
+    spectatorCount: spectatorCount(room),
+    createdAt: room.createdAt || room.updatedAt || 0,
+    joinable: openSeats > 0,
+    openSeats,
+  };
+}
+
+function buildRoomList(modeFilter) {
+  const want = modeFilter ? normalizeMode(modeFilter) : null;
+  const list = [];
+  for (const room of rooms.values()) {
+    if (!roomIsNonEmpty(room)) continue;
+    if (want && room.mode !== want) continue;
+    list.push(roomListEntry(room));
+  }
+  list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return list;
+}
+
+function lobbyChannel(mode) {
+  return "lobby:" + normalizeMode(mode);
+}
+
+const LOBBY_MODES = ["classic", "dice", "checkers", "backgammon", "backgammon-long"];
+
+function broadcastRoomList(modeOrRoom) {
+  let modes;
+  if (!modeOrRoom) {
+    modes = LOBBY_MODES;
+  } else if (typeof modeOrRoom === "string") {
+    modes = [normalizeMode(modeOrRoom)];
+  } else if (modeOrRoom.mode) {
+    modes = [normalizeMode(modeOrRoom.mode)];
+  } else {
+    modes = LOBBY_MODES;
+  }
+  for (const m of modes) {
+    io.to(lobbyChannel(m)).emit("roomList", { mode: m, rooms: buildRoomList(m) });
+  }
+}
+
 io.on("connection", (socket) => {
   socket.data.clientId = null;
   socket.data.roomCode = null;
+  socket.data.lobbyMode = null;
+
+  socket.on("listRooms", (payload, ack) => {
+    try {
+      const rawMode = payload && payload.mode;
+      const mode = rawMode ? normalizeMode(rawMode) : null;
+      if (socket.data.lobbyMode) {
+        socket.leave(lobbyChannel(socket.data.lobbyMode));
+        socket.data.lobbyMode = null;
+      }
+      if (mode) {
+        socket.data.lobbyMode = mode;
+        socket.join(lobbyChannel(mode));
+      }
+      const out = { mode: mode || null, rooms: buildRoomList(mode) };
+      if (typeof ack === "function") ack(out);
+      else socket.emit("roomList", out);
+    } catch (e) {
+      if (typeof ack === "function") ack({ mode: null, rooms: [], error: e.message || "list failed" });
+    }
+  });
 
   socket.on("createRoom", (payload, ack) => {
     try {
@@ -396,6 +478,7 @@ io.on("connection", (socket) => {
       if (typeof ack === "function") ack(out);
       else socket.emit("roomCreated", out);
       emitRoom(room);
+      broadcastRoomList(room);
     } catch (e) {
       if (typeof ack === "function") ack({ ok: false, error: e.message || "create failed" });
     }
@@ -442,6 +525,7 @@ io.on("connection", (socket) => {
       if (typeof ack === "function") ack(out);
       else socket.emit("roomJoined", out);
       emitRoom(room);
+      broadcastRoomList(room);
       socket.to(code).emit("opponentJoined", { seat, room: publicRoom(room, null) });
     } catch (e) {
       if (typeof ack === "function") ack({ ok: false, error: e.message || "join failed" });
@@ -522,6 +606,7 @@ io.on("connection", (socket) => {
         };
         if (typeof ack === "function") ack(asPlayer);
         emitRoom(room);
+        broadcastRoomList(room);
         return;
       }
 
@@ -544,6 +629,7 @@ io.on("connection", (socket) => {
       if (typeof ack === "function") ack(out);
       else socket.emit("roomSpectating", out);
       emitRoom(room);
+      broadcastRoomList(room);
     } catch (e) {
       if (typeof ack === "function") ack({ ok: false, error: e.message || "spectate failed" });
     }
@@ -770,9 +856,11 @@ io.on("connection", (socket) => {
         socket.leave(code);
         socket.to(code).emit("opponentLeft", { seat });
         emitRoom(room);
+        broadcastRoomList(room);
       } else if (removeSpectator(room, clientId)) {
         socket.leave(code);
         emitRoom(room);
+        broadcastRoomList(room);
       }
     }
     socket.data.roomCode = null;
@@ -795,6 +883,7 @@ io.on("connection", (socket) => {
         touch(room);
         socket.to(code).emit("opponentDisconnected", { seat });
         emitRoom(room);
+        // seat still occupied (reconnect window) — list nicks unchanged
       }
       return;
     }
@@ -802,6 +891,7 @@ io.on("connection", (socket) => {
     if (spec && spec.socketId === socket.id) {
       removeSpectator(room, clientId);
       emitRoom(room);
+      broadcastRoomList(room);
     }
   });
 });
@@ -809,15 +899,23 @@ io.on("connection", (socket) => {
 // Idle room cleanup
 setInterval(() => {
   const now = Date.now();
+  const removedModes = new Set();
   for (const [code, room] of rooms) {
     const bothGone =
       (!room.seats.w || !room.seats.w.connected) &&
       (!room.seats.b || !room.seats.b.connected);
     if (bothGone && now - room.updatedAt > ROOM_TTL_MS) {
+      removedModes.add(room.mode);
       rooms.delete(code);
     }
   }
+  for (const m of removedModes) broadcastRoomList(m);
 }, 60 * 1000);
+
+// Periodic lobby refresh for subscribed clients
+setInterval(() => {
+  broadcastRoomList(null);
+}, 7 * 1000);
 
 server.listen(PORT, () => {
   console.log(`BoardHack multiplayer server on http://localhost:${PORT}`);

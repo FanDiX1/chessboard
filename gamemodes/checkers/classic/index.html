@@ -206,7 +206,15 @@
               <button type="button" class="btn btn-primary" id="mpSpectateBtn">OK</button>
             </div>
           </div>
-          <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
+        <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
+          <div class="mp-room-list" id="mpRoomListSection">
+            <div class="mp-room-list-head">
+              <span class="mp-room-list-title" id="mpRoomsTitle">Комнаты</span>
+              <button type="button" class="btn btn-ghost" id="mpRoomsRefreshBtn">Обновить</button>
+            </div>
+            <div class="mp-rooms-list" id="mpRoomsList"></div>
+            <p class="mp-hint" id="mpRoomsEmpty">Нет открытых комнат</p>
+          </div>
         </div>
         <div id="mpActive" class="mp-hidden">
           <div class="mp-code-box">
@@ -355,6 +363,11 @@
       mpRoomFull: "Комната заполнена",
       mpNotFound: "Комната не найдена",
       mpWrongMode: "Комната другого режима",
+      mpYouSpectate: "Вы наблюдаете",
+      mpSpectatorCount: "Зрители: {n}",
+      mpRooms: "Комнаты",
+      mpRoomsRefresh: "Обновить",
+      mpRoomsEmpty: "Нет открытых комнат",
       mpYourTurn: "Ваш ход (онлайн)",
       mpOppTurn: "Ход соперника…"
     },
@@ -425,6 +438,11 @@
       mpRoomFull: "Room is full",
       mpNotFound: "Room not found",
       mpWrongMode: "Wrong game mode room",
+      mpYouSpectate: "You are spectating",
+      mpSpectatorCount: "Spectators: {n}",
+      mpRooms: "Rooms",
+      mpRoomsRefresh: "Refresh",
+      mpRoomsEmpty: "No open rooms",
       mpYourTurn: "Your move (online)",
       mpOppTurn: "Opponent's turn…"
     }
@@ -930,10 +948,16 @@
     if (!mpActive) {
       toggleClass(document.getElementById("mpLobby"), "mp-hidden", false);
       toggleClass(document.getElementById("mpActive"), "mp-hidden", true);
+      var rt = document.getElementById("mpRoomsTitle");
+      if (rt) rt.textContent = t("mpRooms");
+      var rb = document.getElementById("mpRoomsRefreshBtn");
+      if (rb) rb.textContent = t("mpRoomsRefresh");
+      startRoomListPolling();
       toggleClass(document.getElementById("sideSelectWrap"), "mp-hidden", false);
       toggleClass(document.getElementById("difficultyWrap"), "mp-hidden", false);
       return;
     }
+    stopRoomListPolling();
     toggleClass(document.getElementById("mpLobby"), "mp-hidden", true);
     toggleClass(document.getElementById("mpActive"), "mp-hidden", false);
     toggleClass(document.getElementById("sideSelectWrap"), "mp-hidden", true);
@@ -987,6 +1011,8 @@
         mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }, function (res) {
           if (res && res.ok) applyMpRoom(res);
         });
+      } else if (!mpActive) {
+        requestRoomList();
       }
       if (cb) { var f = cb; cb = null; f(null); }
     });
@@ -1020,6 +1046,11 @@
     mpSocket.on("opponentReconnected", function () {
       setMpConn(mpBothSeated() ? "playing" : "waiting");
       updateMpUI(); updateStatus();
+    });
+    mpSocket.on("roomList", function (msg) {
+      if (msg && Array.isArray(msg.rooms) && (!msg.mode || msg.mode === GAME_MODE)) {
+        renderRoomList(msg.rooms);
+      }
     });
   }
 
@@ -1139,6 +1170,92 @@
     } finally {
       mpApplyingRemote = false;
     }
+  }
+
+
+  var mpRoomListTimer = null;
+  var mpLastRoomList = [];
+
+  function requestRoomList() {
+    if (mpActive) return;
+    if (!mpSocket || !mpSocket.connected) return;
+    mpSocket.emit("listRooms", { mode: GAME_MODE }, function (res) {
+      if (res && Array.isArray(res.rooms)) renderRoomList(res.rooms);
+    });
+  }
+
+  function startRoomListPolling() {
+    stopRoomListPolling();
+    ensureMpSocket(function (err) {
+      if (err) return;
+      requestRoomList();
+      mpRoomListTimer = setInterval(function () {
+        if (!mpActive) requestRoomList();
+      }, 6000);
+    });
+  }
+
+  function stopRoomListPolling() {
+    if (mpRoomListTimer) {
+      clearInterval(mpRoomListTimer);
+      mpRoomListTimer = null;
+    }
+  }
+
+  function renderRoomList(rooms) {
+    mpLastRoomList = Array.isArray(rooms) ? rooms : [];
+    var list = document.getElementById("mpRoomsList");
+    var empty = document.getElementById("mpRoomsEmpty");
+    if (!list) return;
+    list.innerHTML = "";
+    if (!mpLastRoomList.length) {
+      if (empty) { empty.classList.remove("mp-hidden"); empty.textContent = t("mpRoomsEmpty"); }
+      return;
+    }
+    if (empty) empty.classList.add("mp-hidden");
+    mpLastRoomList.forEach(function (r) {
+      if (!r || !r.code) return;
+      var wNick = (r.seats && r.seats.w) ? sanitizeNickClient(r.seats.w) : "";
+      var bNick = (r.seats && r.seats.b) ? sanitizeNickClient(r.seats.b) : "";
+      var seatsTxt = (wNick || t("mpSeatEmpty")) + " \u00b7 " + (bNick || t("mpSeatEmpty"));
+      var row = document.createElement("div");
+      row.className = "mp-room-row";
+      var info = document.createElement("div");
+      info.className = "mp-room-info";
+      var codeEl = document.createElement("span");
+      codeEl.className = "mp-room-code";
+      codeEl.textContent = r.code;
+      var seatsEl = document.createElement("span");
+      seatsEl.className = "mp-room-seats";
+      seatsEl.textContent = seatsTxt;
+      info.appendChild(codeEl);
+      info.appendChild(seatsEl);
+      if (typeof r.spectatorCount === "number" && r.spectatorCount > 0) {
+        var specEl = document.createElement("span");
+        specEl.className = "mp-room-specs";
+        specEl.textContent = t("mpSpectators") + ": " + r.spectatorCount;
+        info.appendChild(specEl);
+      }
+      var actions = document.createElement("div");
+      actions.className = "mp-room-actions";
+      if (r.joinable) {
+        var joinBtn = document.createElement("button");
+        joinBtn.type = "button";
+        joinBtn.className = "btn btn-primary";
+        joinBtn.textContent = t("mpJoin");
+        joinBtn.addEventListener("click", function () { enterMpFromJoin(r.code); });
+        actions.appendChild(joinBtn);
+      }
+      var specBtn = document.createElement("button");
+      specBtn.type = "button";
+      specBtn.className = "btn btn-ghost";
+      specBtn.textContent = t("mpSpectate");
+      specBtn.addEventListener("click", function () { enterMpFromSpectate(r.code); });
+      actions.appendChild(specBtn);
+      row.appendChild(info);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
   }
 
   function enterMpFromCreate() {
@@ -1359,6 +1476,11 @@
     if (nl) nl.textContent = t("mpNickLabel");
     loadNickIntoInput();
     document.getElementById("mpHint").textContent = t("mpHint");
+    var roomsTitle = document.getElementById("mpRoomsTitle");
+    if (roomsTitle) roomsTitle.textContent = t("mpRooms");
+    var roomsRefresh = document.getElementById("mpRoomsRefreshBtn");
+    if (roomsRefresh) roomsRefresh.textContent = t("mpRoomsRefresh");
+    if (typeof renderRoomList === "function") renderRoomList(mpLastRoomList);
     document.getElementById("mpCodeLabel").textContent = t("mpCodeLabel");
     document.getElementById("mpCopyBtn").textContent = t("mpCopy");
     document.getElementById("mpLeaveBtn").textContent = t("mpLeave");
@@ -1701,6 +1823,12 @@
   }
 
   function wireMp() {
+    var roomsRefreshBtn = document.getElementById("mpRoomsRefreshBtn");
+    if (roomsRefreshBtn) {
+      roomsRefreshBtn.addEventListener("click", function () {
+        ensureMpSocket(function (err) { if (!err) requestRoomList(); });
+      });
+    }
     document.getElementById("mpCreateBtn").addEventListener("click", function () { enterMpFromCreate(); });
     document.getElementById("mpJoinToggleBtn").addEventListener("click", function () {
       var panel = document.getElementById("mpJoinPanel");

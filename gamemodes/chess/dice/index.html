@@ -138,6 +138,14 @@
               </div>
             </div>
             <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
+            <div class="mp-room-list" id="mpRoomListSection">
+              <div class="mp-room-list-head">
+                <span class="mp-room-list-title" id="mpRoomsTitle">Комнаты</span>
+                <button type="button" class="btn btn-ghost" id="mpRoomsRefreshBtn">Обновить</button>
+              </div>
+              <div class="mp-rooms-list" id="mpRoomsList"></div>
+              <p class="mp-hint" id="mpRoomsEmpty">Нет открытых комнат</p>
+            </div>
           </div>
           <div id="mpActive" class="mp-hidden">
             <div class="mp-code-box">
@@ -331,6 +339,11 @@
           mpRoomFull: "Комната заполнена",
           mpNotFound: "Комната не найдена",
           mpWrongMode: "Комната другого режима",
+          mpYouSpectate: "Вы наблюдаете",
+          mpSpectatorCount: "Зрители: {n}",
+          mpRooms: "Комнаты",
+          mpRoomsRefresh: "Обновить",
+          mpRoomsEmpty: "Нет открытых комнат",
           mpYourTurn: "Ваш ход (онлайн)",
           mpOppTurn: "Ход соперника…",
           turnOpponent: "Соперник",
@@ -454,6 +467,11 @@
           mpRoomFull: "Room is full",
           mpNotFound: "Room not found",
           mpWrongMode: "Wrong game mode room",
+          mpYouSpectate: "You are spectating",
+          mpSpectatorCount: "Spectators: {n}",
+          mpRooms: "Rooms",
+          mpRoomsRefresh: "Refresh",
+          mpRoomsEmpty: "No open rooms",
           mpYourTurn: "Your move (online)",
           mpOppTurn: "Opponent's turn…",
           turnOpponent: "Opponent",
@@ -529,6 +547,9 @@
         $("#mpNickLabel").text(t("mpNickLabel"));
         loadNickIntoInput();
         $("#mpHint").text(t("mpHint"));
+        $("#mpRoomsTitle").text(t("mpRooms"));
+        $("#mpRoomsRefreshBtn").text(t("mpRoomsRefresh"));
+        if (typeof renderRoomList === "function") renderRoomList(mpLastRoomList);
         $("#mpCodeLabel").text(t("mpCodeLabel"));
         $("#mpCopyBtn").text(t("mpCopy"));
         $("#mpLeaveBtn").text(t("mpLeave"));
@@ -827,8 +848,12 @@
           $("#difficulty").prop("disabled", false);
           $("#diceCount").prop("disabled", false);
           $(".sp-disabled-note").remove();
+          $("#mpRoomsTitle").text(t("mpRooms"));
+          $("#mpRoomsRefreshBtn").text(t("mpRoomsRefresh"));
+          startRoomListPolling();
           return;
         }
+        stopRoomListPolling();
         $("#mpLobby").addClass("mp-hidden");
         $("#mpActive").removeClass("mp-hidden");
         $("#mpCodeValue").text(mpRoomCode || "------");
@@ -961,6 +986,8 @@
             mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }, function (res) {
               if (res && res.ok) applyMpRoom(res);
             });
+          } else if (!mpActive) {
+            requestRoomList();
           }
           if (cb) { var f = cb; cb = null; f(null); }
         });
@@ -1021,7 +1048,12 @@
           setMpConn(mpBothSeated() ? "playing" : "waiting");
           updateMpUI();
           updateStatus();
+          mpSocket.on("roomList", function (msg) {
+          if (msg && Array.isArray(msg.rooms) && (!msg.mode || msg.mode === GAME_MODE)) {
+            renderRoomList(msg.rooms);
+          }
         });
+      });
       }
 
       function applyMpRoom(res) {
@@ -1120,6 +1152,75 @@
           mpApplyingRemote = false;
         }
         ensureMpDiceTurnIfNeeded();
+      }
+
+
+      var mpRoomListTimer = null;
+      var mpLastRoomList = [];
+
+      function requestRoomList() {
+        if (mpActive) return;
+        if (!mpSocket || !mpSocket.connected) return;
+        mpSocket.emit("listRooms", { mode: GAME_MODE }, function (res) {
+          if (res && Array.isArray(res.rooms)) renderRoomList(res.rooms);
+        });
+      }
+
+      function startRoomListPolling() {
+        stopRoomListPolling();
+        ensureMpSocket(function (err) {
+          if (err) return;
+          requestRoomList();
+          mpRoomListTimer = setInterval(function () {
+            if (!mpActive) requestRoomList();
+          }, 6000);
+        });
+      }
+
+      function stopRoomListPolling() {
+        if (mpRoomListTimer) {
+          clearInterval(mpRoomListTimer);
+          mpRoomListTimer = null;
+        }
+      }
+
+      function renderRoomList(rooms) {
+        mpLastRoomList = Array.isArray(rooms) ? rooms : [];
+        var $list = $("#mpRoomsList");
+        var $empty = $("#mpRoomsEmpty");
+        if (!$list.length) return;
+        $list.empty();
+        if (!mpLastRoomList.length) {
+          $empty.removeClass("mp-hidden").text(t("mpRoomsEmpty"));
+          return;
+        }
+        $empty.addClass("mp-hidden");
+        mpLastRoomList.forEach(function (r) {
+          if (!r || !r.code) return;
+          var wNick = (r.seats && r.seats.w) ? sanitizeNickClient(r.seats.w) : "";
+          var bNick = (r.seats && r.seats.b) ? sanitizeNickClient(r.seats.b) : "";
+          var seatsTxt = (wNick || t("mpSeatEmpty")) + " \u00b7 " + (bNick || t("mpSeatEmpty"));
+          var $info = $('<div class="mp-room-info"></div>');
+          $info.append($('<span class="mp-room-code"></span>').text(r.code));
+          $info.append($('<span class="mp-room-seats"></span>').text(seatsTxt));
+          if (typeof r.spectatorCount === "number" && r.spectatorCount > 0) {
+            $info.append($('<span class="mp-room-specs"></span>').text(t("mpSpectators") + ": " + r.spectatorCount));
+          }
+          var $actions = $('<div class="mp-room-actions"></div>');
+          if (r.joinable) {
+            $actions.append(
+              $('<button type="button" class="btn btn-primary"></button>')
+                .text(t("mpJoin"))
+                .on("click", function () { enterMpFromJoin(r.code); })
+            );
+          }
+          $actions.append(
+            $('<button type="button" class="btn btn-ghost"></button>')
+              .text(t("mpSpectate"))
+              .on("click", function () { enterMpFromSpectate(r.code); })
+          );
+          $list.append($('<div class="mp-room-row"></div>').append($info).append($actions));
+        });
       }
 
       function enterMpFromCreate() {
@@ -3092,6 +3193,9 @@
         updateMpUI();
         setMpConn("offline");
 
+        $("#mpRoomsRefreshBtn").on("click", function () {
+          ensureMpSocket(function (err) { if (!err) requestRoomList(); });
+        });
         $("#mpCreateBtn").on("click", function () { enterMpFromCreate(); });
         $("#mpJoinToggleBtn").on("click", function () {
           $("#mpJoinPanel").toggleClass("mp-hidden");
