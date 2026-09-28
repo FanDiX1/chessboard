@@ -159,11 +159,12 @@
             </div>
             <p class="mp-seat-pick-hint mp-hidden" id="mpSeatPickHint"></p>
             <div class="btn-row">
-              <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать</button>
+              <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать ссылку</button>
               <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
               <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn"></button>
             </div>
             <p class="mp-hint mp-hidden" id="mpSpectateBanner"></p>
+            <p class="mp-copy-toast" id="mpCopyToast" role="status" aria-live="polite"></p>
             <p class="mp-hint" id="mpSpectatorCount"></p>
             <p class="mp-hint" id="mpActiveHint"></p>
           </div>
@@ -314,10 +315,11 @@
           mpSpectate: "Наблюдать",
           mpSpectateOk: "OK",
           mpSpectating: "вы наблюдаете",
+          mpSpectatingMeta: "Наблюдение",
           mpSpectators: "зрители",
           mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
           mpCodeLabel: "Код комнаты",
-          mpCopy: "Копировать",
+          mpCopy: "Копировать ссылку",
           mpCopied: "Скопировано",
           mpLeave: "Выйти",
           mpOffline: "офлайн",
@@ -443,10 +445,11 @@
           mpSpectate: "Spectate",
           mpSpectateOk: "OK",
           mpSpectating: "spectating",
+          mpSpectatingMeta: "Spectating",
           mpSpectators: "spectators",
           mpHint: "Invite a friend with a room code. No account needed.",
           mpCodeLabel: "Room code",
-          mpCopy: "Copy",
+          mpCopy: "Copy spectate link",
           mpCopied: "Copied",
           mpLeave: "Leave",
           mpOffline: "offline",
@@ -771,7 +774,8 @@
 
       function buildShareLink(code) {
         var u = new URL(window.location.href);
-        u.searchParams.set("room", code);
+        u.searchParams.delete("room");
+        u.searchParams.set("spectate", code);
         if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") {
           u.searchParams.set("server", mpServerUrl);
         } else {
@@ -1393,6 +1397,11 @@
       function tryAutoRejoin() {
         var params = new URLSearchParams(window.location.search);
         var roomParam = params.get("room");
+        var spectateParam = params.get("spectate");
+        if (spectateParam) {
+          enterMpFromSpectate(spectateParam);
+          return;
+        }
         var saved = null;
         try { saved = localStorage.getItem(MP_ROOM_KEY); } catch (e) {}
         var code = (roomParam || saved || "").toUpperCase().trim();
@@ -1440,7 +1449,7 @@
       }
 
       function updateOpponentLabel() {
-        $("#metaBotK").text(t("metaOpp"));
+        $("#metaBotK").text(mpSpectating ? t("mpSpectatingMeta") : t("metaOpp"));
         if (!isMultiplayer()) {
           $botLabel.text(t("metaBot") + " \u2014 " + skillLabel(getSkillKey()));
           return;
@@ -1451,9 +1460,7 @@
           nick = displayNickOrStub(mpRoom.seats[oppColor].nick || "");
         }
         if (mpSpectating) {
-          var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? displayNickOrStub(mpRoom.seats.w.nick || "") : "";
-          var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? displayNickOrStub(mpRoom.seats.b.nick || "") : "";
-          $botLabel.text((wn || t("sideWhite")) + " vs " + (bn || t("sideBlack")));
+          $botLabel.text(t("mpSpectatingMeta"));
         } else {
           $botLabel.text(nick || t("mpOpponent") || t("metaOpp"));
         }
@@ -3230,6 +3237,13 @@
         $("#mpCopyBtn").on("click", function () {
           var link = buildShareLink(mpRoomCode);
           var done = function () {
+            var toast = document.getElementById("mpCopyToast");
+            if (toast) {
+              toast.textContent = t("mpCopied");
+              toast.classList.add("show");
+              window.clearTimeout(toast._hideTimer);
+              toast._hideTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 1200);
+            }
             $("#mpCopyBtn").text(t("mpCopied"));
             window.setTimeout(function () { $("#mpCopyBtn").text(t("mpCopy")); }, 1200);
           };
@@ -3255,7 +3269,7 @@
         $("#mpResetBtn").on("click", newGame);
 
         var _paramsEarly = new URLSearchParams(window.location.search);
-        var _maybeMp = !!(_paramsEarly.get("room") || (function () {
+        var _maybeMp = !!(_paramsEarly.get("room") || _paramsEarly.get("spectate") || (function () {
           try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
         })());
         tryAutoRejoin();

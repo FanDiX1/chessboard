@@ -1033,6 +1033,22 @@ button.btn:disabled {
   line-height: 1.4;
 }
 
+.mp-copy-toast {
+  display: block;
+  min-height: 1.1em;
+  margin: 0.45rem 0 0;
+  color: var(--accent);
+  font-size: 0.75rem;
+  opacity: 0;
+  transform: translateY(-0.2rem);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mp-copy-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .mp-seats {
   display: grid;
   grid-template-columns: 1fr 1fr;
