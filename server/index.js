@@ -38,7 +38,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode  // classic | dice | checkers | backgammon | backgammon-long
+ * @property {string} mode  // classic | dice | custom | checkers | backgammon | backgammon-long
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -50,6 +50,7 @@ const rooms = new Map();
  * @property {object|null} dice  // diceCount, diceRoll, remainingDice, diceSide, lastSkipMsg
  * @property {{color:string,current:string}|null} checkersChain // active stepwise capture
  * @property {number} diceCount  // 1|2|3 authoritative MP dice count (host-controlled)
+ * @property {object|null} customSettings  // chess-custom: backwardCapture, mandatoryCapture, moveTimer
  * @property {object|null} bg  // backgammon full state (points, bar?, off, turn, dice, phase, history)
  */
 
@@ -156,6 +157,9 @@ function publicRoom(room, forClientId) {
     spectatorCount: spectatorCount(room),
     dice: room.dice || null,
     diceCount: room.diceCount === 1 || room.diceCount === 3 ? room.diceCount : 2,
+    customSettings: room.mode === "custom"
+      ? sanitizeCustomSettings(room.customSettings)
+      : null,
     chain: room.checkersChain || null,
     bg: room.bg || null,
   };
@@ -196,10 +200,26 @@ function isBgMode(mode) {
 
 function normalizeMode(mode) {
   if (mode === "dice") return "dice";
+  if (mode === "custom" || mode === "chess-custom") return "custom";
   if (mode === "checkers" || mode === "checkers-classic") return "checkers";
   if (mode === "backgammon" || mode === "bg-classic" || mode === "bg") return "backgammon";
   if (mode === "backgammon-long" || mode === "bg-long" || mode === "long-nardy") return "backgammon-long";
   return "classic";
+}
+
+function defaultCustomSettings() {
+  return { backwardCapture: false, mandatoryCapture: false, moveTimer: 0 };
+}
+
+function sanitizeCustomSettings(raw) {
+  const base = defaultCustomSettings();
+  if (!raw || typeof raw !== "object") return base;
+  const timer = Number(raw.moveTimer);
+  return {
+    backwardCapture: !!raw.backwardCapture,
+    mandatoryCapture: !!raw.mandatoryCapture,
+    moveTimer: timer === 10 || timer === 30 || timer === 60 || timer === 120 ? timer : 0,
+  };
 }
 
 function emptyBgPoint() {
@@ -320,6 +340,7 @@ function createRoom(clientId, mode) {
     updatedAt: Date.now(),
     dice: null,
     diceCount: 2,
+    customSettings: norm === "custom" ? defaultCustomSettings() : null,
     checkersChain: null,
     bg: isBgMode(norm) ? initialBgState(norm) : null,
   };
@@ -408,7 +429,7 @@ function lobbyChannel(mode) {
   return "lobby:" + normalizeMode(mode);
 }
 
-const LOBBY_MODES = ["classic", "dice", "checkers", "backgammon", "backgammon-long"];
+const LOBBY_MODES = ["classic", "dice", "custom", "checkers", "backgammon", "backgammon-long"];
 
 function broadcastRoomList(modeOrRoom) {
   let modes;
@@ -462,6 +483,9 @@ io.on("connection", (socket) => {
       const room = createRoom(clientId, mode);
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
+      if (room.mode === "custom" && payload && payload.customSettings) {
+        room.customSettings = sanitizeCustomSettings(payload.customSettings);
+      }
       const nick = sanitizeNick(payload && payload.nick);
       seatPlayer(room, preferred, clientId, socket.id, nick);
       socket.data.clientId = clientId;
@@ -778,6 +802,17 @@ io.on("connection", (socket) => {
         if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       }
 
+      if (payload && payload.customSettings && room.mode === "custom") {
+        // Host / white seat may update settings before first ply; after that keep locked.
+        const canEditSettings =
+          room.hostId === clientId ||
+          (room.seats.w && room.seats.w.clientId === clientId);
+        const unlocked = !Array.isArray(room.plySans) || room.plySans.length === 0;
+        if (canEditSettings && unlocked) {
+          room.customSettings = sanitizeCustomSettings(payload.customSettings);
+        }
+      }
+
       if (room.mode === "checkers") {
         const chain = payload && payload.chain;
         room.checkersChain = chain && (chain.color === "w" || chain.color === "b")
@@ -800,6 +835,7 @@ io.on("connection", (socket) => {
         status: room.status,
         by: seat,
         dice: room.dice || null,
+        customSettings: room.mode === "custom" ? sanitizeCustomSettings(room.customSettings) : null,
         stateSync: isStateSync,
         chain: room.checkersChain || null,
         bg: room.bg || null,
@@ -824,6 +860,9 @@ io.on("connection", (socket) => {
 
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
+      if (room.mode === "custom" && payload && payload.customSettings) {
+        room.customSettings = sanitizeCustomSettings(payload.customSettings);
+      }
 
       room.fen = startFenForMode(room.mode);
       room.lastMove = null;
@@ -839,6 +878,32 @@ io.on("connection", (socket) => {
       if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
     } catch (e) {
       if (typeof ack === "function") ack({ ok: false, error: e.message || "reset failed" });
+    }
+  });
+
+  socket.on("updateCustomSettings", (payload, ack) => {
+    try {
+      const clientId = String((payload && payload.clientId) || socket.data.clientId || "");
+      const code = String((payload && payload.code) || socket.data.roomCode || "")
+        .toUpperCase()
+        .trim();
+      const room = rooms.get(code);
+      if (!room) return ack && ack({ ok: false, error: "room_not_found" });
+      if (room.mode !== "custom") return ack && ack({ ok: false, error: "wrong_mode" });
+      const seat = findSeatByClient(room, clientId);
+      if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
+      const canEdit =
+        room.hostId === clientId ||
+        (room.seats.w && room.seats.w.clientId === clientId);
+      if (!canEdit) return ack && ack({ ok: false, error: "host_only" });
+      const unlocked = !Array.isArray(room.plySans) || room.plySans.length === 0;
+      if (!unlocked) return ack && ack({ ok: false, error: "settings_locked" });
+      room.customSettings = sanitizeCustomSettings(payload && payload.customSettings);
+      touch(room);
+      emitRoom(room);
+      if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
+    } catch (e) {
+      if (typeof ack === "function") ack({ ok: false, error: e.message || "settings failed" });
     }
   });
 

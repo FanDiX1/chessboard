@@ -1302,3 +1302,84 @@ button.btn:disabled {
   color: var(--text-muted);
   font-size: 0.78rem;
 }
+
+
+/* Customizable chess settings panel */
+.custom-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.custom-setting-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.custom-setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.custom-setting-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.custom-setting-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.custom-toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.custom-toggle[aria-checked="true"] {
+  background: rgba(159, 239, 0, 0.22);
+  border-color: rgba(159, 239, 0, 0.55);
+}
+.custom-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.custom-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.custom-toggle[aria-checked="true"] .custom-toggle-knob {
+  transform: translateX(1.15rem);
+  background: var(--accent);
+}
+.custom-timer-select {
+  flex: 0 0 auto;
+  min-width: 6.5rem;
+  max-width: 8rem;
+}
+.custom-settings-locked {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+#moveTimerStatus {
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}

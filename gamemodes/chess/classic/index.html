@@ -41,6 +41,13 @@
                 <span class="mode-desc" id="menuDiceDesc"></span>
               </span>
             </a>
+            <a href="../custom/index.html" data-mode="custom">
+              <span>⚙</span>
+              <span>
+                <span id="menuCustom">Custom</span>
+                <span class="mode-desc" id="menuCustomDesc"></span>
+              </span>
+            </a>
           </div>
         </div>
         <div class="lang-switch" role="group" aria-label="Language">
@@ -271,8 +278,12 @@
           menuClassicDesc: "Стандартные шахматы",
           menuDice: "Кости",
           menuDiceDesc: "Ходы по броску костей",
+          menuCustom: "Настраиваемый",
+          menuCustomDesc: "Правила на выбор",
           modeBadgeClassic: "шахматы · классика",
           modeBadgeDice: "шахматы · кости",
+          modeBadgeCustom: "шахматы · настраиваемые",
+          mpContinueBot: "Соперник вышел — продолжаем против бота",
           modeSelectLabel: "Режим",
           modeClassic: "Классика",
           modeDice: "Кости",
@@ -394,8 +405,12 @@
           menuClassicDesc: "Standard chess",
           menuDice: "Dice Chess",
           menuDiceDesc: "Move by dice rolls",
+          menuCustom: "Customizable",
+          menuCustomDesc: "House rules on demand",
           modeBadgeClassic: "chess · classic",
           modeBadgeDice: "chess · dice",
+          modeBadgeCustom: "chess · custom",
+          mpContinueBot: "Opponent left — continuing vs bot",
           modeSelectLabel: "Mode",
           modeClassic: "Classic",
           modeDice: "Dice Chess",
@@ -573,8 +588,15 @@
         $("#menuClassicDesc").text(t("menuClassicDesc"));
         $("#menuDice").text(t("menuDice"));
         $("#menuDiceDesc").text(t("menuDiceDesc"));
+        if ($("#menuCustom").length) {
+          $("#menuCustom").text(t("menuCustom"));
+          $("#menuCustomDesc").text(t("menuCustomDesc"));
+        }
         if ($("#modeBadge").length) {
-          $("#modeBadge").text(t(GAME_MODE === "dice" ? "modeBadgeDice" : "modeBadgeClassic"));
+          var badgeKey = "modeBadgeClassic";
+          if (GAME_MODE === "dice") badgeKey = "modeBadgeDice";
+          else if (GAME_MODE === "custom") badgeKey = "modeBadgeCustom";
+          $("#modeBadge").text(t(badgeKey));
         }
       }
 
@@ -933,6 +955,7 @@
         });
         mpSocket.on("opponentJoined", function () { updateMpUI(); updateStatus(); });
         mpSocket.on("opponentLeft", function () {
+          if (typeof promoteMpToLocalBot === "function" && promoteMpToLocalBot()) return;
           setMpConn("waiting");
           updateMpUI();
           updateStatus();
@@ -946,12 +969,12 @@
           setMpConn(mpBothSeated() ? "playing" : "waiting");
           updateMpUI();
           updateStatus();
-          mpSocket.on("roomList", function (msg) {
+        });
+        mpSocket.on("roomList", function (msg) {
           if (msg && Array.isArray(msg.rooms) && (!msg.mode || msg.mode === GAME_MODE)) {
             renderRoomList(msg.rooms);
           }
         });
-      });
       }
 
       function applyMpRoom(res) {
@@ -977,6 +1000,13 @@
         }
         mpActive = true;
         try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
+        if (!mpSpectating && plySans.length > 0 && mpRoom && mpRoom.seats) {
+          var otherSeatColor = mpSeat === "w" ? "b" : "w";
+          var otherSeatObj = mpRoom.seats[otherSeatColor];
+          if (!otherSeatObj || !otherSeatObj.occupied) {
+            if (typeof promoteMpToLocalBot === "function" && promoteMpToLocalBot()) return;
+          }
+        }
         if (mpBothSeated()) setMpConn("playing");
         else setMpConn("waiting");
         updateMpUI();
@@ -1166,24 +1196,74 @@
         });
       }
 
-      function leaveMultiplayer() {
-        if (mpSocket && mpRoomCode) {
-          try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
-        }
+      function clearMpSession(disconnectSocket) {
         mpActive = false;
         mpSpectating = false;
         mpRoomCode = null;
         mpSeat = null;
         mpRoom = null;
         try { localStorage.removeItem(MP_ROOM_KEY); } catch (e) {}
-        if (mpSocket) {
+        if (disconnectSocket && mpSocket) {
           try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
           mpSocket = null;
         }
         setMpConn("offline");
         updateMpUI();
+      }
+
+      function leaveMultiplayer() {
+        if (mpSocket && mpRoomCode) {
+          try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
+        }
+        clearMpSession(true);
         // restore single-player (also refreshes status bar to local turn text)
         newGame();
+      }
+
+      /** Opponent left mid-game: keep position and continue vs Stockfish. */
+      function promoteMpToLocalBot() {
+        if (!mpActive || mpSpectating) return false;
+        if (gameOver) return false;
+        var midGame = plySans.length > 0 || (mpRoom && mpRoom.status === "playing");
+        if (!midGame) return false;
+        var keptSeat = mpSeat || userColor || "w";
+        var fen = game.fen();
+        var keptPly = plySans.slice();
+        var keptUndo = undoStack.slice();
+        var keptDiceRoll = typeof diceRoll !== "undefined" ? diceRoll.slice() : [];
+        var keptRemaining = typeof remainingDice !== "undefined" ? remainingDice.slice() : [];
+        var keptDiceSide = typeof diceSide !== "undefined" ? diceSide : null;
+        if (mpSocket && mpRoomCode) {
+          try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
+        }
+        clearMpSession(true);
+        userColor = keptSeat === "b" ? "b" : "w";
+        try { localStorage.setItem(COLOR_KEY, userColor); } catch (e) {}
+        game.load(fen);
+        plySans = keptPly;
+        undoStack = keptUndo;
+        if (typeof diceRoll !== "undefined") {
+          diceRoll = keptDiceRoll;
+          remainingDice = keptRemaining;
+          diceSide = keptDiceSide;
+        }
+        gameOver = false;
+        botThinking = false;
+        $thinking.removeClass("show");
+        if (board) {
+          board.orientation(boardOrientation());
+          board.position(game.fen(), false);
+        }
+        updateMoveList();
+        if (typeof updateDiceUI === "function") updateDiceUI();
+        setStatus(t("mpContinueBot"), "warn");
+        updateOpponentLabel();
+        if (!gameOver && game.turn() !== userColor) {
+          scheduleBot(450);
+        } else {
+          updateStatus();
+        }
+        return true;
       }
 
       function publishMpMove(from, to, san) {

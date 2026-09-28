@@ -18,7 +18,7 @@
           <div class="brand-mark">♞</div>
           <div>Board<span class="accent">Hack</span></div>
         </a>
-        <span class="mode-badge" id="modeBadge">chess · dice</span>
+        <span class="mode-badge" id="modeBadge">chess · custom</span>
       </div>
       <div class="topbar-actions">
         <div class="mode-menu" id="modeMenu">
@@ -34,14 +34,14 @@
                 <span class="mode-desc" id="menuClassicDesc"></span>
               </span>
             </a>
-            <a href="./index.html" class="active" data-mode="dice">
+            <a href="../dice/index.html" data-mode="dice">
               <span>🎲</span>
               <span>
                 <span id="menuDice">Dice</span>
                 <span class="mode-desc" id="menuDiceDesc"></span>
               </span>
             </a>
-            <a href="../custom/index.html" data-mode="custom">
+            <a href="./index.html" class="active" data-mode="custom">
               <span>⚙</span>
               <span>
                 <span id="menuCustom">Custom</span>
@@ -94,20 +94,7 @@
                 <option value="master"></option>
               </select>
             </div>
-            <div id="diceCountWrap">
-              <label class="field-label" for="diceCount" id="diceCountLabel"></label>
-              <select id="diceCount">
-                <option value="1"></option>
-                <option value="2" selected></option>
-                <option value="3"></option>
-              </select>
-            </div>
-            <div class="dice-panel visible" id="dicePanel">
-              <div class="card-title" id="dicePanelTitle"></div>
-              <div class="dice-faces" id="diceFaces"></div>
-              <p class="diff-hint" id="diceAllowedHint"></p>
-            </div>
-            <div class="btn-row" id="spGameBtns">
+            <div class="btn-row">
               <button type="button" class="btn btn-primary" id="newGameBtn"></button>
               <button type="button" class="btn btn-ghost" id="undoBtn"></button>
               <button type="button" class="btn btn-ghost" id="rulesBtn"></button>
@@ -115,6 +102,44 @@
           </div>
         </section>
 
+        <section class="card" id="customSettingsCard">
+          <div class="card-title" id="customSettingsTitle">Настройки</div>
+          <div class="custom-settings" id="customSettingsPanel">
+            <div class="custom-setting-row">
+              <div class="custom-setting-text">
+                <span class="custom-setting-label" id="setBackwardLabel">Взятие при ходьбе назад</span>
+                <span class="custom-setting-hint" id="setBackwardHint"></span>
+              </div>
+              <button type="button" class="custom-toggle" id="setBackwardToggle" role="switch" aria-checked="false" aria-labelledby="setBackwardLabel">
+                <span class="custom-toggle-knob" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="custom-setting-row">
+              <div class="custom-setting-text">
+                <span class="custom-setting-label" id="setMandatoryLabel">Обязательно бить если можно</span>
+                <span class="custom-setting-hint" id="setMandatoryHint"></span>
+              </div>
+              <button type="button" class="custom-toggle" id="setMandatoryToggle" role="switch" aria-checked="false" aria-labelledby="setMandatoryLabel">
+                <span class="custom-toggle-knob" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="custom-setting-row">
+              <div class="custom-setting-text">
+                <span class="custom-setting-label" id="setTimerLabel">Таймер хода</span>
+                <span class="custom-setting-hint" id="setTimerHint"></span>
+              </div>
+              <select id="setMoveTimer" class="custom-timer-select" aria-labelledby="setTimerLabel">
+                <option value="0">Off</option>
+                <option value="10">10</option>
+                <option value="30">30</option>
+                <option value="60">60</option>
+                <option value="120">120</option>
+              </select>
+            </div>
+            <p class="custom-settings-locked mp-hidden" id="customSettingsLocked"></p>
+            <p class="mp-hint" id="moveTimerStatus" aria-live="polite"></p>
+          </div>
+        </section>
 
         <section class="card mp-card" id="mpCard">
           <div class="card-title" id="mpTitle">Мультиплеер</div>
@@ -225,7 +250,7 @@
   <script>
     (function () {
       "use strict";
-      var GAME_MODE = "dice";
+      var GAME_MODE = "custom";
 
       "use strict";
 
@@ -236,7 +261,7 @@
 
       var I18N = {
         ru: {
-          docTitle: "BoardHack — Взломай доску",
+          docTitle: "BoardHack — Настраиваемые шахматы",
           heroTitleHtml: 'Взломай доску. <span class="accent">Захвати флаг.</span>',
           heroDesc: "Тёмная шахматная лаборатория. Выберите сторону, переиграйте бота, поставьте мат и удержите позицию.",
           playArea: "Игровая зона",
@@ -244,9 +269,9 @@
           session: "Сессия",
           history: "История ходов",
           rulesButton: "Правила",
-          rulesTitle: "Правила шахмат с костями",
+          rulesTitle: "Настраиваемые шахматы",
           rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Цель:</strong> поставить мат; в этом режиме взятие короля также завершает партию.</li><li><strong>Бросок:</strong> в начале хода бросьте 1–3 кости: 1 — пешка, 2 — конь, 3 — слон, 4 — ладья, 5 — ферзь, 6 — король.</li><li><strong>Ходы:</strong> сделайте по одному ходу каждого выпавшего типа; одинаковая грань даёт несколько ходов.</li><li><strong>Ограничение:</strong> ходить можно только выпавшими типами. Если тип не имеет хода, он пропускается; если ходов нет — ход переходит сопернику.</li><li><strong>Шахматные правила:</strong> обычные ходы, взятия и превращение пешки сохраняются.</li></ul>",
+          rulesHtml: "<ul><li><strong>База:</strong> стандартные FIDE-шахматы (мат, рокировка, взятие на проходе, превращение).</li><li><strong>Взятие при ходьбе назад:</strong> пешки дополнительно могут бить на одну клетку по диагонали <em>назад</em> (белые — к 1-й линии, чёрные — к 8-й). Остальные фигуры без изменений.</li><li><strong>Обязательно бить:</strong> если у стороны есть хотя бы одно взятие, ход без взятия запрещён.</li><li><strong>Таймер хода:</strong> лимит секунд на ход (выкл / 10 / 30 / 60 / 120). При истечении текущий игрок проигрывает партию.</li><li><strong>Мультиплеер:</strong> настройки задаёт создатель / белые до первого хода, затем фиксируются. Если соперник вышел — партия продолжается против бота.</li></ul>",
           sideSelectLabel: "Играть за",
           diffLabel: "Сложность бота",
           diffEasy: "Легко",
@@ -281,6 +306,7 @@
           kingCaptureWin: "Король взят — победили {winner}!",
           winnerYou: "вы",
           winnerBot: "бот",
+          winnerOpp: "соперник",
           stalemate: "Пат — ничья.",
           drawRepetition: "Ничья — троекратное повторение.",
           drawMaterial: "Ничья — недостаточно материала.",
@@ -295,7 +321,21 @@
           modeBadgeClassic: "шахматы · классика",
           modeBadgeDice: "шахматы · кости",
           modeBadgeCustom: "шахматы · настраиваемые",
+          customSettingsTitle: "Настройки",
+          setBackwardLabel: "Взятие при ходьбе назад",
+          setBackwardHint: "Пешки могут бить на одну клетку по диагонали назад",
+          setMandatoryLabel: "Обязательно бить если можно",
+          setMandatoryHint: "Если есть взятие — обычный ход запрещён (как в шашках)",
+          setTimerLabel: "Таймер хода",
+          setTimerHint: "Секунды на ход; при истечении текущий игрок проигрывает",
+          setTimerOff: "Выкл",
+          setTimerSec: "{n} с",
+          customSettingsLocked: "Настройки зафиксированы до конца партии",
+          customSettingsHostOnly: "Только создатель комнаты меняет настройки до старта",
+          timerStatus: "Таймер: {n} с",
+          timerTimeoutLoss: "Время вышло — {loser} проиграл(а)",
           mpContinueBot: "Соперник вышел — продолжаем против бота",
+          mandatoryMustCapture: "Есть взятие — нужно бить",
           modeSelectLabel: "Режим",
           modeClassic: "Классика",
           modeDice: "Кости",
@@ -316,7 +356,6 @@
           pieceK: "король",
           yourMoveDice: "Ваш ход — выполните все кости",
           botThinkingDice: "Бот ходит по костям…",
-          winnerOpp: "соперник",
           mpTitle: "Мультиплеер",
           mpCreate: "Создать комнату",
           mpJoin: "Войти",
@@ -348,7 +387,6 @@
           mpSeatOffline: "офлайн",
           mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
           mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
-          mpPlayingHint: "Ходите своей фигурой. Бот отключён.",
           mpBotOff: "Бот отключён в мультиплеере",
           mpRoomFull: "Комната заполнена",
           mpNotFound: "Комната не найдена",
@@ -361,16 +399,10 @@
           mpYourTurn: "Ваш ход (онлайн)",
           mpOppTurn: "Ход соперника…",
           turnOpponent: "Соперник",
-          metaOpp: "Противник",
-          histWhiteTurn: "Белые",
-          histBlackTurn: "Чёрные",
-          histPass: "пасс",
-          histSkipped: "пропуск",
-          histUsed: "сыграно",
-          histPly: "ход"
+          metaOpp: "Противник"
         },
         en: {
-          docTitle: "BoardHack — Hack the Board",
+          docTitle: "BoardHack — Customizable Chess",
           heroTitleHtml: 'Breach the board. <span class="accent">Capture the flag.</span>',
           heroDesc: "Dark-ops chess lab. Pick a side, outsmart the bot, force checkmate, and own the position.",
           playArea: "Play area",
@@ -378,9 +410,9 @@
           session: "Session",
           history: "Move history",
           rulesButton: "Rules",
-          rulesTitle: "Dice chess rules",
+          rulesTitle: "Customizable chess",
           rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Goal:</strong> checkmate; in this mode, capturing the king also ends the game.</li><li><strong>Roll:</strong> at the start of a turn roll 1–3 dice: 1 — pawn, 2 — knight, 3 — bishop, 4 — rook, 5 — queen, 6 — king.</li><li><strong>Moves:</strong> make one move for each rolled type; duplicate faces grant multiple moves.</li><li><strong>Restriction:</strong> only rolled piece types may move. A type with no legal move is skipped; if none can move, the turn passes.</li><li><strong>Chess rules:</strong> normal moves, captures, and pawn promotion still apply.</li></ul>",
+          rulesHtml: "<ul><li><strong>Base:</strong> standard FIDE chess (mate, castling, en passant, promotion).</li><li><strong>Capture while moving backward:</strong> pawns may also capture one square diagonally <em>backward</em> (White toward the 1st rank, Black toward the 8th). Other pieces unchanged.</li><li><strong>Mandatory capture:</strong> if the side to move has any capture, non-capturing moves are illegal.</li><li><strong>Move timer:</strong> seconds per move (off / 10 / 30 / 60 / 120). On timeout the side to move loses the game.</li><li><strong>Multiplayer:</strong> room creator / White owns settings until the first move, then locked. If the opponent leaves, the game continues vs the bot.</li></ul>",
           sideSelectLabel: "Play as",
           diffLabel: "Bot difficulty",
           diffEasy: "Easy",
@@ -415,6 +447,7 @@
           kingCaptureWin: "King captured — {winner} wins!",
           winnerYou: "you",
           winnerBot: "bot",
+          winnerOpp: "opponent",
           stalemate: "Stalemate — draw.",
           drawRepetition: "Draw — threefold repetition.",
           drawMaterial: "Draw — insufficient material.",
@@ -429,7 +462,21 @@
           modeBadgeClassic: "chess · classic",
           modeBadgeDice: "chess · dice",
           modeBadgeCustom: "chess · custom",
+          customSettingsTitle: "Settings",
+          setBackwardLabel: "Capture while moving backward",
+          setBackwardHint: "Pawns may also capture one square diagonally backward",
+          setMandatoryLabel: "Mandatory capture",
+          setMandatoryHint: "If any capture exists, non-captures are illegal (like checkers)",
+          setTimerLabel: "Move timer",
+          setTimerHint: "Seconds per move; on timeout the side to move loses the game",
+          setTimerOff: "Off",
+          setTimerSec: "{n} s",
+          customSettingsLocked: "Settings locked for this game",
+          customSettingsHostOnly: "Only the room creator / White can change settings before the first move",
+          timerStatus: "Timer: {n} s",
+          timerTimeoutLoss: "Time out — {loser} loses",
           mpContinueBot: "Opponent left — continuing vs bot",
+          mandatoryMustCapture: "A capture is available — you must capture",
           modeSelectLabel: "Mode",
           modeClassic: "Classic",
           modeDice: "Dice Chess",
@@ -450,7 +497,6 @@
           pieceK: "king",
           yourMoveDice: "Your turn — fulfill all dice",
           botThinkingDice: "Bot playing dice moves…",
-          winnerOpp: "opponent",
           mpTitle: "Multiplayer",
           mpCreate: "Create room",
           mpJoin: "Join",
@@ -475,14 +521,13 @@
           mpOpponent: "Opponent",
           mpOpponentGone: "opponent disconnected",
           mpError: "connection error",
-          mpSeatEmpty: "empty",
+          mpSeatEmpty: "open",
           mpPlayerStub: "Player",
           mpSeatYou: "you",
           mpSeatOpp: "opponent",
           mpSeatOffline: "offline",
           mpWaitingHint: "Share the code or link. Bot is disabled.",
           mpSeatPickHint: "While alone — click a color to switch side",
-          mpPlayingHint: "Move your pieces. Bot is disabled.",
           mpBotOff: "Bot disabled in multiplayer",
           mpRoomFull: "Room is full",
           mpNotFound: "Room not found",
@@ -495,13 +540,7 @@
           mpYourTurn: "Your move (online)",
           mpOppTurn: "Opponent's turn…",
           turnOpponent: "Opponent",
-          metaOpp: "Opponent",
-          histWhiteTurn: "White",
-          histBlackTurn: "Black",
-          histPass: "pass",
-          histSkipped: "skip",
-          histUsed: "used",
-          histPly: "move"
+          metaOpp: "Opponent"
         }
       };
 
@@ -527,6 +566,20 @@
         $("#rulesTitle").text(t("rulesTitle"));
         $("#rulesCloseBtn").attr("aria-label", t("rulesClose"));
         $("#rulesBox").html(t("rulesHtml"));
+        if ($("#customSettingsTitle").length) {
+          $("#customSettingsTitle").text(t("customSettingsTitle"));
+          $("#setBackwardLabel").text(t("setBackwardLabel"));
+          $("#setBackwardHint").text(t("setBackwardHint"));
+          $("#setMandatoryLabel").text(t("setMandatoryLabel"));
+          $("#setMandatoryHint").text(t("setMandatoryHint"));
+          $("#setTimerLabel").text(t("setTimerLabel"));
+          $("#setTimerHint").text(t("setTimerHint"));
+          $("#setMoveTimer option[value='0']").text(t("setTimerOff"));
+          ["10","30","60","120"].forEach(function (n) {
+            $("#setMoveTimer option[value='" + n + "']").text(t("setTimerSec").replace("{n}", n));
+          });
+          if (typeof updateCustomSettingsUI === "function") updateCustomSettingsUI();
+        }
         $("#sideSelectLabel").text(t("sideSelectLabel"));
         $("#sideSelect option[value='w']").text(t("sideWhite"));
         $("#sideSelect option[value='b']").text(t("sideBlack"));
@@ -553,11 +606,7 @@
         $("#newGameBtn").text(t("newGame"));
         $("#undoBtn").text(t("undo"));
         $("#mpTitle").text(t("mpTitle"));
-        // Keep mission card visible in MP so #dicePanel stays shown; hide only vs-bot controls.
-        $("#missionTitle").closest("section.card").removeClass("mp-hidden");
-        $("#sideSelectWrap").toggleClass("mp-hidden", isMultiplayer());
-        $("#difficultyWrap").toggleClass("mp-hidden", isMultiplayer());
-        $("#spGameBtns").toggleClass("mp-hidden", isMultiplayer());
+        $("#missionTitle").closest("section.card").toggleClass("mp-hidden", isMultiplayer());
         $("#mpResetBtn").toggleClass("mp-hidden", !canMpAct() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
         $("#mpCreateBtn").text(t("mpCreate"));
         $("#mpJoinToggleBtn").text(t("mpJoin"));
@@ -658,8 +707,6 @@
       var botSchedGen = 0;
       var undoStack = [];
       var plySans = [];
-      // Dice-mode turn log: [{side, dice:[{value,type,status}], plies:[{san,piece}], passed, closed}]
-      var diceTurnLog = [];
 
       // Dice Chess: 1=p, 2=n, 3=b, 4=r, 5=q, 6=k
       // Each die = one required move of that type this turn (duplicates = multiple moves).
@@ -678,6 +725,286 @@
         if (savedDice === 1 || savedDice === 2 || savedDice === 3) diceCount = savedDice;
       } catch (e) {}
 
+      var CUSTOM_SETTINGS_KEY = "boardhack-custom-settings";
+      var customSettings = { backwardCapture: false, mandatoryCapture: false, moveTimer: 0 };
+      try {
+        var rawCs = localStorage.getItem(CUSTOM_SETTINGS_KEY);
+        if (rawCs) {
+          var parsedCs = JSON.parse(rawCs);
+          if (parsedCs && typeof parsedCs === "object") {
+            customSettings.backwardCapture = !!parsedCs.backwardCapture;
+            customSettings.mandatoryCapture = !!parsedCs.mandatoryCapture;
+            var mt = Number(parsedCs.moveTimer);
+            customSettings.moveTimer = (mt === 10 || mt === 30 || mt === 60 || mt === 120) ? mt : 0;
+          }
+        }
+      } catch (e) {}
+      var moveTimerId = null;
+      var moveDeadline = 0;
+      var settingsLockedLocal = false;
+
+      function cloneCustomSettings(s) {
+        s = s || customSettings;
+        return {
+          backwardCapture: !!s.backwardCapture,
+          mandatoryCapture: !!s.mandatoryCapture,
+          moveTimer: (s.moveTimer === 10 || s.moveTimer === 30 || s.moveTimer === 60 || s.moveTimer === 120) ? s.moveTimer : 0
+        };
+      }
+
+      function persistCustomSettings() {
+        try { localStorage.setItem(CUSTOM_SETTINGS_KEY, JSON.stringify(cloneCustomSettings())); } catch (e) {}
+      }
+
+      function canEditCustomSettings() {
+        if (!isMultiplayer()) return !settingsLockedLocal;
+        if (!mpRoom) return false;
+        if (Array.isArray(plySans) && plySans.length > 0) return false;
+        if (mpRoom.plySans && mpRoom.plySans.length > 0) return false;
+        var cid = getOrCreateClientId();
+        if (mpRoom.hostId && mpRoom.hostId === cid) return true;
+        if (mpSeat === "w") return true;
+        return false;
+      }
+
+      function applyCustomSettingsObject(obj, fromRemote) {
+        if (!obj || typeof obj !== "object") return;
+        customSettings.backwardCapture = !!obj.backwardCapture;
+        customSettings.mandatoryCapture = !!obj.mandatoryCapture;
+        var mt = Number(obj.moveTimer);
+        customSettings.moveTimer = (mt === 10 || mt === 30 || mt === 60 || mt === 120) ? mt : 0;
+        if (!fromRemote) persistCustomSettings();
+        updateCustomSettingsUI();
+        if (!gameOver) restartMoveTimer();
+      }
+
+      function updateCustomSettingsUI() {
+        if (!$("#customSettingsCard").length) return;
+        var editable = canEditCustomSettings();
+        $("#setBackwardToggle").attr("aria-checked", customSettings.backwardCapture ? "true" : "false").prop("disabled", !editable);
+        $("#setMandatoryToggle").attr("aria-checked", customSettings.mandatoryCapture ? "true" : "false").prop("disabled", !editable);
+        $("#setMoveTimer").val(String(customSettings.moveTimer || 0)).prop("disabled", !editable);
+        var locked = isMultiplayer()
+          ? (!editable && (plySans.length > 0 || (mpRoom && mpRoom.plySans && mpRoom.plySans.length > 0)))
+          : settingsLockedLocal;
+        if (locked) {
+          $("#customSettingsLocked").removeClass("mp-hidden").text(t("customSettingsLocked"));
+        } else if (isMultiplayer() && !editable) {
+          $("#customSettingsLocked").removeClass("mp-hidden").text(t("customSettingsHostOnly"));
+        } else {
+          $("#customSettingsLocked").addClass("mp-hidden").text("");
+        }
+      }
+
+      function publishCustomSettings() {
+        if (!isMultiplayer() || !canMpAct() || !mpSocket || !mpRoomCode) return;
+        if (!canEditCustomSettings()) return;
+        mpSocket.emit("updateCustomSettings", {
+          clientId: getOrCreateClientId(),
+          code: mpRoomCode,
+          customSettings: cloneCustomSettings()
+        }, function (res) {
+          if (res && res.ok && res.room && res.room.customSettings) {
+            applyCustomSettingsObject(res.room.customSettings, true);
+            if (mpRoom) mpRoom.customSettings = cloneCustomSettings(res.room.customSettings);
+          }
+        });
+      }
+
+      function setCustomToggle(key, on) {
+        if (!canEditCustomSettings()) return;
+        customSettings[key] = !!on;
+        persistCustomSettings();
+        updateCustomSettingsUI();
+        publishCustomSettings();
+        clearSelection();
+        updateStatus();
+      }
+
+      function clearMoveTimer() {
+        if (moveTimerId) {
+          clearInterval(moveTimerId);
+          moveTimerId = null;
+        }
+        moveDeadline = 0;
+        $("#moveTimerStatus").text("");
+      }
+
+      function restartMoveTimer() {
+        clearMoveTimer();
+        if (gameOver) return;
+        var secs = customSettings.moveTimer;
+        if (!secs || secs <= 0) return;
+        if (isMultiplayer() && !mpBothSeated()) return;
+        if (isSpectating()) return;
+        moveDeadline = Date.now() + secs * 1000;
+        moveTimerId = setInterval(tickMoveTimer, 200);
+        tickMoveTimer();
+      }
+
+      function tickMoveTimer() {
+        if (!moveDeadline || gameOver) {
+          clearMoveTimer();
+          return;
+        }
+        var left = Math.ceil((moveDeadline - Date.now()) / 1000);
+        if (left <= 0) {
+          clearMoveTimer();
+          onMoveTimeout();
+          return;
+        }
+        $("#moveTimerStatus").text(t("timerStatus").replace("{n}", String(left)));
+      }
+
+      function onMoveTimeout() {
+        if (gameOver) return;
+        var loserColor = game.turn();
+        gameOver = true;
+        clearMoveTimer();
+        cancelScheduledBot();
+        botThinking = false;
+        $thinking.removeClass("show");
+        var loserLabel;
+        if (isMultiplayer()) {
+          loserLabel = loserColor === userColor ? t("winnerYou") : t("winnerOpp");
+        } else {
+          loserLabel = loserColor === userColor ? t("winnerYou") : t("winnerBot");
+        }
+        setStatus(t("timerTimeoutLoss").replace("{loser}", loserLabel), "danger");
+        $turnLabel.text(t("turnOver"));
+        if (isMultiplayer() && canMpAct() && mpSocket) {
+          try {
+            mpSocket.emit("makeMove", {
+              clientId: getOrCreateClientId(),
+              code: mpRoomCode,
+              stateSync: true,
+              fen: game.fen(),
+              plySans: plySans.slice(),
+              gameOver: true,
+              customSettings: cloneCustomSettings()
+            });
+          } catch (e) {}
+        }
+      }
+
+      function sqFileRank(sq) {
+        return { f: sq.charCodeAt(0) - 97, r: parseInt(sq.charAt(1), 10) };
+      }
+
+      function isBackwardPawnCaptureSquare(from, to, color) {
+        var a = sqFileRank(from);
+        var b = sqFileRank(to);
+        if (Math.abs(a.f - b.f) !== 1) return false;
+        if (color === "w") return b.r === a.r - 1;
+        return b.r === a.r + 1;
+      }
+
+      function extraBackwardCaptures() {
+        if (!customSettings.backwardCapture) return [];
+        var turn = game.turn();
+        var out = [];
+        var files = "abcdefgh";
+        var boardState = game.board();
+        for (var row = 0; row < 8; row++) {
+          for (var col = 0; col < 8; col++) {
+            var p = boardState[row][col];
+            if (!p || p.type !== "p" || p.color !== turn) continue;
+            var from = files[col] + (8 - row);
+            var backRow = row + (turn === "w" ? 1 : -1);
+            for (var dc = -1; dc <= 1; dc += 2) {
+              var nc = col + dc;
+              if (backRow < 0 || backRow > 7 || nc < 0 || nc > 7) continue;
+              var target = boardState[backRow][nc];
+              if (!target || target.color === turn) continue;
+              var to = files[nc] + (8 - backRow);
+              var before = game.fen();
+              game.remove(to);
+              game.remove(from);
+              game.put({ type: "p", color: turn }, to);
+              var illegal = game.in_check();
+              game.load(before);
+              if (!illegal) {
+                out.push({
+                  color: turn,
+                  from: from,
+                  to: to,
+                  flags: "c",
+                  piece: "p",
+                  captured: target.type,
+                  san: from.charAt(0) + "x" + to,
+                  promotion: undefined
+                });
+              }
+            }
+          }
+        }
+        return out;
+      }
+
+      function applyBackwardCaptureMove(from, to) {
+        var before = game.fen();
+        var piece = game.get(from);
+        var captured = game.get(to);
+        if (!piece || piece.type !== "p" || !captured || captured.color === piece.color) return null;
+        if (!isBackwardPawnCaptureSquare(from, to, piece.color)) return null;
+        var color = piece.color;
+        game.remove(to);
+        game.remove(from);
+        game.put({ type: "p", color: color }, to);
+        if (game.in_check()) {
+          game.load(before);
+          return null;
+        }
+        var san = from.charAt(0) + "x" + to;
+        var parts = game.fen().split(" ");
+        parts[1] = color === "w" ? "b" : "w";
+        parts[3] = "-";
+        parts[4] = "0";
+        if (color === "b") parts[5] = String((parseInt(parts[5], 10) || 1) + 1);
+        if (!game.load(parts.join(" "))) {
+          game.load(before);
+          return null;
+        }
+        return {
+          color: color,
+          from: from,
+          to: to,
+          flags: "c",
+          piece: "p",
+          captured: captured.type,
+          san: san
+        };
+      }
+
+      function getAllCustomMoves() {
+        var moves = game.moves({ verbose: true }).concat(extraBackwardCaptures());
+        if (customSettings.mandatoryCapture) {
+          var caps = [];
+          for (var i = 0; i < moves.length; i++) {
+            if (moves[i].captured) caps.push(moves[i]);
+          }
+          if (caps.length) return caps;
+        }
+        return moves;
+      }
+
+      function getCustomMovesFrom(square) {
+        var all = getAllCustomMoves();
+        var out = [];
+        for (var i = 0; i < all.length; i++) {
+          if (all[i].from === square) out.push(all[i]);
+        }
+        return out;
+      }
+
+      function findCustomMove(from, to) {
+        var moves = getCustomMovesFrom(from);
+        for (var i = 0; i < moves.length; i++) {
+          if (moves[i].to === to) return moves[i];
+        }
+        return null;
+      }
+
       // diceRoll: original faces [{value, type, status: "pending"|"used"|"skipped"}]
       // remainingDice: still-required [{value, type}]
       var diceRoll = [];
@@ -685,10 +1012,6 @@
       var diceSide = null;
       var lastSkipMsg = "";
       var consecutiveSkipPasses = 0;
-      var DICE_REVEAL_MS = 750;
-      var diceRevealUntil = 0;
-      var diceRevealTimerId = null;
-      var mpIgnoreDiceCountChange = false;
 
       var $statusText = $("#statusText");
       var $statusDot = $("#statusDot");
@@ -700,7 +1023,7 @@
 
       // ——— Multiplayer (room-by-code) ———
       var CLIENT_ID_KEY = "boardhack-client-id";
-      var MP_ROOM_KEY = "boardhack-mp-room-dice";
+      var MP_ROOM_KEY = "boardhack-mp-room-custom";
       var mpActive = false;
       var mpSocket = null;
       var mpRoomCode = null;
@@ -870,22 +1193,15 @@
 
       function updateMpUI() {
         $("#mpTitle").text(t("mpTitle"));
-        // Keep mission card visible in MP so #dicePanel stays shown; hide only vs-bot controls.
-        $("#missionTitle").closest("section.card").removeClass("mp-hidden");
-        $("#sideSelectWrap").toggleClass("mp-hidden", isMultiplayer());
-        $("#difficultyWrap").toggleClass("mp-hidden", isMultiplayer());
-        $("#spGameBtns").toggleClass("mp-hidden", isMultiplayer());
+        $("#missionTitle").closest("section.card").toggleClass("mp-hidden", isMultiplayer());
         $("#mpResetBtn").toggleClass("mp-hidden", !canMpAct() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
-        updateDiceCountControl();
         if (!mpActive) {
           $("#mpLobby").removeClass("mp-hidden");
           $("#mpActive").addClass("mp-hidden");
           $("#sideSelectWrap").removeClass("mp-hidden");
           $("#difficultyWrap").removeClass("mp-hidden");
-          $("#spGameBtns").removeClass("mp-hidden");
           $("#sideSelect").prop("disabled", false);
           $("#difficulty").prop("disabled", false);
-          $("#diceCount").prop("disabled", false);
           $(".sp-disabled-note").remove();
           $("#mpRoomsTitle").text(t("mpRooms"));
           $("#mpRoomsRefreshBtn").text(t("mpRoomsRefresh"));
@@ -895,6 +1211,9 @@
         stopRoomListPolling();
         $("#mpLobby").addClass("mp-hidden");
         $("#mpActive").removeClass("mp-hidden");
+        // Hide single-player controls before rendering room details.
+        $("#sideSelectWrap").addClass("mp-hidden");
+        $("#difficultyWrap").addClass("mp-hidden");
         $("#mpCodeValue").text(mpRoomCode || "------");
         $("#mpShareLink").text(mpRoomCode ? buildShareLink(mpRoomCode) : "");
         var canPick = mpAloneCanSwitch();
@@ -915,10 +1234,8 @@
         } else {
           $("#mpSeatPickHint").addClass("mp-hidden").text("");
         }
-        $("#mpActiveHint").text(mpBothSeated() ? t("mpPlayingHint") : t("mpWaitingHint"));
-        $("#sideSelectWrap").addClass("mp-hidden");
-        $("#difficultyWrap").addClass("mp-hidden");
-        $("#spGameBtns").addClass("mp-hidden");
+        var bothSeated = mpBothSeated();
+        $("#mpActiveHint").toggleClass("mp-hidden", bothSeated).text(bothSeated ? "" : t("mpWaitingHint"));
         $("#sideSelect").prop("disabled", true);
         $("#difficulty").prop("disabled", true);
         $(".sp-disabled-note").remove();
@@ -936,65 +1253,6 @@
           $("#mpSpectateBanner").addClass("mp-hidden").text("");
         }
         updateOpponentLabel();
-      }
-
-      function snapshotDiceState() {
-        return {
-          diceCount: diceCount,
-          diceRoll: cloneDiceList(diceRoll),
-          remainingDice: cloneDiceList(remainingDice),
-          diceSide: diceSide,
-          lastSkipMsg: lastSkipMsg || ""
-        };
-      }
-
-      function isMpHost() {
-        return isMultiplayer() && mpRoom && mpRoom.hostId === getOrCreateClientId();
-      }
-
-      function updateDiceCountControl() {
-        if (!$("#diceCount").length) return;
-        // In MP only the host may change dice count (avoids sync/newGame feedback loop).
-        var canEdit = !isMultiplayer() || !mpActive || isMpHost();
-        $("#diceCount").prop("disabled", !canEdit);
-      }
-
-      /** Apply dice count without firing the select change → newGame loop. */
-      function applyDiceCountFromRemote(n) {
-        if (n !== 1 && n !== 2 && n !== 3) return false;
-        diceCount = n;
-        mpIgnoreDiceCountChange = true;
-        try {
-          if ($("#diceCount").length) $("#diceCount").val(String(diceCount));
-        } finally {
-          mpIgnoreDiceCountChange = false;
-        }
-        try { localStorage.setItem(DICE_COUNT_KEY, String(diceCount)); } catch (e) {}
-        updateDiceCountControl();
-        return true;
-      }
-
-      function applyDiceState(d) {
-        if (!d) {
-          clearDiceState();
-          return;
-        }
-        if (d.diceCount === 1 || d.diceCount === 2 || d.diceCount === 3) {
-          applyDiceCountFromRemote(d.diceCount);
-        }
-        diceRoll = d.diceRoll ? cloneDiceList(d.diceRoll) : [];
-        remainingDice = d.remainingDice ? cloneDiceList(d.remainingDice) : [];
-        diceSide = d.diceSide != null ? d.diceSide : null;
-        lastSkipMsg = d.lastSkipMsg || "";
-        updateDiceUI();
-        // Fresh roll from peer: hold so both sides can see faces before play continues.
-        if (diceRoll.length && remainingDice.length && diceSide) {
-          var allPending = true;
-          for (var i = 0; i < diceRoll.length; i++) {
-            if (diceRoll[i].status && diceRoll[i].status !== "pending") { allPending = false; break; }
-          }
-          if (allPending) noteDiceReveal();
-        }
       }
 
       function ensureMpSocket(cb) {
@@ -1043,36 +1301,22 @@
         });
         mpSocket.on("moveApplied", function (msg) {
           if (!mpActive || !msg) return;
+          if (msg.customSettings) applyCustomSettingsObject(msg.customSettings, true);
           if (msg.by === mpSeat && !mpApplyingRemote) {
+            // echo of our own move — still sync fen if needed
             if (msg.fen && msg.fen !== game.fen()) applyRemotePosition(msg);
-            else if (msg.dice) {
-              applyDiceState(msg.dice);
-              if (mpRoom) mpRoom.dice = msg.dice;
-            }
+            restartMoveTimer();
             return;
           }
           applyRemotePosition(msg);
+          restartMoveTimer();
         });
         mpSocket.on("gameReset", function (msg) {
           if (!mpActive) return;
-          if (msg && msg.room) {
-            mpRoom = msg.room;
-            if (msg.room.diceCount === 1 || msg.room.diceCount === 2 || msg.room.diceCount === 3) {
-              applyDiceCountFromRemote(msg.room.diceCount);
-            }
-            if (mpBothSeated()) setMpConn("playing");
-            else setMpConn("waiting");
-            updateMpUI();
-          }
-          // One-shot board clear + roll; do not re-enter applyMpRoom (avoids double ensure/sync).
+          if (msg && msg.room) applyMpRoom({ room: msg.room, seat: mpSeat, code: mpRoomCode });
           syncBoardFromMpRoom(true);
-          ensureMpDiceTurnIfNeeded();
         });
-        mpSocket.on("opponentJoined", function () {
-          updateMpUI();
-          updateStatus();
-          ensureMpDiceTurnIfNeeded();
-        });
+        mpSocket.on("opponentJoined", function () { updateMpUI(); updateStatus(); });
         mpSocket.on("opponentLeft", function () {
           if (promoteMpToLocalBot()) return;
           setMpConn("waiting");
@@ -1080,6 +1324,7 @@
           updateStatus();
         });
         mpSocket.on("opponentDisconnected", function () {
+          // Soft disconnect — wait for reconnect; do not demote to bot yet
           setMpConn("waiting");
           updateMpUI();
           updateStatus();
@@ -1119,19 +1364,21 @@
         }
         mpActive = true;
         try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
-        if (mpRoom && (mpRoom.diceCount === 1 || mpRoom.diceCount === 2 || mpRoom.diceCount === 3)) {
-          applyDiceCountFromRemote(mpRoom.diceCount);
+        if (mpRoom && mpRoom.customSettings) {
+          applyCustomSettingsObject(mpRoom.customSettings, true);
         }
+        // Mid-game opponent seat cleared (left) — continue vs bot
         if (!mpSpectating && plySans.length > 0 && mpRoom && mpRoom.seats) {
-          var otherSeatColor = mpSeat === "w" ? "b" : "w";
-          var otherSeatObj = mpRoom.seats[otherSeatColor];
-          if (!otherSeatObj || !otherSeatObj.occupied) {
+          var other = mpSeat === "w" ? "b" : "w";
+          var otherSeat = mpRoom.seats[other];
+          if (!otherSeat || !otherSeat.occupied) {
             if (promoteMpToLocalBot()) return;
           }
         }
         if (mpBothSeated()) setMpConn("playing");
         else setMpConn("waiting");
         updateMpUI();
+        updateCustomSettingsUI();
         cancelScheduledBot();
         botThinking = false;
         $thinking.removeClass("show");
@@ -1140,7 +1387,7 @@
         }
         syncBoardFromMpRoom(false);
         updateStatus();
-        ensureMpDiceTurnIfNeeded();
+        restartMoveTimer();
       }
 
       function syncBoardFromMpRoom(forceReset) {
@@ -1149,14 +1396,11 @@
         if (forceReset || game.fen() !== fen) {
           game.load(fen);
           if (Array.isArray(mpRoom.plySans)) plySans = mpRoom.plySans.slice();
-          if (Array.isArray(mpRoom.diceTurnLog)) diceTurnLog = cloneDiceTurnLog(mpRoom.diceTurnLog);
           gameOver = false;
           if (board) board.position(game.fen(), false);
           clearSelection();
           updateMoveList();
         }
-        if (mpRoom.dice) applyDiceState(mpRoom.dice);
-        else if (forceReset) clearDiceState();
         applyGameEndFromPosition();
       }
 
@@ -1168,20 +1412,10 @@
           else if (msg.move && msg.move.san && plySans[plySans.length - 1] !== msg.move.san) {
             plySans.push(msg.move.san);
           }
-          if (Array.isArray(msg.diceTurnLog)) {
-            diceTurnLog = cloneDiceTurnLog(msg.diceTurnLog);
-          }
-          if (!msg.stateSync) playMoveSound();
-          if (Object.prototype.hasOwnProperty.call(msg, "dice")) {
-            applyDiceState(msg.dice);
-          }
+          playMoveSound();
           if (board) board.position(game.fen());
           clearSelection();
           updateMoveList();
-          if (msg.dice && msg.dice.diceSide && msg.dice.remainingDice && msg.dice.remainingDice.length) {
-            setSideToMove(msg.dice.diceSide);
-          }
-          refreshDiceHighlights();
           if (msg.status === "finished" || applyGameEndFromPosition()) {
             /* status updated inside */
           } else {
@@ -1190,15 +1424,12 @@
           if (mpRoom) {
             mpRoom.fen = msg.fen || mpRoom.fen;
             mpRoom.plySans = plySans.slice();
-            if (Array.isArray(msg.diceTurnLog)) mpRoom.diceTurnLog = cloneDiceTurnLog(msg.diceTurnLog);
-            if (msg.move) mpRoom.lastMove = msg.move;
+            mpRoom.lastMove = msg.move || mpRoom.lastMove;
             if (msg.status) mpRoom.status = msg.status;
-            if (Object.prototype.hasOwnProperty.call(msg, "dice")) mpRoom.dice = msg.dice;
           }
         } finally {
           mpApplyingRemote = false;
         }
-        ensureMpDiceTurnIfNeeded();
       }
 
 
@@ -1274,7 +1505,7 @@
           if (err) return;
           mpSocket.emit(
             "createRoom",
-            { clientId: getOrCreateClientId(), mode: "dice", preferredSeat: (userColor === "b" ? "b" : "w"), diceCount: diceCount, nick: getNick() },
+            { clientId: getOrCreateClientId(), mode: "custom", preferredSeat: (userColor === "b" ? "b" : "w"), customSettings: cloneCustomSettings(), nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 setMpConn("error", (res && res.error) || t("mpError"));
@@ -1294,14 +1525,13 @@
           if (err) return;
           mpSocket.emit(
             "joinRoom",
-            { clientId: getOrCreateClientId(), code: code, mode: "dice", nick: getNick() },
+            { clientId: getOrCreateClientId(), code: code, mode: "custom", nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 var errKey = res && res.error;
                 var msg = t("mpError");
                 if (errKey === "room_not_found") msg = t("mpNotFound");
                 if (errKey === "room_full") msg = t("mpRoomFull");
-                if (errKey === "wrong_mode") msg = t("mpWrongMode");
                 setMpConn("error", msg);
                 return;
               }
@@ -1320,7 +1550,7 @@
           if (err) return;
           mpSocket.emit(
             "spectateRoom",
-            { clientId: getOrCreateClientId(), code: code, mode: "dice", nick: getNick() },
+            { clientId: getOrCreateClientId(), code: code, mode: "custom", nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 var errKey = res && res.error;
@@ -1356,6 +1586,7 @@
           try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
         }
         clearMpSession(true);
+        // restore single-player (also refreshes status bar to local turn text)
         newGame();
       }
 
@@ -1369,10 +1600,6 @@
         var fen = game.fen();
         var keptPly = plySans.slice();
         var keptUndo = undoStack.slice();
-        var keptDiceRoll = diceRoll.slice();
-        var keptRemaining = remainingDice.slice();
-        var keptDiceSide = diceSide;
-        var keptSkip = lastSkipMsg;
         if (mpSocket && mpRoomCode) {
           try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
         }
@@ -1382,10 +1609,6 @@
         game.load(fen);
         plySans = keptPly;
         undoStack = keptUndo;
-        diceRoll = keptDiceRoll;
-        remainingDice = keptRemaining;
-        diceSide = keptDiceSide;
-        lastSkipMsg = keptSkip;
         gameOver = false;
         botThinking = false;
         $thinking.removeClass("show");
@@ -1394,9 +1617,10 @@
           board.position(game.fen(), false);
         }
         updateMoveList();
-        updateDiceUI();
+        updateCustomSettingsUI();
         setStatus(t("mpContinueBot"), "warn");
         updateOpponentLabel();
+        restartMoveTimer();
         if (!gameOver && game.turn() !== userColor) {
           scheduleBot(450);
         } else {
@@ -1407,7 +1631,6 @@
 
       function publishMpMove(from, to, san) {
         if (!canMpAct() || !mpSocket) return;
-        var dice = snapshotDiceState();
         mpSocket.emit("makeMove", {
           clientId: getOrCreateClientId(),
           code: mpRoomCode,
@@ -1417,61 +1640,14 @@
           fen: game.fen(),
           san: san,
           plySans: plySans.slice(),
-          diceTurnLog: cloneDiceTurnLog(diceTurnLog),
           gameOver: !!gameOver,
-          dice: dice
+          customSettings: cloneCustomSettings()
         });
         if (mpRoom) {
           mpRoom.fen = game.fen();
           mpRoom.plySans = plySans.slice();
-          mpRoom.diceTurnLog = cloneDiceTurnLog(diceTurnLog);
           mpRoom.lastMove = { from: from, to: to, san: san, color: mpSeat };
-          mpRoom.dice = dice;
         }
-      }
-
-      function publishMpStateSync() {
-        if (!isMultiplayer() || !mpSocket || mpApplyingRemote) return;
-        var dice = snapshotDiceState();
-        mpSocket.emit("makeMove", {
-          clientId: getOrCreateClientId(),
-          code: mpRoomCode,
-          fen: game.fen(),
-          plySans: plySans.slice(),
-          diceTurnLog: cloneDiceTurnLog(diceTurnLog),
-          gameOver: !!gameOver,
-          dice: dice,
-          stateSync: true
-        });
-        if (mpRoom) {
-          mpRoom.fen = game.fen();
-          mpRoom.plySans = plySans.slice();
-          mpRoom.diceTurnLog = cloneDiceTurnLog(diceTurnLog);
-          mpRoom.dice = dice;
-        }
-      }
-
-      /** If both seated and it is my chess turn with no active dice, roll and sync. */
-      function ensureMpDiceTurnIfNeeded() {
-        if (!isMultiplayer() || !mpBothSeated() || gameOver || mpApplyingRemote) return;
-        if (game.turn() !== userColor) return;
-        if (diceSide === userColor && remainingDice.length > 0) return;
-        if (diceSide && diceSide !== userColor) return;
-        if (diceRevealPending()) return;
-        // Roll + sync immediately so opponent sees faces; resolve skip/pass after reveal delay.
-        beginDiceTurnFor(userColor, { deferResolve: true });
-        publishMpStateSync();
-        updateStatus();
-        afterDiceReveal(function () {
-          if (!isMultiplayer() || mpApplyingRemote || gameOver) return;
-          if (game.turn() !== userColor) return;
-          var canMove = resolveDiceTurnAfterReveal(userColor);
-          publishMpStateSync();
-          updateStatus();
-          if (!canMove) {
-            // Turn may have passed via skips; opponent will roll when they receive sync.
-          }
-        });
       }
 
       function tryAutoRejoin() {
@@ -1493,29 +1669,23 @@
             { clientId: getOrCreateClientId(), code: code, nick: getNick() },
             function (res) {
               if (res && res.ok) {
-                if (res.room && res.room.mode && res.room.mode !== "dice") {
-                  setMpConn("error", t("mpWrongMode"));
-                  return;
-                }
                 applyMpRoom(res);
                 return;
               }
+              // fall back to join if seat not claimed yet
               mpSocket.emit(
                 "joinRoom",
-                { clientId: getOrCreateClientId(), code: code, mode: "dice", nick: getNick() },
+                { clientId: getOrCreateClientId(), code: code, mode: "custom", nick: getNick() },
                 function (res2) {
                   if (res2 && res2.ok) applyMpRoom(res2);
-                  else if (roomParam) {
-                    var msg = t("mpNotFound");
-                    if (res2 && res2.error === "wrong_mode") msg = t("mpWrongMode");
-                    setMpConn("error", msg);
-                  }
+                  else if (roomParam) setMpConn("error", t("mpNotFound"));
                 }
               );
             }
           );
         });
       }
+
 
       function getSkillKey() {
         var v = $("#difficulty").val();
@@ -1559,11 +1729,7 @@
 
       function syncModeSelects() {
         if ($("#modeSelect").length) $("#modeSelect").val(gameMode);
-        if ($("#diceCount").length) {
-          mpIgnoreDiceCountChange = true;
-          try { $("#diceCount").val(String(diceCount)); }
-          finally { mpIgnoreDiceCountChange = false; }
-        }
+        if ($("#diceCount").length) $("#diceCount").val(String(diceCount));
         if (isDiceMode()) {
           $("#diceCountWrap").removeClass("hidden");
           $("#dicePanel").addClass("visible");
@@ -1571,7 +1737,6 @@
           $("#diceCountWrap").addClass("hidden");
           $("#dicePanel").removeClass("visible");
         }
-        updateDiceCountControl();
       }
 
       function pieceName(type) {
@@ -1590,109 +1755,7 @@
         return out;
       }
 
-      function cloneDiceTurnLog(list) {
-        var out = [];
-        if (!list) return out;
-        for (var i = 0; i < list.length; i++) {
-          var t = list[i];
-          var plies = [];
-          if (t.plies) {
-            for (var j = 0; j < t.plies.length; j++) {
-              plies.push({ san: t.plies[j].san, piece: t.plies[j].piece });
-            }
-          }
-          out.push({
-            side: t.side,
-            dice: cloneDiceList(t.dice || []),
-            plies: plies,
-            passed: !!t.passed,
-            closed: !!t.closed
-          });
-        }
-        return out;
-      }
-
-      /** True if side has at least one piece of this type on the board. */
-      function sideHasPieceType(side, pieceType) {
-        var boardState = game.board();
-        for (var r = 0; r < 8; r++) {
-          for (var c = 0; c < 8; c++) {
-            var p = boardState[r][c];
-            if (p && p.color === side && p.type === pieceType) return true;
-          }
-        }
-        return false;
-      }
-
-      function startDiceTurnLogEntry(side) {
-        diceTurnLog.push({
-          side: side,
-          dice: cloneDiceList(diceRoll),
-          plies: [],
-          passed: false,
-          closed: false
-        });
-      }
-
-      function syncOpenDiceTurnFaces() {
-        if (!diceTurnLog.length) return;
-        var last = diceTurnLog[diceTurnLog.length - 1];
-        if (last.closed) return;
-        last.dice = cloneDiceList(diceRoll);
-      }
-
-      function appendDiceTurnPly(san, piece) {
-        if (!diceTurnLog.length) return;
-        var last = diceTurnLog[diceTurnLog.length - 1];
-        if (last.closed) return;
-        last.plies.push({ san: san, piece: piece });
-        last.passed = false;
-        last.dice = cloneDiceList(diceRoll);
-      }
-
-      function closeDiceTurnLogEntry() {
-        if (!diceTurnLog.length) return;
-        var last = diceTurnLog[diceTurnLog.length - 1];
-        if (last.closed) return;
-        last.dice = cloneDiceList(diceRoll);
-        if (!last.plies.length) last.passed = true;
-        last.closed = true;
-      }
-
-      function clearDiceReveal() {
-        if (diceRevealTimerId != null) {
-          clearTimeout(diceRevealTimerId);
-          diceRevealTimerId = null;
-        }
-        diceRevealUntil = 0;
-      }
-
-      function noteDiceReveal() {
-        diceRevealUntil = Date.now() + DICE_REVEAL_MS;
-      }
-
-      function diceRevealPending() {
-        return Date.now() < diceRevealUntil;
-      }
-
-      function afterDiceReveal(fn) {
-        var wait = Math.max(0, diceRevealUntil - Date.now());
-        if (diceRevealTimerId != null) {
-          clearTimeout(diceRevealTimerId);
-          diceRevealTimerId = null;
-        }
-        if (wait <= 0) {
-          fn();
-          return;
-        }
-        diceRevealTimerId = window.setTimeout(function () {
-          diceRevealTimerId = null;
-          fn();
-        }, wait);
-      }
-
       function clearDiceState() {
-        clearDiceReveal();
         diceRoll = [];
         remainingDice = [];
         diceSide = null;
@@ -1709,11 +1772,6 @@
         return names;
       }
 
-      /** Re-classify die playability (green/red/dim). Call after every ply, not only on roll. */
-      function refreshDiceHighlights() {
-        updateDiceUI();
-      }
-
       function updateDiceUI() {
         syncModeSelects();
         if (!isDiceMode()) {
@@ -1721,43 +1779,17 @@
           $("#diceAllowedHint").text("");
           return;
         }
-        syncOpenDiceTurnFaces();
         var html = "";
         var colorChar = diceSide || game.turn() || "w";
-        var evalSide = diceSide || game.turn() || "w";
-        // After a ply FEN turn flips, but diceSide still owns remaining dice.
-        // Classify geometry for evalSide or blocked dice falsely look playable (opp moves).
-        if (diceSide && remainingDice.length > 0 && game.turn() !== diceSide) {
-          setSideToMove(diceSide);
-          evalSide = diceSide;
-          colorChar = diceSide;
-        }
         for (var i = 0; i < diceRoll.length; i++) {
           var d = diceRoll[i];
           var cls = "die";
-          var statusLabel = "";
-          if (d.status === "used") {
-            cls += " used";
-            statusLabel = t("histUsed");
-          } else if (d.status === "skipped") {
-            cls += " skipped";
-            statusLabel = t("histSkipped");
-          } else {
-            // pending: green = playable geometry, red = on board but blocked, dim = missing
-            var onBoard = sideHasPieceType(evalSide, d.type);
-            if (!onBoard) {
-              cls += " missing";
-            } else if (hasLegalForType(d.type, evalSide)) {
-              cls += " playable";
-            } else {
-              cls += " blocked";
-            }
-          }
+          if (d.status === "used") cls += " used";
+          if (d.status === "skipped") cls += " skipped";
           var pieceCode = colorChar + d.type.toUpperCase();
           var imgSrc = PIECE_THEME.replace("{piece}", pieceCode);
-          var title = pieceName(d.type) + (statusLabel ? " — " + statusLabel : "");
           html +=
-            '<div class="' + cls + '" title="' + title + '">' +
+            '<div class="' + cls + '" title="' + pieceName(d.type) + '">' +
             '<img class="die-piece-img" src="' + imgSrc + '" alt="' + pieceName(d.type) + '" />' +
             "</div>";
         }
@@ -1775,189 +1807,13 @@
         $("#diceAllowedHint").text(hint);
       }
 
-      /**
-       * Dice mode: chess.js FIDE-legal moves hide anything that leaves/ignores check.
-       * Use pseudo-legal (geometry) moves when legal:false — still piece-correct,
-       * but not filtered by check/mate. Classic mode keeps default legal:true.
-       */
-      function getModeMoves(extra) {
-        var opts = { verbose: true };
-        if (isDiceMode()) opts.legal = false;
-        if (extra) {
-          for (var k in extra) {
-            if (Object.prototype.hasOwnProperty.call(extra, k)) opts[k] = extra[k];
-          }
-        }
-        return game.moves(opts);
-      }
-
-      /**
-       * True if this piece type has a geometry (dice) / legal (classic) move now
-       * for the given side (defaults to active diceSide, else game.turn()).
-       * Must not use a flipped post-ply turn — that scores the opponent and paints
-       * blocked dice green.
-       */
-      function hasLegalForType(pieceType, side) {
-        side = side || diceSide || game.turn();
-        if (side && game.turn() !== side) {
-          setSideToMove(side);
-        }
-        if (side && game.turn() !== side) return false;
-        var all = getModeMoves();
+      /** True only if chess.js reports a real legal move for this piece type. */
+      function hasLegalForType(pieceType) {
+        var all = game.moves({ verbose: true });
         for (var i = 0; i < all.length; i++) {
           if (all[i].piece === pieceType) return true;
         }
         return false;
-      }
-
-      function findGeometryMove(from, to, promotion) {
-        promotion = promotion || "q";
-        var dirty = getModeMoves();
-        for (var i = 0; i < dirty.length; i++) {
-          var m = dirty[i];
-          if (m.from !== from || m.to !== to) continue;
-          if (m.promotion && m.promotion !== promotion) continue;
-          return m;
-        }
-        return null;
-      }
-
-      /**
-       * Apply a pseudo-legal verbose move that chess.js move() would reject
-       * (leaves own king in check). Rebuilds FEN after geometric board edits.
-       */
-      function applyGeometryMove(vm) {
-        if (!vm || !vm.from || !vm.to) return null;
-        var from = vm.from;
-        var to = vm.to;
-        var fenBefore = game.fen();
-        var parts = fenBefore.split(" ");
-        if (parts.length < 6) return null;
-        var turn = parts[1];
-        var castling = parts[2];
-        var half = parseInt(parts[4], 10) || 0;
-        var full = parseInt(parts[5], 10) || 1;
-        var flags = vm.flags || "";
-
-        if (flags.indexOf("e") !== -1) {
-          game.remove(to.charAt(0) + from.charAt(1));
-        } else if (vm.captured) {
-          game.remove(to);
-        }
-
-        var piece = game.remove(from);
-        if (!piece) {
-          game.load(fenBefore);
-          return null;
-        }
-
-        if (flags.indexOf("k") !== -1) {
-          if (turn === "w") {
-            game.remove("h1");
-            game.put({ type: "r", color: "w" }, "f1");
-          } else {
-            game.remove("h8");
-            game.put({ type: "r", color: "b" }, "f8");
-          }
-        } else if (flags.indexOf("q") !== -1) {
-          if (turn === "w") {
-            game.remove("a1");
-            game.put({ type: "r", color: "w" }, "d1");
-          } else {
-            game.remove("a8");
-            game.put({ type: "r", color: "b" }, "d8");
-          }
-        }
-
-        game.put(
-          { type: vm.promotion || piece.type, color: piece.color },
-          to
-        );
-
-        var nc = castling;
-        function stripCastle(ch) {
-          nc = nc.replace(ch, "");
-        }
-        if (piece.type === "k") {
-          if (turn === "w") {
-            stripCastle("K");
-            stripCastle("Q");
-          } else {
-            stripCastle("k");
-            stripCastle("q");
-          }
-        }
-        if (from === "a1" || to === "a1") stripCastle("Q");
-        if (from === "h1" || to === "h1") stripCastle("K");
-        if (from === "a8" || to === "a8") stripCastle("q");
-        if (from === "h8" || to === "h8") stripCastle("k");
-        if (!nc) nc = "-";
-
-        var newEp = "-";
-        if (flags.indexOf("b") !== -1) {
-          var fr = parseInt(from.charAt(1), 10);
-          var tr = parseInt(to.charAt(1), 10);
-          newEp = from.charAt(0) + String((fr + tr) / 2);
-        }
-
-        var newHalf =
-          piece.type === "p" || vm.captured || flags.indexOf("e") !== -1
-            ? 0
-            : half + 1;
-        var newFull = turn === "b" ? full + 1 : full;
-        var newTurn = turn === "w" ? "b" : "w";
-        var boardPart = game.fen().split(" ")[0];
-        var newFen = [boardPart, newTurn, nc, newEp, String(newHalf), String(newFull)].join(
-          " "
-        );
-        if (!game.load(newFen)) {
-          game.load(fenBefore);
-          return null;
-        }
-        return {
-          color: piece.color,
-          from: from,
-          to: to,
-          piece: piece.type,
-          captured: vm.captured,
-          promotion: vm.promotion,
-          flags: flags,
-          san: vm.san || from + to
-        };
-      }
-
-      /**
-       * Make a move: FIDE-legal via chess.js when possible; in dice mode fall back
-       * to geometry apply so check/mate does not block.
-       */
-      function applyGameMove(moveInput) {
-        var from;
-        var to;
-        var promotion = "q";
-        if (typeof moveInput === "string") {
-          var moved = game.move(moveInput);
-          if (moved) return moved;
-          if (!isDiceMode() || moveInput.length < 4) return null;
-          from = moveInput.slice(0, 2);
-          to = moveInput.slice(2, 4);
-          if (moveInput.length > 4) promotion = moveInput.charAt(4).toLowerCase();
-        } else if (moveInput && typeof moveInput === "object") {
-          from = moveInput.from;
-          to = moveInput.to;
-          if (moveInput.promotion) promotion = moveInput.promotion;
-          var movedObj = game.move({
-            from: from,
-            to: to,
-            promotion: promotion
-          });
-          if (movedObj) return movedObj;
-          if (!isDiceMode()) return null;
-        } else {
-          return null;
-        }
-        var vm = findGeometryMove(from, to, promotion);
-        if (!vm) return null;
-        return applyGeometryMove(vm);
       }
 
       function countKingsOnBoard() {
@@ -1976,15 +1832,14 @@
       }
 
       /**
-       * After every ply: king missing, (classic) checkmate/stalemate, or draws.
-       * Dice mode ignores FIDE checkmate/stalemate — geometry moves may still exist;
-       * king capture remains the decisive check-like win.
+       * After every ply: king missing, checkmate, stalemate, or other game_over.
        * Clears dice multi-move state. Returns true if play must stop.
        */
       function applyGameEndFromPosition() {
         var kings = countKingsOnBoard();
         if (kings.w < 1 || kings.b < 1) {
           gameOver = true;
+          clearMoveTimer();
           remainingDice = [];
           diceSide = null;
           var winnerColor = kings.w < 1 ? "b" : "w";
@@ -1992,77 +1847,63 @@
           var winner = winnerColor === userColor ? t("winnerYou") : loserLabel;
           setStatus(t("kingCaptureWin").replace("{winner}", winner), "danger");
           $turnLabel.text(t("turnOver"));
-          closeDiceTurnLogEntry();
           updateDiceUI();
-          updateMoveList();
           return true;
         }
 
-        // Dice: do not end on FIDE mate/stalemate (move gen ignores check).
-        if (!isDiceMode()) {
-          if (game.in_checkmate()) {
-            gameOver = true;
-            remainingDice = [];
-            diceSide = null;
-            var loserLabelMate = isMultiplayer() ? t("winnerOpp") : t("winnerBot");
-            var wMate = game.turn() === userColor ? loserLabelMate : t("winnerYou");
-            setStatus(t("checkmateWin").replace("{winner}", wMate), "danger");
-            $turnLabel.text(t("turnOver"));
-            updateDiceUI();
-            return true;
-          }
+        // Custom end detection: chess.js misses backward-capture escapes / mandatory filters
+        var customMoves = getAllCustomMoves();
+        var noCustomMoves = customMoves.length === 0;
 
-          if (game.in_stalemate()) {
-            gameOver = true;
-            remainingDice = [];
-            diceSide = null;
-            setStatus(t("stalemate"), "warn");
-            $turnLabel.text(t("turnDraw"));
-            updateDiceUI();
-            return true;
-          }
+        if (game.in_check() && noCustomMoves) {
+          gameOver = true;
+          clearMoveTimer();
+          remainingDice = [];
+          diceSide = null;
+          var loserLabelMate = isMultiplayer() ? t("winnerOpp") : t("winnerBot");
+          var wMate = game.turn() === userColor ? loserLabelMate : t("winnerYou");
+          setStatus(t("checkmateWin").replace("{winner}", wMate), "danger");
+          $turnLabel.text(t("turnOver"));
+          updateDiceUI();
+          return true;
+        }
+
+        if (!game.in_check() && noCustomMoves) {
+          gameOver = true;
+          clearMoveTimer();
+          remainingDice = [];
+          diceSide = null;
+          setStatus(t("stalemate"), "warn");
+          $turnLabel.text(t("turnDraw"));
+          updateDiceUI();
+          return true;
         }
 
         if (game.in_threefold_repetition()) {
           gameOver = true;
+          clearMoveTimer();
           remainingDice = [];
           diceSide = null;
           setStatus(t("drawRepetition"), "warn");
           $turnLabel.text(t("turnDraw"));
-          closeDiceTurnLogEntry();
           updateDiceUI();
-          updateMoveList();
           return true;
         }
 
         if (game.insufficient_material()) {
           gameOver = true;
+          clearMoveTimer();
           remainingDice = [];
           diceSide = null;
           setStatus(t("drawMaterial"), "warn");
           $turnLabel.text(t("turnDraw"));
-          closeDiceTurnLogEntry();
           updateDiceUI();
-          updateMoveList();
           return true;
         }
 
-        // 50-move draw (halfmove clock) — valid in both modes; skip mate/stale via in_draw
-        var halfMove = parseInt(game.fen().split(" ")[4], 10) || 0;
-        if (halfMove >= 100) {
+        if (game.in_draw() || game.game_over()) {
           gameOver = true;
-          remainingDice = [];
-          diceSide = null;
-          setStatus(t("draw"), "warn");
-          $turnLabel.text(t("turnDraw"));
-          closeDiceTurnLogEntry();
-          updateDiceUI();
-          updateMoveList();
-          return true;
-        }
-
-        if (!isDiceMode() && (game.in_draw() || game.game_over())) {
-          gameOver = true;
+          clearMoveTimer();
           remainingDice = [];
           diceSide = null;
           setStatus(t("draw"), "warn");
@@ -2075,11 +1916,11 @@
       }
 
       function getDiceFilteredMoves() {
-        if (!isDiceMode()) return getModeMoves();
+        if (!isDiceMode()) return getAllCustomMoves();
         if (!remainingDice.length) return [];
         var set = {};
         for (var i = 0; i < remainingDice.length; i++) set[remainingDice[i].type] = true;
-        var all = getModeMoves();
+        var all = getAllCustomMoves();
         var out = [];
         for (var j = 0; j < all.length; j++) {
           if (set[all[j].piece]) out.push(all[j]);
@@ -2094,7 +1935,7 @@
         return false;
       }
 
-      /** May select/move this type only if it remains on dice AND has a geometry/legal move now. */
+      /** May select/move this type only if it remains on dice AND has a legal move now. */
       function pieceAllowedByDice(pieceType) {
         if (!isDiceMode()) return true;
         return dieTypeRemaining(pieceType) && hasLegalForType(pieceType);
@@ -2107,9 +1948,6 @@
         var prev = parts[1];
         if (prev === color) return true;
         parts[1] = color;
-        // EP square is only valid for the side that did not just double-push.
-        // Clearing it lets chess.js accept a mid dice-turn side restore.
-        parts[3] = "-";
         // chess.js increments fullmove when Black moves → White; undo that if restoring Black
         if (color === "b" && prev === "w") {
           var fm = parseInt(parts[5], 10) || 1;
@@ -2270,7 +2108,7 @@
       }
 
       /**
-       * Pass only when NO remaining die type has a geometry (dice) move right now.
+       * Pass only when NO remaining die type has a legal move right now.
        * Keep blocked types while at least one remaining type is playable
        * (e.g. pawn move may later free a bishop).
        * Returns true when this side's dice turn is over.
@@ -2299,21 +2137,16 @@
           passTurnNoMove();
         }
         diceSide = null;
-        closeDiceTurnLogEntry();
         updateDiceUI();
-        updateMoveList();
         return true;
       }
 
       function rollDiceForSide(side) {
         lastSkipMsg = "";
-        if (!isDiceMode() || gameOver) {
+        if (!isDiceMode() || game.game_over()) {
           clearDiceState();
           return;
         }
-        // Close previous turn log before overwriting diceRoll faces
-        closeDiceTurnLogEntry();
-        updateMoveList();
         diceSide = side;
         diceRoll = [];
         remainingDice = [];
@@ -2325,9 +2158,7 @@
           remainingDice.push({ value: roll, type: pt });
         }
         // Keep all dice on roll — even types with no legal move yet
-        startDiceTurnLogEntry(side);
         updateDiceUI();
-        noteDiceReveal();
       }
 
       function diceTurnComplete() {
@@ -2416,8 +2247,7 @@
           diceRoll: cloneDiceList(diceRoll),
           remainingDice: cloneDiceList(remainingDice),
           diceSide: diceSide,
-          lastSkipMsg: lastSkipMsg,
-          diceTurnLog: cloneDiceTurnLog(diceTurnLog)
+          lastSkipMsg: lastSkipMsg
         });
       }
 
@@ -2428,22 +2258,34 @@
         remainingDice = s.remainingDice ? cloneDiceList(s.remainingDice) : [];
         diceSide = s.diceSide != null ? s.diceSide : null;
         lastSkipMsg = s.lastSkipMsg || "";
-        diceTurnLog = s.diceTurnLog ? cloneDiceTurnLog(s.diceTurnLog) : [];
       }
 
-      // chess.js move (O-O / O-O-O); dice may use geometry when in check/mate
+      // Standard chess.js move (includes O-O / O-O-O); castling needs king on dice
       function tryMakeUserMove(from, to) {
         var piece = game.get(from);
         if (piece && !pieceAllowedByDice(piece.type)) return false;
-        snapshotPush();
-        var snap = undoStack[undoStack.length - 1];
-        var move = applyGameMove({ from: from, to: to, promotion: "q" });
-        if (move === null) {
-          undoStack.pop();
+        var allowed = findCustomMove(from, to);
+        if (!allowed) {
+          if (customSettings.mandatoryCapture && getAllCustomMoves().some(function (m) { return !!m.captured; })) {
+            setStatus(t("mandatoryMustCapture"), "warn");
+          }
           return false;
         }
+        snapshotPush();
+        var move = null;
+        var std = game.move({ from: from, to: to, promotion: "q" });
+        if (std) {
+          move = std;
+        } else {
+          move = applyBackwardCaptureMove(from, to);
+          if (!move) {
+            undoStack.pop();
+            return false;
+          }
+        }
         if (isDiceMode() && !dieTypeRemaining(move.piece)) {
-          restoreSnapshot(snap);
+          if (std) game.undo();
+          else game.undo(); // may not work for manual — reload snapshot
           undoStack.pop();
           return false;
         }
@@ -2451,8 +2293,10 @@
         playMoveSound();
         if (isDiceMode()) {
           consumeDie(move.piece);
-          appendDiceTurnPly(move.san, move.piece);
         }
+        settingsLockedLocal = true;
+        updateCustomSettingsUI();
+        restartMoveTimer();
         return true;
       }
 
@@ -2476,28 +2320,11 @@
           return false;
         }
         diceSide = null;
-        closeDiceTurnLogEntry();
         updateDiceUI();
-        updateMoveList();
         return true;
       }
 
-      function resolveDiceTurnAfterReveal(side) {
-        if (!isDiceMode()) return true;
-        if (endTurnIfNoPlayableDice(side)) {
-          consecutiveSkipPasses++;
-          return false;
-        }
-        consecutiveSkipPasses = 0;
-        return true;
-      }
-
-      /**
-       * Roll dice for side and show UI immediately.
-       * opts.deferResolve: skip auto-pass so caller can wait ~750ms (dice reveal) first.
-       */
-      function beginDiceTurnFor(side, opts) {
-        opts = opts || {};
+      function beginDiceTurnFor(side) {
         if (!isDiceMode()) {
           clearDiceState();
           return true; // ready to move (classic: single move)
@@ -2506,8 +2333,7 @@
           setSideToMove(side);
         }
         rollDiceForSide(side);
-        if (opts.deferResolve) return true;
-        // If no remaining type has a geometry move, pass turn immediately
+        // If no remaining type has a legal move, pass turn immediately
         if (endTurnIfNoPlayableDice(side)) {
           consecutiveSkipPasses++;
           return false;
@@ -2521,7 +2347,7 @@
         if (!fromSquare) return;
         var piece = game.get(fromSquare);
         if (piece && !pieceAllowedByDice(piece.type)) return;
-        var moves = getModeMoves({ square: fromSquare });
+        var moves = getCustomMovesFrom(fromSquare);
         for (var i = 0; i < moves.length; i++) {
           var m = moves[i];
           if (!pieceAllowedByDice(m.piece)) continue;
@@ -2548,63 +2374,18 @@
         showLegalMoves(sq);
       }
 
-      /** Prefer king capture, then any capture, else first geometry/legal move. */
-      function pickDiceFallbackMove(moves) {
-        if (!moves || !moves.length) return null;
-        var i;
-        for (i = 0; i < moves.length; i++) {
-          if (moves[i].captured === "k") return moves[i];
-        }
-        for (i = 0; i < moves.length; i++) {
-          if (moves[i].captured) return moves[i];
-        }
-        return moves[0];
-      }
-
       function findBestMoveStockfish(done) {
-        var pool = getDiceFilteredMoves();
-        if (!pool.length) {
+        var legal = getDiceFilteredMoves();
+        if (!legal.length) {
           done(null);
           return;
         }
-        // Dice: king capture wins immediately — do not wait on Stockfish
-        if (isDiceMode()) {
-          for (var ki = 0; ki < pool.length; ki++) {
-            if (pool[ki].captured === "k") {
-              done(pool[ki]);
-              return;
-            }
-          }
-        }
-
         var fen = game.fen();
-        var searchUci = null;
-        var searchPool = pool;
-        if (isDiceMode()) {
-          // Stockfish only accepts FIDE-legal moves; geometry-only escapes stay local
-          var fide = game.moves({ verbose: true });
-          searchPool = [];
-          searchUci = [];
-          for (var i = 0; i < pool.length; i++) {
-            var pm = pool[i];
-            for (var f = 0; f < fide.length; f++) {
-              var fm = fide[f];
-              if (
-                fm.from === pm.from &&
-                fm.to === pm.to &&
-                (!pm.promotion || fm.promotion === pm.promotion)
-              ) {
-                searchPool.push(pm);
-                searchUci.push(BoardHackStockfish.moveToUci(pm));
-                break;
-              }
-            }
-          }
-          if (!searchUci.length) {
-            done(pickDiceFallbackMove(pool));
-            return;
-          }
+        var searchUci = [];
+        for (var i = 0; i < legal.length; i++) {
+          searchUci.push(BoardHackStockfish.moveToUci(legal[i]));
         }
+        if (!searchUci.length) searchUci = null;
         var genAtStart = botSchedGen;
         BoardHackStockfish.getBestMove(fen, searchUci, getSkillKey())
           .then(function (uci) {
@@ -2614,11 +2395,11 @@
             }
             var parsed = BoardHackStockfish.parseUci(uci);
             if (!parsed) {
-              done(pickDiceFallbackMove(isDiceMode() ? pool : searchPool));
+              done(legal[0] || null);
               return;
             }
-            for (var j = 0; j < pool.length; j++) {
-              var m = pool[j];
+            for (var j = 0; j < legal.length; j++) {
+              var m = legal[j];
               if (m.from === parsed.from && m.to === parsed.to) {
                 if (!parsed.promotion || m.promotion === parsed.promotion) {
                   done(m);
@@ -2626,7 +2407,7 @@
                 }
               }
             }
-            // Fallback: try apply (dice geometry if needed)
+            // Fallback: try chess.js apply
             var tryMove = { from: parsed.from, to: parsed.to };
             if (parsed.promotion) tryMove.promotion = parsed.promotion;
             done(tryMove);
@@ -2641,82 +2422,11 @@
               return;
             }
             console.warn("Stockfish search failed:", err && err.message ? err.message : err);
-            done(pickDiceFallbackMove(isDiceMode() ? pool : searchPool));
+            done(legal[0] || null);
           });
       }
 
-      function dieFaceMiniHtml(d, side) {
-        var colorChar = side || "w";
-        var pieceCode = colorChar + String(d.type || "p").toUpperCase();
-        var imgSrc = PIECE_THEME.replace("{piece}", pieceCode);
-        var st = d.status || "pending";
-        var cls = "hist-die hist-die-" + st;
-        return (
-          '<span class="' + cls + '" title="' + pieceName(d.type) + '">' +
-          '<img src="' + imgSrc + '" alt="' + pieceName(d.type) + '" />' +
-          "</span>"
-        );
-      }
-
       function updateMoveList() {
-        if (isDiceMode()) {
-          syncOpenDiceTurnFaces();
-          var totalPlies = 0;
-          for (var ti = 0; ti < diceTurnLog.length; ti++) {
-            totalPlies += (diceTurnLog[ti].plies && diceTurnLog[ti].plies.length) || 0;
-          }
-          $moveCount.text(String(totalPlies));
-          if (!diceTurnLog.length) {
-            $moveList.html('<div class="empty-moves"></div>');
-            $moveList.find(".empty-moves").text(t("emptyMoves"));
-            return;
-          }
-          var html = "";
-          var turnNum = 0;
-          for (var i = 0; i < diceTurnLog.length; i++) {
-            var entry = diceTurnLog[i];
-            if (entry.side === "w") turnNum++;
-            var sideLabel = entry.side === "w" ? t("histWhiteTurn") : t("histBlackTurn");
-            var isOpp =
-              (isMultiplayer() && entry.side !== userColor) ||
-              (!isMultiplayer() && entry.side !== userColor);
-            var diceHtml = "";
-            for (var di = 0; di < (entry.dice || []).length; di++) {
-              diceHtml += dieFaceMiniHtml(entry.dice[di], entry.side);
-            }
-            var body = "";
-            if (entry.passed || !(entry.plies && entry.plies.length)) {
-              if (entry.closed || entry.passed) {
-                body = '<span class="hist-pass">' + t("histPass") + "</span>";
-              } else {
-                body = '<span class="hist-pass hist-pass-pending">…</span>';
-              }
-            } else {
-              for (var pi = 0; pi < entry.plies.length; pi++) {
-                var ply = entry.plies[pi];
-                body +=
-                  '<span class="hist-ply' + (isOpp ? " bot" : "") + '">' +
-                  '<span class="hist-ply-idx">' + (pi + 1) + ".</span> " +
-                  ply.san +
-                  "</span>";
-              }
-            }
-            html +=
-              '<div class="hist-turn' + (isOpp ? " hist-turn-opp" : "") + (entry.closed ? "" : " hist-turn-open") + '">' +
-              '<div class="hist-turn-head">' +
-              '<span class="hist-turn-num">' + (entry.side === "w" ? turnNum + "." : "") + "</span>" +
-              '<span class="hist-turn-side">' + sideLabel + "</span>" +
-              '<span class="hist-turn-dice">' + diceHtml + "</span>" +
-              "</div>" +
-              '<div class="hist-turn-body">' + body + "</div>" +
-              "</div>";
-          }
-          $moveList.html(html);
-          $moveList.scrollTop($moveList[0].scrollHeight);
-          return;
-        }
-
-        // Classic: plain SAN pair rows (unchanged)
         var history = plySans;
         $moveCount.text(String(history.length));
         if (!history.length) {
@@ -2724,19 +2434,19 @@
           $moveList.find(".empty-moves").text(t("emptyMoves"));
           return;
         }
-        var htmlC = "";
-        for (var ci = 0; ci < history.length; ci += 2) {
-          var num = Math.floor(ci / 2) + 1;
-          var white = history[ci] ? history[ci] : "";
-          var black = history[ci + 1] ? history[ci + 1] : "";
-          htmlC +=
+        var html = "";
+        for (var i = 0; i < history.length; i += 2) {
+          var num = Math.floor(i / 2) + 1;
+          var white = history[i] ? history[i] : "";
+          var black = history[i + 1] ? history[i + 1] : "";
+          html +=
             '<div class="move-row">' +
             '<span class="move-num">' + num + ".</span>" +
             '<span class="move-san' + (userColor === "b" ? " bot" : "") + '">' + white + "</span>" +
             '<span class="move-san' + (userColor === "w" ? " bot" : "") + '">' + black + "</span>" +
             "</div>";
         }
-        $moveList.html(htmlC);
+        $moveList.html(html);
         $moveList.scrollTop($moveList[0].scrollHeight);
       }
 
@@ -2771,7 +2481,7 @@
             if (game.in_check() && game.turn() === userColor) {
               setStatus(t("checkYou"), "warn");
             } else {
-              setStatus(isDiceMode() ? t("yourMoveDice") : t("mpYourTurn"), null);
+              setStatus(t("mpYourTurn"), null);
             }
           } else {
             $turnLabel.text(t("turnOpponent"));
@@ -2820,17 +2530,12 @@
           if (canBotActNow(false)) scheduleBot(80);
           return;
         }
-        beginDiceTurnFor(userColor, { deferResolve: true });
+        var canMove = beginDiceTurnFor(userColor);
         updateStatus();
-        afterDiceReveal(function () {
-          if (gameOver || applyGameEndFromPosition()) return;
-          var canMove = resolveDiceTurnAfterReveal(userColor);
-          updateStatus();
-          if (!canMove) {
-            // all user dice unplayable — pass already done; bot's turn
-            if (canBotActNow(false)) scheduleBot(200);
-          }
-        });
+        if (!canMove) {
+          // all user dice unplayable — pass already done; bot's turn
+          if (canBotActNow(false)) scheduleBot(200);
+        }
       }
 
       function makeBotMove() {
@@ -2869,8 +2574,14 @@
         // Always roll/play as bot color — never game.turn() if it could be user
         var side = botColor();
         setSideToMove(side);
-        beginDiceTurnFor(side, { deferResolve: true });
+        var started = beginDiceTurnFor(side);
         updateStatus();
+
+        if (!started) {
+          // all bot dice skipped — user's turn now
+          window.setTimeout(startUserTurnAfterBot, 120);
+          return;
+        }
 
         function botPly() {
           var genAtStart = botSchedGen;
@@ -2923,12 +2634,14 @@
             }
 
             snapshotPush();
-            var botSnap = undoStack[undoStack.length - 1];
-            var moved = applyGameMove(best);
+            var moved = game.move(best);
+            if (!moved && best && best.from && best.to) {
+              moved = applyBackwardCaptureMove(best.from, best.to);
+            }
             if (moved) {
               // Sanity: never accept a move of the user's color
               if (moved.color === userColor) {
-                restoreSnapshot(botSnap);
+                try { game.undo(); } catch (e) {}
                 undoStack.pop();
                 finishBotThinking();
                 setSideToMove(userColor);
@@ -2937,16 +2650,14 @@
               }
               plySans.push(moved.san);
               playMoveSound();
-              if (isDiceMode()) {
-                consumeDie(moved.piece);
-                appendDiceTurnPly(moved.san, moved.piece);
-              }
+              if (isDiceMode()) consumeDie(moved.piece);
               board.position(game.fen());
               updateMoveList();
+              updateDiceUI();
+              restartMoveTimer();
 
               // End before any multi-move side restore (mate / king capture)
               if (applyGameEndFromPosition()) {
-                refreshDiceHighlights();
                 finishBotThinking();
                 return;
               }
@@ -2954,12 +2665,11 @@
               if (isDiceMode() && remainingDice.length > 0) {
                 setSideToMove(botColor());
                 if (!endTurnIfNoPlayableDice(botColor())) {
-                  refreshDiceHighlights();
                   window.setTimeout(botPly, 180);
                   return;
                 }
               }
-              refreshDiceHighlights();
+              updateDiceUI();
               startUserTurnAfterBot();
             } else {
               undoStack.pop();
@@ -2968,34 +2678,15 @@
           });
         }
 
-        afterDiceReveal(function () {
-          if (gameOver || applyGameEndFromPosition()) {
-            finishBotThinking();
-            return;
-          }
-          var started = resolveDiceTurnAfterReveal(side);
-          updateStatus();
-          if (!started) {
-            // all bot dice skipped — user's turn now
-            window.setTimeout(startUserTurnAfterBot, 120);
-            return;
-          }
-          window.setTimeout(botPly, 60);
-        });
+        window.setTimeout(botPly, 60);
       }
 
       function onDragStart(source, piece) {
         if (gameOver || botThinking || applyGameEndFromPosition()) return false;
-        if (diceRevealPending()) return false;
         if (isMultiplayer()) {
           if (!canMpAct() || !mpBothSeated()) return false;
           cancelScheduledBot();
-          if (game.turn() !== mpSeat) return false;
-          if (isHumanDiceTurnActive() || userHasRemainingDice()) {
-            setSideToMove(userColor);
-          } else if (game.turn() !== userColor) {
-            return false;
-          }
+          if (game.turn() !== userColor || game.turn() !== mpSeat) return false;
         } else {
           cancelScheduledBot();
           if (isHumanDiceTurnActive() || userHasRemainingDice()) {
@@ -3019,8 +2710,7 @@
         if (!tryMakeUserMove(source, target)) return "snapback";
         board.position(game.fen());
         updateMoveList();
-        var handOff = afterUserDicePly();
-        refreshDiceHighlights();
+        updateDiceUI();
         if (isMultiplayer()) {
           if (!canMpAct()) return "snapback";
           var san = plySans[plySans.length - 1];
@@ -3029,6 +2719,7 @@
           cancelScheduledBot();
           return;
         }
+        var handOff = afterUserDicePly();
         updateStatus();
         if (handOff && !gameOver && !userHasRemainingDice() && canBotActNow(false)) {
           scheduleBot(250);
@@ -3043,15 +2734,10 @@
 
       function tryClickMove(square) {
         if (gameOver || botThinking || applyGameEndFromPosition()) return;
-        if (diceRevealPending()) return;
         if (isMultiplayer()) {
           if (!mpBothSeated()) return;
           cancelScheduledBot();
-          if (isHumanDiceTurnActive() || userHasRemainingDice()) {
-            setSideToMove(userColor);
-          } else if (game.turn() !== userColor) {
-            return;
-          }
+          if (game.turn() !== userColor) return;
         } else {
           cancelScheduledBot();
           if (isHumanDiceTurnActive() || userHasRemainingDice()) {
@@ -3086,8 +2772,7 @@
 
         board.position(game.fen());
         updateMoveList();
-        var handOff = afterUserDicePly();
-        refreshDiceHighlights();
+        updateDiceUI();
         if (isMultiplayer()) {
           var san = plySans[plySans.length - 1];
           publishMpMove(from, square, san);
@@ -3095,6 +2780,7 @@
           cancelScheduledBot();
           return;
         }
+        var handOff = afterUserDicePly();
         updateStatus();
         if (handOff && !gameOver && !userHasRemainingDice() && canBotActNow(false)) {
           scheduleBot(250);
@@ -3117,18 +2803,20 @@
 
       function newGame() {
         cancelScheduledBot();
-        clearDiceReveal();
+        clearMoveTimer();
+        settingsLockedLocal = false;
         if (isMultiplayer()) {
           if (mpSocket && mpRoom && mpRoom.hostId === getOrCreateClientId()) {
             mpSocket.emit("resetGame", {
               clientId: getOrCreateClientId(),
               code: mpRoomCode,
-              diceCount: diceCount
+              nick: getNick(),
+              customSettings: cloneCustomSettings()
             });
           }
+          // optimistic local reset; server will broadcast gameReset
           undoStack = [];
           plySans = [];
-          diceTurnLog = [];
           game.load(START_FEN);
           gameOver = false;
           botThinking = false;
@@ -3138,12 +2826,13 @@
           board.orientation(boardOrientation());
           board.position(START_POSITION);
           updateMoveList();
+          updateCustomSettingsUI();
           updateStatus();
+          restartMoveTimer();
           return;
         }
         undoStack = [];
         plySans = [];
-        diceTurnLog = [];
         game.load(START_FEN);
         gameOver = false;
         botThinking = false;
@@ -3153,20 +2842,19 @@
         board.orientation(boardOrientation());
         board.position(START_POSITION);
         updateMoveList();
+        updateCustomSettingsUI();
         updateStatus();
         $("#undoBtn").prop("disabled", false);
         syncModeSelects();
+        restartMoveTimer();
         if (userColor === "b") {
           scheduleBot(250);
         } else {
-          beginDiceTurnFor(userColor, { deferResolve: true });
+          var canMove = beginDiceTurnFor(userColor);
           updateStatus();
-          afterDiceReveal(function () {
-            if (gameOver) return;
-            var canMove = resolveDiceTurnAfterReveal(userColor);
-            updateStatus();
-            if (!canMove) scheduleBot(200);
-          });
+          if (!canMove) {
+            scheduleBot(200);
+          }
         }
       }
 
@@ -3219,16 +2907,8 @@
       }
 
       function onDiceCountChange() {
-        if (mpIgnoreDiceCountChange) return;
         var v = parseInt($("#diceCount").val(), 10);
         var next = v === 1 || v === 3 ? v : 2;
-        if (isMultiplayer()) {
-          if (!isMpHost()) {
-            // Opponent must not re-emit; snap select back to authoritative count.
-            applyDiceCountFromRemote(diceCount);
-            return;
-          }
-        }
         if (next === diceCount) return;
         diceCount = next;
         saveModeSettings();
@@ -3273,6 +2953,28 @@
           updateOpponentLabel();
         });
 
+        $("#setBackwardToggle").on("click", function () {
+          if ($(this).prop("disabled")) return;
+          setCustomToggle("backwardCapture", $(this).attr("aria-checked") !== "true");
+        });
+        $("#setMandatoryToggle").on("click", function () {
+          if ($(this).prop("disabled")) return;
+          setCustomToggle("mandatoryCapture", $(this).attr("aria-checked") !== "true");
+        });
+        $("#setMoveTimer").on("change", function () {
+          if (!canEditCustomSettings()) {
+            updateCustomSettingsUI();
+            return;
+          }
+          var v = parseInt($(this).val(), 10);
+          customSettings.moveTimer = (v === 10 || v === 30 || v === 60 || v === 120) ? v : 0;
+          persistCustomSettings();
+          updateCustomSettingsUI();
+          publishCustomSettings();
+          restartMoveTimer();
+        });
+        updateCustomSettingsUI();
+
         if (typeof BoardHackStockfish !== "undefined") {
           BoardHackStockfish.ensureReady().catch(function (e) {
             console.warn("Stockfish init:", e && e.message ? e.message : e);
@@ -3287,9 +2989,11 @@
         });
 
         updateMoveList();
+        updateCustomSettingsUI();
         updateStatus();
         updateMpUI();
         setMpConn("offline");
+        if (!isMultiplayer()) restartMoveTimer();
 
         $("#mpRoomsRefreshBtn").on("click", function () {
           ensureMpSocket(function (err) { if (!err) requestRoomList(); });
@@ -3348,24 +3052,23 @@
         $("#mpLeaveBtn").on("click", function () { leaveMultiplayer(); });
         $("#mpResetBtn").on("click", newGame);
 
+        // Auto-join from ?room= or saved room (reconnect)
         var _paramsEarly = new URLSearchParams(window.location.search);
         var _maybeMp = !!(_paramsEarly.get("room") || _paramsEarly.get("spectate") || (function () {
           try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
         })());
         tryAutoRejoin();
 
+        // If restored color is black, bot (White) makes the opening move — skip when joining MP
         if (!isMultiplayer() && !_maybeMp) {
           if (userColor === "b") {
             scheduleBot(250);
           } else {
-            beginDiceTurnFor(userColor, { deferResolve: true });
+            var canMoveInit = beginDiceTurnFor(userColor);
             updateStatus();
-            afterDiceReveal(function () {
-              if (gameOver) return;
-              var canMoveInit = resolveDiceTurnAfterReveal(userColor);
-              updateStatus();
-              if (!canMoveInit) scheduleBot(200);
-            });
+            if (!canMoveInit) {
+              scheduleBot(200);
+            }
           }
         }
       });

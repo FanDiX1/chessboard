@@ -1,12 +1,13 @@
 # BoardHack
 
-Dark-themed multi-game hub: chess, checkers, and backgammon. Local bots and multiplayer rooms (RU/EN).
+Dark-themed multi-game hub: chess (classic / dice / customizable), checkers, and backgammon. Local bots and multiplayer rooms (RU/EN).
 
 ## Features
 
 - **Hub** — game tabs (Chess / Checkers / Backgammon / Mahjong) with mode cards
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
+- **Chess → Customizable** — house rules (backward pawn capture, mandatory capture, move timer)
 - **Checkers → Classic** — Russian draughts vs local bot or online multiplayer
 - **Backgammon → Classic** — Russian long nardy vs local bot or online multiplayer (same direction, no hitting, head rule)
 - **Backgammon → Short** — short/Western backgammon vs local bot or online multiplayer (hitting, bar, bearing off)
@@ -42,6 +43,7 @@ index.html                 # multi-game hub
 css/                       # BoardHack styles
 gamemodes/chess/classic/   # classic chess
 gamemodes/chess/dice/      # dice chess
+gamemodes/chess/custom/    # customizable house-rule chess
 gamemodes/checkers/classic/# Russian draughts
 gamemodes/backgammon/long/   # classic long nardy (классика)
 gamemodes/backgammon/classic/# short backgammon (короткие)

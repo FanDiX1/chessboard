@@ -1,6 +1,6 @@
 # BoardHack multiplayer server
 
-Room-by-code WebSocket server for BoardHack (chess classic/dice, checkers, and backgammon classic/long). Modes are isolated so rooms do not collide. No accounts — invite a friend with a short room code.
+Room-by-code WebSocket server for BoardHack (chess classic/dice/custom, checkers, and backgammon classic/long). Modes are isolated so rooms do not collide. No accounts — invite a friend with a short room code.
 
 ## Run
 
@@ -22,7 +22,7 @@ Open a game mode in a browser:
 - Default production server: `https://chessboard-ulhg.onrender.com`
 - Local: `http://localhost:3001` — override via `?server=http://HOST:3001`
 - Join link: `...?room=ABC123` (optional `&server=...`)
-- `createRoom` / `joinRoom` `mode`: `classic` | `dice` | `checkers` (alias `checkers-classic`) | `backgammon` | `backgammon-long` (aliases `bg-classic` / `bg-long`)
+- `createRoom` / `joinRoom` `mode`: `classic` | `dice` | `custom` (alias `chess-custom`) | `checkers` (alias `checkers-classic`) | `backgammon` | `backgammon-long` (aliases `bg-classic` / `bg-long`)
 
 Flow:
 
@@ -43,10 +43,17 @@ Flow:
 | `reconnectRoom` | C→S | `{ clientId, code, nick? }` reclaim seat after refresh |
 | `makeMove` | C→S | `{ clientId, code, from, to, fen, san, plySans?, gameOver?, bg?, stateSync? }` |
 | `resetGame` | C→S | host only — back to start FEN |
+| `updateCustomSettings` | C→S | custom mode: `{ clientId, code, customSettings }` (host/white, before first ply) |
 | `leaveRoom` | C→S | leave seat |
 | `roomState` / `moveApplied` / `gameReset` | S→C | sync |
 | `opponentJoined` / `opponentLeft` / `opponentDisconnected` / `opponentReconnected` | S→C | presence |
 
 Room codes are 6 characters (`A–Z` / `2–9`, no ambiguous `0/O/1/I`).
 
+Custom chess rooms sync `customSettings` (`backwardCapture`, `mandatoryCapture`, `moveTimer`) with FEN/clocks.
+
 Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black) with starting position for Russian draughts; chess rooms keep standard FIDE FEN; backgammon rooms sync a `bg` state object (points, bar for classic, off, turn, dice, phase, history) with `fen` marker `bg w|b`.
+
+## Deploy note
+
+After pulling server changes (new `custom` mode / `updateCustomSettings`), **redeploy the Render service** so production picks up `chess-custom` rooms.
