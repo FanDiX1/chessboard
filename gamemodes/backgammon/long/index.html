@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BoardHack — Нарды · Длинные</title>
+  <title>BoardHack — Нарды · Классика</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -274,7 +274,7 @@
         <div class="brand-mark">♞</div>
         <div>Board<span class="accent">Hack</span></div>
       </a>
-      <span class="mode-badge" id="modeBadge">нарды · длинные</span>
+      <span class="mode-badge" id="modeBadge">Нарды · Классика</span>
     </div>
     <div class="topbar-actions">
       <div class="lang-switch" role="group" aria-label="Language">
@@ -437,8 +437,8 @@
 
   var I18N = {
     ru: {
-      docTitle: "BoardHack — Нарды · Длинные",
-      modeBadge: "нарды · длинные",
+      docTitle: "BoardHack — Нарды · Классика",
+      modeBadge: "Нарды · Классика",
       playArea: "Игровая зона",
       mission: "Управление",
       session: "Сессия",
@@ -509,8 +509,8 @@
       pipLabel: "Пипсы"
     },
     en: {
-      docTitle: "BoardHack — Backgammon · Long",
-      modeBadge: "backgammon · long",
+      docTitle: "BoardHack — Backgammon · Classic",
+      modeBadge: "Backgammon · Classic",
       playArea: "Play area",
       mission: "Controls",
       session: "Session",
@@ -1479,6 +1479,7 @@
   }
 
   function renderBoard() {
+    if (!state) return;
     var layout = boardPointOrder();
     var legal = phase === "move" && isUserTurn() && !botThinking ? legalNextMoves() : [];
     var legalFrom = {};
@@ -1627,6 +1628,12 @@
 
   function updateMeta() {
     document.getElementById("sideLabel").textContent = userColor === "w" ? t("sideWhite") : t("sideBlack");
+    if (!state) {
+      document.getElementById("turnLabel").textContent = "—";
+      document.getElementById("moveCount").textContent = "0";
+      updateOpponentLabel();
+      return;
+    }
     document.getElementById("turnLabel").textContent = state.turn === "w" ? t("turnWhite") : t("turnBlack");
     document.getElementById("moveCount").textContent = String(moveHistory.length);
     updateOpponentLabel();
@@ -2079,8 +2086,13 @@
   document.getElementById("sideSelect").value = userColor;
   document.getElementById("difficulty").value = difficulty;
   wireMp();
-  applyLang();
   setMpConn("offline");
+
+  // Paint board immediately — applyLang also renders and needs state
+  state = initialState();
+  phase = "roll";
+  headLeft = 1;
+  applyLang();
 
   var paramsEarly = new URLSearchParams(window.location.search);
   var maybeMp = !!(paramsEarly.get("room") || (function () {
@@ -2089,14 +2101,9 @@
   tryAutoRejoin();
 
   if (!isMultiplayer() && !maybeMp) {
-    newGameLocal();
-  } else if (!maybeMp) {
-    state = initialState();
-    renderAll();
+    newGameLocal(); // render + schedule auto-roll
   } else {
-    state = initialState();
-    phase = "roll";
-    renderAll();
+    renderAll(); // board visible while MP lobby / rejoin
   }
 })();
 </script>
