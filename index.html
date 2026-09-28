@@ -43,13 +43,13 @@
         <span class="hub-tab-icon">⬤</span>
         <span id="tabCheckersLabel">Шашки</span>
       </button>
-      <button type="button" class="hub-tab" role="tab" id="tabMahjong" data-game="mahjong" aria-selected="false" aria-controls="panelMahjong">
-        <span class="hub-tab-icon">🀄</span>
-        <span id="tabMahjongLabel">Маджонг</span>
-      </button>
       <button type="button" class="hub-tab" role="tab" id="tabBackgammon" data-game="backgammon" aria-selected="false" aria-controls="panelBackgammon">
         <span class="hub-tab-icon">⚪</span>
         <span id="tabBackgammonLabel">Нарды</span>
+      </button>
+      <button type="button" class="hub-tab" role="tab" id="tabMahjong" data-game="mahjong" aria-selected="false" aria-controls="panelMahjong">
+        <span class="hub-tab-icon">🀄</span>
+        <span id="tabMahjongLabel">Маджонг</span>
       </button>
     </div>
 
@@ -87,6 +87,20 @@
         </div>
       </section>
 
+      <section class="hub-panel" id="panelBackgammon" role="tabpanel" aria-labelledby="tabBackgammon" data-game="backgammon" hidden>
+        <div class="hub-panel-head">
+          <h2 id="panelBackgammonTitle">Нарды</h2>
+          <p class="hub-panel-desc" id="panelBackgammonDesc">Короткие нарды (классика) — локальный бот.</p>
+        </div>
+        <div class="mode-cards">
+          <a class="mode-card" href="gamemodes/backgammon/classic/index.html">
+            <h2>⚪ <span id="cardBackgammonClassicTitle">Классика</span></h2>
+            <p id="cardBackgammonClassicDesc">Короткие нарды: взятие, бар, вывод, дубли — 4 хода. Против бота.</p>
+            <div class="go" id="cardBackgammonClassicGo">Открыть →</div>
+          </a>
+        </div>
+      </section>
+
       <section class="hub-panel" id="panelMahjong" role="tabpanel" aria-labelledby="tabMahjong" data-game="mahjong" hidden>
         <div class="hub-panel-head">
           <h2 id="panelMahjongTitle">Маджонг</h2>
@@ -97,20 +111,6 @@
             <h2>🀄 <span id="cardMahjongSoonTitle">Скоро</span></h2>
             <p id="cardMahjongSoonDesc">Режимы маджонга в разработке. Загляните позже.</p>
             <div class="go go-muted" id="cardMahjongSoonGo">Coming soon</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="hub-panel" id="panelBackgammon" role="tabpanel" aria-labelledby="tabBackgammon" data-game="backgammon" hidden>
-        <div class="hub-panel-head">
-          <h2 id="panelBackgammonTitle">Нарды</h2>
-          <p class="hub-panel-desc" id="panelBackgammonDesc">Режимы нард появятся здесь.</p>
-        </div>
-        <div class="mode-cards">
-          <div class="mode-card mode-card--soon" aria-disabled="true">
-            <h2>⚪ <span id="cardBackgammonSoonTitle">Скоро</span></h2>
-            <p id="cardBackgammonSoonDesc">Режимы нард в разработке. Загляните позже.</p>
-            <div class="go go-muted" id="cardBackgammonSoonGo">Coming soon</div>
           </div>
         </div>
       </section>
@@ -140,7 +140,7 @@
           panelMahjongTitle: "Маджонг",
           panelMahjongDesc: "Режимы маджонга появятся здесь.",
           panelBackgammonTitle: "Нарды",
-          panelBackgammonDesc: "Режимы нард появятся здесь.",
+          panelBackgammonDesc: "Короткие нарды (классика) — локальный бот.",
           cardClassicTitle: "Классика",
           cardClassicDesc: "Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.",
           cardClassicGo: "Открыть →",
@@ -153,9 +153,9 @@
           cardMahjongSoonTitle: "Скоро",
           cardMahjongSoonDesc: "Режимы маджонга в разработке. Загляните позже.",
           cardMahjongSoonGo: "Скоро",
-          cardBackgammonSoonTitle: "Скоро",
-          cardBackgammonSoonDesc: "Режимы нард в разработке. Загляните позже.",
-          cardBackgammonSoonGo: "Скоро"
+          cardBackgammonClassicTitle: "Классика",
+          cardBackgammonClassicDesc: "Короткие нарды: взятие, бар, вывод, дубли — 4 хода. Против бота.",
+          cardBackgammonClassicGo: "Открыть →"
         },
         en: {
           docTitle: "BoardHack — Hack the Board",
@@ -172,7 +172,7 @@
           panelMahjongTitle: "Mahjong",
           panelMahjongDesc: "Mahjong modes will land here.",
           panelBackgammonTitle: "Backgammon",
-          panelBackgammonDesc: "Backgammon modes will land here.",
+          panelBackgammonDesc: "Short backgammon (classic) — local bot.",
           cardClassicTitle: "Classic",
           cardClassicDesc: "Standard FIDE chess. Move by move, no piece restrictions.",
           cardClassicGo: "Open →",
@@ -185,9 +185,9 @@
           cardMahjongSoonTitle: "Coming soon",
           cardMahjongSoonDesc: "Mahjong modes are in the works. Check back later.",
           cardMahjongSoonGo: "Coming soon",
-          cardBackgammonSoonTitle: "Coming soon",
-          cardBackgammonSoonDesc: "Backgammon modes are in the works. Check back later.",
-          cardBackgammonSoonGo: "Coming soon"
+          cardBackgammonClassicTitle: "Classic",
+          cardBackgammonClassicDesc: "Western backgammon: hitting, bar, bearing off, doubles = 4 moves. Vs bot.",
+          cardBackgammonClassicGo: "Open →"
         }
       };
 
@@ -237,9 +237,9 @@
         document.getElementById("cardMahjongSoonTitle").textContent = t("cardMahjongSoonTitle");
         document.getElementById("cardMahjongSoonDesc").textContent = t("cardMahjongSoonDesc");
         document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");
-        document.getElementById("cardBackgammonSoonTitle").textContent = t("cardBackgammonSoonTitle");
-        document.getElementById("cardBackgammonSoonDesc").textContent = t("cardBackgammonSoonDesc");
-        document.getElementById("cardBackgammonSoonGo").textContent = t("cardBackgammonSoonGo");
+        document.getElementById("cardBackgammonClassicTitle").textContent = t("cardBackgammonClassicTitle");
+        document.getElementById("cardBackgammonClassicDesc").textContent = t("cardBackgammonClassicDesc");
+        document.getElementById("cardBackgammonClassicGo").textContent = t("cardBackgammonClassicGo");
         document.getElementById("langRu").classList.toggle("active", lang === "ru");
         document.getElementById("langEn").classList.toggle("active", lang === "en");
       }

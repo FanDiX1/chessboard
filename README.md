@@ -1,20 +1,21 @@
 # BoardHack
 
-Dark-themed multi-game hub: chess and checkers. Local bots and multiplayer rooms (RU/EN).
+Dark-themed multi-game hub: chess, checkers, and backgammon. Local bots and multiplayer rooms (RU/EN).
 
 ## Features
 
-- **Hub** — game tabs (Chess / Checkers / Mahjong) with mode cards
+- **Hub** — game tabs (Chess / Checkers / Backgammon / Mahjong) with mode cards
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
 - **Checkers → Classic** — Russian draughts vs local bot or online multiplayer
+- **Backgammon → Classic** — short/Western backgammon vs local bot (hitting, bar, bearing off)
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
 - **Multiplayer** — room codes via Socket.IO server (`server/`)
 - **i18n** — Russian / English UI
 
 ## Quick start (static site)
 
-Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/classic/index.html` in a browser.
+Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/classic/index.html` / `gamemodes/backgammon/classic/index.html` in a browser.
 
 Stockfish needs HTTP(S) (not `file://`) for WASM workers.
 
@@ -41,6 +42,7 @@ css/                       # BoardHack styles
 gamemodes/chess/classic/   # classic chess
 gamemodes/chess/dice/      # dice chess
 gamemodes/checkers/classic/# Russian draughts
+gamemodes/backgammon/classic/# short backgammon
 js/                        # Stockfish bot helper
 vendor/stockfish/          # Stockfish 18 lite WASM
 server/                    # Express + Socket.IO rooms (no node_modules in git)
