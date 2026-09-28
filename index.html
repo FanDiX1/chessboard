@@ -7,657 +7,103 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
-  <style>
-    :root {
-      --bg: #0b0e11;
-      --bg-elevated: #14181d;
-      --card: #1a1d21;
-      --card-hover: #21262c;
-      --border: #2a2f36;
-      --border-soft: #1f242b;
-      --text: #e8edf2;
-      --text-muted: #8b949e;
-      --accent: #9fef00;
-      --accent-dim: rgba(159, 239, 0, 0.12);
-      --accent-glow: rgba(159, 239, 0, 0.25);
-      --danger: #ff3e3e;
-      --warn: #ffbf00;
-      --info: #4dabf7;
-      --radius: 10px;
-      --font: "Ubuntu", system-ui, -apple-system, sans-serif;
-      --mono: "Ubuntu Mono", ui-monospace, monospace;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.5;
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(159, 239, 0, 0.06), transparent),
-        radial-gradient(ellipse 40% 30% at 100% 100%, rgba(159, 239, 0, 0.03), transparent);
-    }
-
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .topbar {
-      border-bottom: 1px solid var(--border);
-      background: rgba(11, 14, 17, 0.92);
-      backdrop-filter: blur(8px);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-
-    .topbar-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0.85rem 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      font-weight: 700;
-      font-size: 1.15rem;
-      letter-spacing: -0.02em;
-    }
-
-    .brand-mark {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      background: var(--accent);
-      color: #0b0e11;
-      display: grid;
-      place-items: center;
-      font-family: var(--mono);
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-
-    .brand span.accent { color: var(--accent); }
-
-    .lang-switch {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.15rem;
-      border: 1px solid var(--border);
-      background: var(--card);
-      border-radius: 999px;
-      padding: 0.15rem;
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      user-select: none;
-    }
-
-    .lang-switch button {
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-family: inherit;
-      font-size: inherit;
-      font-weight: 700;
-      padding: 0.3rem 0.55rem;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background 0.12s ease, color 0.12s ease;
-    }
-
-    .lang-switch button.active {
-      background: var(--accent);
-      color: #0b0e11;
-    }
-
-    .lang-switch button:not(.active):hover {
-      color: var(--text);
-    }
-
-    .lang-sep {
-      color: var(--border);
-      padding: 0 0.1rem;
-      pointer-events: none;
-    }
-
-    .main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1.5rem 1.25rem 3rem;
-    }
-
-    .hero { margin-bottom: 1.5rem; }
-
-    .hero h1 {
-      font-size: clamp(1.5rem, 3vw, 2rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 0.35rem;
-    }
-
-    .hero h1 .accent { color: var(--accent); }
-
-    .hero p {
-      color: var(--text-muted);
-      max-width: 36rem;
-      font-size: 0.95rem;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-    }
-
-    @media (min-width: 900px) {
-      .layout {
-        grid-template-columns: minmax(0, 1fr) 320px;
-        align-items: start;
-      }
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.1rem;
-    }
-
-    .card-title {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      font-weight: 500;
-      margin-bottom: 0.75rem;
-    }
-
-    .board-wrap {
-      position: relative;
-      width: 100%;
-      max-width: 560px;
-      margin: 0 auto;
-    }
-
-    #board { width: 100%; }
-
-    .board-b72b1 {
-      border: 2px solid var(--border) !important;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 0 0 1px var(--border-soft), 0 12px 40px rgba(0, 0, 0, 0.45);
-    }
-
-    /* a1 dark; standard FIDE colors */
-    .white-1e1d7 { background-color: #c8cdd5 !important; }
-    .black-3c85d { background-color: #4a5564 !important; }
-
-    /* Ensure black pieces stay visible on dark squares (alpha already outlined) */
-    #board img.piece-417db {
-      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
-    }
-
-    .highlight-white { box-shadow: inset 0 0 0 3px var(--accent) !important; }
-    .highlight-black { box-shadow: inset 0 0 0 3px var(--accent) !important; }
-
-    .status-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-      padding: 0.65rem 0.85rem;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: var(--mono);
-      font-size: 0.85rem;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent-glow);
-      flex-shrink: 0;
-    }
-
-    .status-dot.warn { background: var(--warn); box-shadow: 0 0 8px rgba(255, 191, 0, 0.4); }
-    .status-dot.danger { background: var(--danger); box-shadow: 0 0 8px rgba(255, 62, 62, 0.4); }
-    .status-dot.info { background: var(--info); box-shadow: 0 0 8px rgba(77, 171, 247, 0.4); }
-
-    #statusText { flex: 1; min-width: 0; }
-
-    .side-stack { display: flex; flex-direction: column; gap: 1rem; }
-
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    label.field-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: block;
-      margin-bottom: 0.35rem;
-    }
-
-    select, button {
-      font-family: var(--font);
-      font-size: 0.9rem;
-    }
-
-    select {
-      width: 100%;
-      background: var(--bg-elevated);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.55rem 0.75rem;
-      outline: none;
-      cursor: pointer;
-    }
-
-    select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-dim);
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    button.btn {
-      flex: 1;
-      min-width: 110px;
-      border: none;
-      border-radius: 8px;
-      padding: 0.65rem 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-    }
-
-    button.btn:active { transform: scale(0.98); }
-
-    button.btn-primary {
-      background: var(--accent);
-      color: #0b0e11;
-      box-shadow: 0 0 20px var(--accent-glow);
-    }
-
-    button.btn-primary:hover {
-      filter: brightness(1.05);
-      box-shadow: 0 0 28px var(--accent-glow);
-    }
-
-    button.btn-ghost {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    button.btn-ghost:hover {
-      background: var(--card-hover);
-      border-color: #3a424c;
-    }
-
-    button.btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .diff-hint {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.25rem;
-    }
-
-    .move-list {
-      max-height: 280px;
-      overflow-y: auto;
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.5rem;
-    }
-
-    .move-list::-webkit-scrollbar { width: 6px; }
-    .move-list::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
-    }
-
-    .move-row {
-      display: grid;
-      grid-template-columns: 2.2rem 1fr 1fr;
-      gap: 0.35rem;
-      padding: 0.3rem 0.4rem;
-      border-radius: 4px;
-    }
-
-    .move-row:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
-    .move-num { color: var(--text-muted); }
-    .move-san { color: var(--text); }
-    .move-san.bot { color: var(--accent); }
-
-    .empty-moves {
-      color: var(--text-muted);
-      padding: 0.75rem;
-      text-align: center;
-      font-size: 0.8rem;
-    }
-
-    .meta-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-
-    .meta-item {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.6rem 0.75rem;
-    }
-
-    .meta-item .k {
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-    }
-
-    .meta-item .v {
-      font-family: var(--mono);
-      font-size: 0.9rem;
-      color: var(--accent);
-      margin-top: 0.15rem;
-    }
-
-    .footer {
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border);
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      text-align: center;
-    }
-
-    .thinking {
-      position: absolute;
-      inset: 0;
-      display: none;
-      place-items: center;
-      background: rgba(11, 14, 17, 0.55);
-      border-radius: 8px;
-      z-index: 20;
-      backdrop-filter: blur(2px);
-    }
-
-    .thinking.show { display: grid; }
-
-    .thinking-pill {
-      background: var(--card);
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      font-family: var(--mono);
-      font-size: 0.85rem;
-      padding: 0.5rem 1rem;
-      border-radius: 999px;
-      box-shadow: 0 0 24px var(--accent-glow);
-      animation: pulse 1.2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.65; }
-    }
-
-    .square-55d63 { position: relative; }
-
-    .square-55d63.selected {
-      box-shadow: inset 0 0 0 3px var(--accent) !important;
-      background-color: rgba(159, 239, 0, 0.18) !important;
-    }
-
-    .square-55d63.legal-dot::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 22%;
-      height: 22%;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: rgba(159, 239, 0, 0.55);
-      box-shadow: 0 0 8px rgba(159, 239, 0, 0.35);
-      pointer-events: none;
-      z-index: 3;
-    }
-
-    .square-55d63.legal-capture::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(
-        circle at center,
-        transparent 0%,
-        transparent 58%,
-        rgba(159, 239, 0, 0.42) 59%,
-        rgba(159, 239, 0, 0.42) 100%
-      );
-      pointer-events: none;
-      z-index: 3;
-    }
-  </style>
+  <link rel="stylesheet" href="css/boardhack.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <div class="brand-mark">♞</div>
-        <div>Board<span class="accent">Hack</span></div>
+        <a href="index.html">
+          <div class="brand-mark">♞</div>
+          <div>Board<span class="accent">Hack</span></div>
+        </a>
       </div>
-      <div class="lang-switch" role="group" aria-label="Language">
-        <button type="button" id="langRu" data-lang="ru">RU</button>
-        <span class="lang-sep">|</span>
-        <button type="button" id="langEn" data-lang="en">EN</button>
+      <div class="topbar-actions">
+        <div class="mode-menu" id="modeMenu">
+          <button type="button" class="mode-menu-btn" id="modeMenuBtn" aria-haspopup="true" aria-expanded="false">
+            <span id="modeMenuLabel">Режим</span>
+            <span class="chev">▾</span>
+          </button>
+          <div class="mode-menu-panel" id="modeMenuPanel" role="menu">
+            <a href="gamemodes/classic/index.html" data-mode="classic">
+              <span>♟</span>
+              <span>
+                <span id="menuClassic">Классика</span>
+                <span class="mode-desc" id="menuClassicDesc">Стандартные шахматы</span>
+              </span>
+            </a>
+            <a href="gamemodes/dice/index.html" data-mode="dice">
+              <span>🎲</span>
+              <span>
+                <span id="menuDice">Кости</span>
+                <span class="mode-desc" id="menuDiceDesc">Ходы по броску костей</span>
+              </span>
+            </a>
+          </div>
+        </div>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" id="langRu" data-lang="ru">RU</button>
+          <span class="lang-sep">|</span>
+          <button type="button" id="langEn" data-lang="en">EN</button>
+        </div>
       </div>
     </div>
   </header>
 
   <main class="main">
-    <section class="hero">
-      <h1 id="heroTitle"></h1>
-      <p id="heroDesc"></p>
-    </section>
-
-    <div class="layout">
-      <section class="card">
-        <div class="card-title" id="playAreaTitle"></div>
-        <div class="status-bar" id="statusBar">
-          <span class="status-dot" id="statusDot"></span>
-          <span id="statusText"></span>
-        </div>
-        <div class="board-wrap">
-          <div id="board"></div>
-          <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
-        </div>
-      </section>
-
-      <aside class="side-stack">
-        <section class="card">
-          <div class="card-title" id="missionTitle"></div>
-          <div class="controls">
-            <div>
-              <label class="field-label" for="sideSelect" id="sideSelectLabel"></label>
-              <select id="sideSelect">
-                <option value="w" selected></option>
-                <option value="b"></option>
-              </select>
-            </div>
-            <div>
-              <label class="field-label" for="difficulty" id="diffLabel"></label>
-              <select id="difficulty">
-                <option value="1"></option>
-                <option value="2" selected></option>
-                <option value="3"></option>
-              </select>
-              <p class="diff-hint" id="diffHint"></p>
-            </div>
-            <div class="btn-row">
-              <button type="button" class="btn btn-primary" id="newGameBtn"></button>
-              <button type="button" class="btn btn-ghost" id="undoBtn"></button>
-            </div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-title" id="sessionTitle"></div>
-          <div class="meta-grid">
-            <div class="meta-item">
-              <div class="k" id="metaSideK"></div>
-              <div class="v" id="sideLabel"></div>
-            </div>
-            <div class="meta-item">
-              <div class="k" id="metaTurnK"></div>
-              <div class="v" id="turnLabel"></div>
-            </div>
-            <div class="meta-item">
-              <div class="k" id="metaMovesK"></div>
-              <div class="v" id="moveCount">0</div>
-            </div>
-            <div class="meta-item">
-              <div class="k" id="metaBotK"></div>
-              <div class="v" id="botLabel"></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-title" id="historyTitle"></div>
-          <div class="move-list" id="moveList"></div>
-        </section>
-      </aside>
+    <div class="mode-cards">
+      <a class="mode-card" href="gamemodes/classic/index.html">
+        <h2>♟ <span id="cardClassicTitle">Классика</span></h2>
+        <p id="cardClassicDesc">Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.</p>
+        <div class="go" id="cardClassicGo">Открыть →</div>
+      </a>
+      <a class="mode-card" href="gamemodes/dice/index.html">
+        <h2>🎲 <span id="cardDiceTitle">Кости</span></h2>
+        <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
+        <div class="go" id="cardDiceGo">Открыть →</div>
+      </a>
     </div>
 
     <footer class="footer">BoardHack</footer>
   </main>
 
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
   <script>
     (function () {
       "use strict";
-
       var LANG_KEY = "boardhack-lang";
-      var COLOR_KEY = "boardhack-color";
-
+      var MODE_KEY = "boardhack-mode";
       var I18N = {
         ru: {
           docTitle: "BoardHack — Взломай доску",
           heroTitleHtml: 'Взломай доску. <span class="accent">Захвати флаг.</span>',
-          heroDesc: "Тёмная шахматная лаборатория. Выберите сторону, переиграйте бота, поставьте мат и удержите позицию.",
-          playArea: "Игровая зона",
-          mission: "Управление",
-          session: "Сессия",
-          history: "История ходов",
-          sideSelectLabel: "Играть за",
-          diffLabel: "Сложность бота",
-          diffEasy: "Легко — глубина 1",
-          diffMedium: "Средне — глубина 2",
-          diffHard: "Сложно — глубина 3",
-          diffHint: "Больше глубина — сильнее (и медленнее) поиск minimax.",
-          newGame: "Новая игра",
-          undo: "Отмена",
-          metaSide: "Сторона",
-          metaTurn: "Ход",
-          metaMoves: "Ходы",
-          metaBot: "Бот",
-          sideWhite: "Белые",
-          sideBlack: "Чёрные",
-          turnYou: "Вы",
-          turnBot: "Бот",
-          turnOver: "Конец игры",
-          turnDraw: "Ничья",
-          easy: "Легко",
-          medium: "Средне",
-          hard: "Сложно",
-          emptyMoves: "Ходов пока нет. Сделайте первый.",
-          thinking: "бот думает…",
-          yourMove: "Ваш ход",
-          checkYou: "Шах! Ваш ход — защищайтесь или контратакуйте.",
-          botThinking: "Бот думает…",
-          botInCheck: "Бот под шахом — считает…",
-          checkmateWin: "Мат — победили {winner}!",
-          winnerYou: "вы",
-          winnerBot: "бот",
-          stalemate: "Пат — ничья.",
-          drawRepetition: "Ничья — троекратное повторение.",
-          drawMaterial: "Ничья — недостаточно материала.",
-          draw: "Ничья."
+          heroDesc: "Тёмная шахматная лаборатория. Выберите режим, сторону и сложность — затем переиграйте бота.",
+          menuLabel: "Режим",
+          menuClassic: "Классика",
+          menuClassicDesc: "Стандартные шахматы",
+          menuDice: "Кости",
+          menuDiceDesc: "Ходы по броску костей",
+          cardClassicTitle: "Классика",
+          cardClassicDesc: "Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.",
+          cardClassicGo: "Открыть →",
+          cardDiceTitle: "Кости",
+          cardDiceDesc: "Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.",
+          cardDiceGo: "Открыть →"
         },
         en: {
           docTitle: "BoardHack — Hack the Board",
           heroTitleHtml: 'Breach the board. <span class="accent">Capture the flag.</span>',
-          heroDesc: "Dark-ops chess lab. Pick a side, outsmart the bot, force checkmate, and own the position.",
-          playArea: "Play area",
-          mission: "Mission control",
-          session: "Session",
-          history: "Move history",
-          sideSelectLabel: "Play as",
-          diffLabel: "Bot difficulty",
-          diffEasy: "Easy — depth 1",
-          diffMedium: "Medium — depth 2",
-          diffHard: "Hard — depth 3",
-          diffHint: "Higher depth = stronger (and slower) minimax search.",
-          newGame: "New Game",
-          undo: "Undo",
-          metaSide: "Side",
-          metaTurn: "Turn",
-          metaMoves: "Moves",
-          metaBot: "Bot",
-          sideWhite: "White",
-          sideBlack: "Black",
-          turnYou: "You",
-          turnBot: "Bot",
-          turnOver: "Game over",
-          turnDraw: "Draw",
-          easy: "Easy",
-          medium: "Medium",
-          hard: "Hard",
-          emptyMoves: "No moves yet. Make the first strike.",
-          thinking: "bot thinking…",
-          yourMove: "Your move",
-          checkYou: "Check! Your move — defend or counter.",
-          botThinking: "Bot thinking…",
-          botInCheck: "Bot is in check — calculating…",
-          checkmateWin: "Checkmate — {winner} wins!",
-          winnerYou: "you",
-          winnerBot: "bot",
-          stalemate: "Stalemate — draw.",
-          drawRepetition: "Draw — threefold repetition.",
-          drawMaterial: "Draw — insufficient material.",
-          draw: "Draw."
+          heroDesc: "Dark-ops chess lab. Pick a mode, side, and difficulty — then outsmart the bot.",
+          menuLabel: "Mode",
+          menuClassic: "Classic",
+          menuClassicDesc: "Standard chess",
+          menuDice: "Dice Chess",
+          menuDiceDesc: "Move by dice rolls",
+          cardClassicTitle: "Classic",
+          cardClassicDesc: "Standard FIDE chess. Move by move, no piece restrictions.",
+          cardClassicGo: "Open →",
+          cardDiceTitle: "Dice Chess",
+          cardDiceDesc: "Each turn rolls dice — move only the rolled piece types. 1–3 dice.",
+          cardDiceGo: "Open →"
         }
       };
 
@@ -672,650 +118,57 @@
         return pack[key] != null ? pack[key] : (I18N.en[key] || key);
       }
 
-      function applyStaticLang() {
+      function applyLang() {
         document.documentElement.lang = lang;
         document.title = t("docTitle");
-        $("#heroTitle").html(t("heroTitleHtml"));
-        $("#heroDesc").text(t("heroDesc"));
-        $("#playAreaTitle").text(t("playArea"));
-        $("#missionTitle").text(t("mission"));
-        $("#sessionTitle").text(t("session"));
-        $("#historyTitle").text(t("history"));
-        $("#sideSelectLabel").text(t("sideSelectLabel"));
-        $("#sideSelect option[value='w']").text(t("sideWhite"));
-        $("#sideSelect option[value='b']").text(t("sideBlack"));
-        $("#diffLabel").text(t("diffLabel"));
-        $("#difficulty option[value='1']").text(t("diffEasy"));
-        $("#difficulty option[value='2']").text(t("diffMedium"));
-        $("#difficulty option[value='3']").text(t("diffHard"));
-        $("#diffHint").text(t("diffHint"));
-        $("#newGameBtn").text(t("newGame"));
-        $("#undoBtn").text(t("undo"));
-        $("#metaSideK").text(t("metaSide"));
-        $("#metaTurnK").text(t("metaTurn"));
-        $("#metaMovesK").text(t("metaMoves"));
-        $("#metaBotK").text(t("metaBot"));
-        $("#sideLabel").text(userColor === "w" ? t("sideWhite") : t("sideBlack"));
-        $("#thinkingText").text(t("thinking"));
-        $("#langRu").toggleClass("active", lang === "ru");
-        $("#langEn").toggleClass("active", lang === "en");
+        document.getElementById("modeMenuLabel").textContent = t("menuLabel");
+        document.getElementById("menuClassic").textContent = t("menuClassic");
+        document.getElementById("menuClassicDesc").textContent = t("menuClassicDesc");
+        document.getElementById("menuDice").textContent = t("menuDice");
+        document.getElementById("menuDiceDesc").textContent = t("menuDiceDesc");
+        document.getElementById("cardClassicTitle").textContent = t("cardClassicTitle");
+        document.getElementById("cardClassicDesc").textContent = t("cardClassicDesc");
+        document.getElementById("cardClassicGo").textContent = t("cardClassicGo");
+        document.getElementById("cardDiceTitle").textContent = t("cardDiceTitle");
+        document.getElementById("cardDiceDesc").textContent = t("cardDiceDesc");
+        document.getElementById("cardDiceGo").textContent = t("cardDiceGo");
+        document.getElementById("langRu").classList.toggle("active", lang === "ru");
+        document.getElementById("langEn").classList.toggle("active", lang === "en");
       }
 
       function setLang(next) {
         if (next !== "ru" && next !== "en") return;
         lang = next;
         try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-        applyStaticLang();
-        updateMoveList();
-        updateStatus();
+        applyLang();
       }
 
-      // Standard FIDE starting position — white K e1 / Q d1, black K e8 / Q d8
-      var START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-      var START_POSITION = {
-        a8: "bR", b8: "bN", c8: "bB", d8: "bQ", e8: "bK", f8: "bB", g8: "bN", h8: "bR",
-        a7: "bP", b7: "bP", c7: "bP", d7: "bP", e7: "bP", f7: "bP", g7: "bP", h7: "bP",
-        a2: "wP", b2: "wP", c2: "wP", d2: "wP", e2: "wP", f2: "wP", g2: "wP", h2: "wP",
-        a1: "wR", b1: "wN", c1: "wB", d1: "wQ", e1: "wK", f1: "wB", g1: "wN", h1: "wR"
-      };
-      var PIECE_THEME =
-        "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
-
-      var PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
-
-      var PST = {
-        p: [
-          0, 0, 0, 0, 0, 0, 0, 0,
-          50, 50, 50, 50, 50, 50, 50, 50,
-          10, 10, 20, 30, 30, 20, 10, 10,
-          5, 5, 10, 25, 25, 10, 5, 5,
-          0, 0, 0, 20, 20, 0, 0, 0,
-          5, -5, -10, 0, 0, -10, -5, 5,
-          5, 10, 10, -20, -20, 10, 10, 5,
-          0, 0, 0, 0, 0, 0, 0, 0
-        ],
-        n: [
-          -50, -40, -30, -30, -30, -30, -40, -50,
-          -40, -20, 0, 0, 0, 0, -20, -40,
-          -30, 0, 10, 15, 15, 10, 0, -30,
-          -30, 5, 15, 20, 20, 15, 5, -30,
-          -30, 0, 15, 20, 20, 15, 0, -30,
-          -30, 5, 10, 15, 15, 10, 5, -30,
-          -40, -20, 0, 5, 5, 0, -20, -40,
-          -50, -40, -30, -30, -30, -30, -40, -50
-        ],
-        b: [
-          -20, -10, -10, -10, -10, -10, -10, -20,
-          -10, 0, 0, 0, 0, 0, 0, -10,
-          -10, 0, 5, 10, 10, 5, 0, -10,
-          -10, 5, 5, 10, 10, 5, 5, -10,
-          -10, 0, 10, 10, 10, 10, 0, -10,
-          -10, 10, 10, 10, 10, 10, 10, -10,
-          -10, 5, 0, 0, 0, 0, 5, -10,
-          -20, -10, -10, -10, -10, -10, -10, -20
-        ],
-        r: [
-          0, 0, 0, 0, 0, 0, 0, 0,
-          5, 10, 10, 10, 10, 10, 10, 5,
-          -5, 0, 0, 0, 0, 0, 0, -5,
-          -5, 0, 0, 0, 0, 0, 0, -5,
-          -5, 0, 0, 0, 0, 0, 0, -5,
-          -5, 0, 0, 0, 0, 0, 0, -5,
-          -5, 0, 0, 0, 0, 0, 0, -5,
-          0, 0, 0, 5, 5, 0, 0, 0
-        ],
-        q: [
-          -20, -10, -10, -5, -5, -10, -10, -20,
-          -10, 0, 0, 0, 0, 0, 0, -10,
-          -10, 0, 5, 5, 5, 5, 0, -10,
-          -5, 0, 5, 5, 5, 5, 0, -5,
-          0, 0, 5, 5, 5, 5, 0, -5,
-          -10, 5, 5, 5, 5, 5, 0, -10,
-          -10, 0, 5, 0, 0, 0, 0, -10,
-          -20, -10, -10, -5, -5, -10, -10, -20
-        ],
-        k: [
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -20, -30, -30, -40, -40, -30, -30, -20,
-          -10, -20, -20, -20, -20, -20, -20, -10,
-          20, 20, 0, 0, 0, 0, 20, 20,
-          20, 30, 10, 0, 0, 10, 30, 20
-        ]
-      };
-
-      var game = new Chess();
-      game.load(START_FEN);
-      var board = null;
-      var userColor = "w";
-      try {
-        var savedColor = localStorage.getItem(COLOR_KEY);
-        if (savedColor === "w" || savedColor === "b") userColor = savedColor;
-      } catch (e) {}
-      var selectedSquare = null;
-      var gameOver = false;
-      var botThinking = false;
-      var undoStack = [];
-      var plySans = [];
-
-      var $statusText = $("#statusText");
-      var $statusDot = $("#statusDot");
-      var $moveList = $("#moveList");
-      var $thinking = $("#thinking");
-      var $turnLabel = $("#turnLabel");
-      var $moveCount = $("#moveCount");
-      var $botLabel = $("#botLabel");
-
-      function getDepth() {
-        return parseInt($("#difficulty").val(), 10) || 2;
-      }
-
-      function depthLabel(d) {
-        return d === 1 ? t("easy") : d === 3 ? t("hard") : t("medium");
-      }
-
-      function setStatus(text, kind) {
-        $statusText.text(text);
-        $statusDot.removeClass("warn danger info");
-        if (kind) $statusDot.addClass(kind);
-      }
-
-      function removeLegalHighlights() {
-        $("#board .square-55d63").removeClass("legal-dot legal-capture");
-      }
-
-      var audioCtx = null;
-
-      function getAudioCtx() {
-        if (!audioCtx) {
-          var AC = window.AudioContext || window.webkitAudioContext;
-          if (!AC) return null;
-          audioCtx = new AC();
-        }
-        if (audioCtx.state === "suspended") {
-          try { audioCtx.resume(); } catch (e) {}
-        }
-        return audioCtx;
-      }
-
-      // Short wood-like thud: low thump + brief noise layer
-      function playMoveSound() {
-        try {
-          var ctx = getAudioCtx();
-          if (!ctx) return;
-          var t0 = ctx.currentTime;
-          var dur = 0.12;
-
-          // Low wooden thump
-          var osc = ctx.createOscillator();
-          var oscGain = ctx.createGain();
-          var oscFilter = ctx.createBiquadFilter();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(95, t0);
-          osc.frequency.exponentialRampToValueAtTime(38, t0 + dur);
-          oscFilter.type = "lowpass";
-          oscFilter.frequency.setValueAtTime(280, t0);
-          oscGain.gain.setValueAtTime(0.0001, t0);
-          oscGain.gain.exponentialRampToValueAtTime(0.38, t0 + 0.006);
-          oscGain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-          osc.connect(oscFilter);
-          oscFilter.connect(oscGain);
-          oscGain.connect(ctx.destination);
-          osc.start(t0);
-          osc.stop(t0 + dur + 0.02);
-
-          // Soft noise "wood contact" layer
-          var nLen = Math.floor(ctx.sampleRate * 0.06);
-          var buffer = ctx.createBuffer(1, nLen, ctx.sampleRate);
-          var data = buffer.getChannelData(0);
-          for (var i = 0; i < nLen; i++) {
-            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nLen, 2.2);
-          }
-          var noise = ctx.createBufferSource();
-          noise.buffer = buffer;
-          var noiseFilter = ctx.createBiquadFilter();
-          noiseFilter.type = "bandpass";
-          noiseFilter.frequency.setValueAtTime(420, t0);
-          noiseFilter.Q.setValueAtTime(0.9, t0);
-          var noiseGain = ctx.createGain();
-          noiseGain.gain.setValueAtTime(0.0001, t0);
-          noiseGain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.004);
-          noiseGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
-          noise.connect(noiseFilter);
-          noiseFilter.connect(noiseGain);
-          noiseGain.connect(ctx.destination);
-          noise.start(t0);
-          noise.stop(t0 + 0.08);
-        } catch (e) {}
-      }
-
-      function snapshotPush() {
-        undoStack.push({
-          fen: game.fen(),
-          sans: plySans.slice()
-        });
-      }
-
-      function restoreSnapshot(s) {
-        game.load(s.fen);
-        plySans = s.sans.slice();
-      }
-
-      // Standard chess.js move (includes O-O / O-O-O)
-      function tryMakeUserMove(from, to) {
-        snapshotPush();
-        var move = game.move({ from: from, to: to, promotion: "q" });
-        if (move === null) {
-          undoStack.pop();
-          return false;
-        }
-        plySans.push(move.san);
-        playMoveSound();
-        return true;
-      }
-
-      function showLegalMoves(fromSquare) {
-        removeLegalHighlights();
-        if (!fromSquare) return;
-        var moves = game.moves({ square: fromSquare, verbose: true });
-        for (var i = 0; i < moves.length; i++) {
-          var m = moves[i];
-          var $sq = $("#board .square-" + m.to);
-          if (m.captured) {
-            $sq.addClass("legal-capture");
-          } else {
-            $sq.addClass("legal-dot");
-          }
-        }
-      }
-
-      function clearSelection() {
-        $("#board .square-55d63").removeClass("selected");
-        removeLegalHighlights();
-        selectedSquare = null;
-      }
-
-      function highlightSquare(sq) {
-        clearSelection();
-        if (!sq) return;
-        selectedSquare = sq;
-        $("#board .square-" + sq).addClass("selected");
-        showLegalMoves(sq);
-      }
-
-      function evaluateBoard(g) {
-        var boardState = g.board();
-        var score = 0;
-        for (var r = 0; r < 8; r++) {
-          for (var c = 0; c < 8; c++) {
-            var piece = boardState[r][c];
-            if (!piece) continue;
-            var type = piece.type;
-            var color = piece.color;
-            var value = PIECE_VALUES[type] || 0;
-            var pst = PST[type] || PST.p;
-            var idx = r * 8 + c;
-            var pstVal = color === "w" ? pst[idx] : pst[63 - idx];
-            var total = value + pstVal;
-            score += color === "w" ? total : -total;
-          }
-        }
-        return score;
-      }
-
-      function orderMoves(moves) {
-        return moves.sort(function (a, b) {
-          var scoreA = (a.captured ? 10 : 0) + (a.promotion ? 8 : 0);
-          var scoreB = (b.captured ? 10 : 0) + (b.promotion ? 8 : 0);
-          return scoreB - scoreA;
-        });
-      }
-
-      function minimax(g, depth, alpha, beta, maximizing) {
-        if (depth === 0 || g.game_over()) {
-          if (g.in_checkmate()) {
-            return maximizing ? -99999 + (3 - depth) : 99999 - (3 - depth);
-          }
-          if (g.in_draw() || g.in_stalemate() || g.in_threefold_repetition() || g.insufficient_material()) {
-            return 0;
-          }
-          return evaluateBoard(g);
-        }
-
-        var moves = orderMoves(g.moves({ verbose: true }));
-
-        if (maximizing) {
-          var maxEval = -Infinity;
-          for (var i = 0; i < moves.length; i++) {
-            g.move(moves[i]);
-            var ev = minimax(g, depth - 1, alpha, beta, false);
-            g.undo();
-            if (ev > maxEval) maxEval = ev;
-            if (ev > alpha) alpha = ev;
-            if (beta <= alpha) break;
-          }
-          return maxEval;
-        }
-
-        var minEval = Infinity;
-        for (var j = 0; j < moves.length; j++) {
-          g.move(moves[j]);
-          var ev2 = minimax(g, depth - 1, alpha, beta, true);
-          g.undo();
-          if (ev2 < minEval) minEval = ev2;
-          if (ev2 < beta) beta = ev2;
-          if (beta <= alpha) break;
-        }
-        return minEval;
-      }
-
-      function findBestMove() {
-        var depth = getDepth();
-        var moves = orderMoves(game.moves({ verbose: true }));
-        if (!moves.length) return null;
-
-        if (depth === 1 && Math.random() < 0.35) {
-          return moves[Math.floor(Math.random() * moves.length)];
-        }
-
-        var bestMove = null;
-        // Bot plays the opposite color of the user
-        var botMaximizing = userColor === "b"; // bot is White
-        var bestScore = botMaximizing ? -Infinity : Infinity;
-        var alpha = -Infinity;
-        var beta = Infinity;
-
-        for (var i = moves.length - 1; i > 0; i--) {
-          var k = Math.floor(Math.random() * (i + 1));
-          var tmp = moves[i];
-          moves[i] = moves[k];
-          moves[k] = tmp;
-        }
-        moves = orderMoves(moves);
-
-        for (var m = 0; m < moves.length; m++) {
-          game.move(moves[m]);
-          var score = minimax(game, depth - 1, alpha, beta, !botMaximizing);
-          game.undo();
-          if (botMaximizing) {
-            if (score > bestScore) {
-              bestScore = score;
-              bestMove = moves[m];
-            }
-            if (score > alpha) alpha = score;
-          } else {
-            if (score < bestScore) {
-              bestScore = score;
-              bestMove = moves[m];
-            }
-            if (score < beta) beta = score;
-          }
-        }
-
-        return bestMove || moves[0];
-      }
-
-      function updateMoveList() {
-        var history = plySans;
-        $moveCount.text(String(history.length));
-        if (!history.length) {
-          $moveList.html('<div class="empty-moves"></div>');
-          $moveList.find(".empty-moves").text(t("emptyMoves"));
-          return;
-        }
-        var html = "";
-        for (var i = 0; i < history.length; i += 2) {
-          var num = Math.floor(i / 2) + 1;
-          var white = history[i] ? history[i] : "";
-          var black = history[i + 1] ? history[i + 1] : "";
-          html +=
-            '<div class="move-row">' +
-            '<span class="move-num">' + num + ".</span>" +
-            '<span class="move-san' + (userColor === "b" ? " bot" : "") + '">' + white + "</span>" +
-            '<span class="move-san' + (userColor === "w" ? " bot" : "") + '">' + black + "</span>" +
-            "</div>";
-        }
-        $moveList.html(html);
-        $moveList.scrollTop($moveList[0].scrollHeight);
-      }
-
-      function updateStatus() {
-        $botLabel.text(depthLabel(getDepth()));
-        $("#sideLabel").text(userColor === "w" ? t("sideWhite") : t("sideBlack"));
-
-        if (game.in_checkmate()) {
-          gameOver = true;
-          var winner = game.turn() === userColor ? t("winnerBot") : t("winnerYou");
-          setStatus(t("checkmateWin").replace("{winner}", winner), "danger");
-          $turnLabel.text(t("turnOver"));
-          return;
-        }
-        if (game.in_stalemate()) {
-          gameOver = true;
-          setStatus(t("stalemate"), "warn");
-          $turnLabel.text(t("turnDraw"));
-          return;
-        }
-        if (game.in_threefold_repetition()) {
-          gameOver = true;
-          setStatus(t("drawRepetition"), "warn");
-          $turnLabel.text(t("turnDraw"));
-          return;
-        }
-        if (game.insufficient_material()) {
-          gameOver = true;
-          setStatus(t("drawMaterial"), "warn");
-          $turnLabel.text(t("turnDraw"));
-          return;
-        }
-        if (game.in_draw()) {
-          gameOver = true;
-          setStatus(t("draw"), "warn");
-          $turnLabel.text(t("turnDraw"));
-          return;
-        }
-
-        var turn = game.turn();
-        if (turn === userColor) {
-          $turnLabel.text(t("turnYou"));
-          if (game.in_check()) {
-            setStatus(t("checkYou"), "warn");
-          } else {
-            setStatus(t("yourMove"), null);
-          }
-        } else {
-          $turnLabel.text(t("turnBot"));
-          if (game.in_check()) {
-            setStatus(t("botInCheck"), "info");
-          } else {
-            setStatus(t("botThinking"), "info");
-          }
-        }
-      }
-
-      function makeBotMove() {
-        if (gameOver || game.game_over() || game.turn() === userColor) return;
-        botThinking = true;
-        $("#thinkingText").text(t("thinking"));
-        $thinking.addClass("show");
-        $("#undoBtn").prop("disabled", true);
-
-        setTimeout(function () {
-          var best = findBestMove();
-          if (best) {
-            snapshotPush();
-            var moved = game.move(best);
-            if (moved) {
-              plySans.push(moved.san);
-              playMoveSound();
-            } else {
-              undoStack.pop();
-            }
-            board.position(game.fen());
-          }
-          botThinking = false;
-          $thinking.removeClass("show");
-          $("#undoBtn").prop("disabled", false);
-          clearSelection();
-          updateMoveList();
-          updateStatus();
-        }, 60);
-      }
-
-      function onDragStart(source, piece) {
-        if (gameOver || botThinking || game.game_over()) return false;
-        if (game.turn() !== userColor) return false;
-        if (piece.charAt(0) !== userColor) return false;
-        selectedSquare = source;
-        $("#board .square-55d63").removeClass("selected");
-        $("#board .square-" + source).addClass("selected");
-        showLegalMoves(source);
-        return true;
-      }
-
-      function onDrop(source, target) {
-        clearSelection();
-        if (!tryMakeUserMove(source, target)) return "snapback";
-        board.position(game.fen());
-        updateMoveList();
-        updateStatus();
-        window.setTimeout(makeBotMove, 250);
-      }
-
-      function onSnapEnd() {
-        board.position(game.fen());
-      }
-
-      function tryClickMove(square) {
-        if (gameOver || botThinking || game.game_over()) return;
-        if (game.turn() !== userColor) return;
-
-        var piece = game.get(square);
-
-        if (!selectedSquare) {
-          if (piece && piece.color === userColor) {
-            highlightSquare(square);
-          }
-          return;
-        }
-
-        if (selectedSquare === square) {
-          clearSelection();
-          return;
-        }
-
-        if (piece && piece.color === userColor) {
-          highlightSquare(square);
-          return;
-        }
-
-        var from = selectedSquare;
-        clearSelection();
-        if (!tryMakeUserMove(from, square)) return;
-
-        board.position(game.fen());
-        updateMoveList();
-        updateStatus();
-        window.setTimeout(makeBotMove, 250);
-      }
-
-      function boardOrientation() {
-        return userColor === "w" ? "white" : "black";
-      }
-
-      function saveUserColor() {
-        try { localStorage.setItem(COLOR_KEY, userColor); } catch (e) {}
-      }
-
-      function syncSideSelect() {
-        $("#sideSelect").val(userColor);
-      }
-
-      function newGame() {
-        undoStack = [];
-        plySans = [];
-        game.load(START_FEN);
-        gameOver = false;
-        botThinking = false;
-        clearSelection();
-        $thinking.removeClass("show");
-        board.orientation(boardOrientation());
-        board.position(START_POSITION);
-        updateMoveList();
-        updateStatus();
-        $("#undoBtn").prop("disabled", false);
-        // Bot (White) opens when the user plays Black
-        if (userColor === "b") {
-          window.setTimeout(makeBotMove, 250);
-        }
-      }
-
-      function undoMove() {
-        if (botThinking || undoStack.length === 0) return;
-        // Undo user move + bot reply when it's the user's turn again
-        if (game.turn() === userColor && undoStack.length >= 2) {
-          undoStack.pop();
-          restoreSnapshot(undoStack.pop());
-        } else {
-          restoreSnapshot(undoStack.pop());
-        }
-        gameOver = false;
-        clearSelection();
-        board.position(game.fen());
-        updateMoveList();
-        updateStatus();
-      }
-
-      function onSideChange() {
-        var next = $("#sideSelect").val() === "b" ? "b" : "w";
-        userColor = next;
-        saveUserColor();
-        newGame();
-      }
-
-      $(function () {
-        syncSideSelect();
-        applyStaticLang();
-
-        board = Chessboard("board", {
-          draggable: true,
-          position: START_POSITION,
-          orientation: boardOrientation(),
-          pieceTheme: PIECE_THEME,
-          onDragStart: onDragStart,
-          onDrop: onDrop,
-          onSnapEnd: onSnapEnd
-        });
-
-        $("#board").on("click", ".square-55d63", function () {
-          var sq = $(this).data("square");
-          if (sq) tryClickMove(sq);
-        });
-
-        $("#newGameBtn").on("click", newGame);
-        $("#undoBtn").on("click", undoMove);
-        $("#sideSelect").on("change", onSideChange);
-        $("#difficulty").on("change", function () {
-          $botLabel.text(depthLabel(getDepth()));
-        });
-
-        $("#langRu").on("click", function () { setLang("ru"); });
-        $("#langEn").on("click", function () { setLang("en"); });
-
-        $(window).on("resize", function () {
-          board.resize();
-        });
-
-        updateMoveList();
-        updateStatus();
-
-        // If restored color is black, bot (White) makes the opening move
-        if (userColor === "b") {
-          window.setTimeout(makeBotMove, 250);
-        }
+      var menu = document.getElementById("modeMenu");
+      var btn = document.getElementById("modeMenuBtn");
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = !menu.classList.contains("open");
+        menu.classList.toggle("open", open);
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
       });
+      document.addEventListener("click", function () {
+        menu.classList.remove("open");
+        btn.setAttribute("aria-expanded", "false");
+      });
+      menu.addEventListener("click", function (e) { e.stopPropagation(); });
+
+      document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
+      document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
+
+      // Remember last mode for convenience (optional deep-link hint only)
+      try {
+        var last = localStorage.getItem(MODE_KEY);
+        if (last === "classic" || last === "dice") {
+          /* no auto-redirect — shell stays as chooser */
+        }
+      } catch (e) {}
+
+      applyLang();
     })();
   </script>
 </body>
