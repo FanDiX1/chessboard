@@ -39,6 +39,7 @@ const rooms = new Map();
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
+ * @property {object[]} diceTurnLog
  * @property {{w:Seat|null,b:Seat|null}} seats
  * @property {string} hostId
  * @property {'waiting'|'playing'|'finished'} status
@@ -76,6 +77,7 @@ function publicRoom(room, forClientId) {
     fen: room.fen,
     lastMove: room.lastMove,
     plySans: room.plySans.slice(),
+    diceTurnLog: Array.isArray(room.diceTurnLog) ? room.diceTurnLog : [],
     seats: {
       w: room.seats.w
         ? { occupied: true, connected: !!room.seats.w.connected }
@@ -123,6 +125,7 @@ function createRoom(clientId, mode) {
     fen: START_FEN,
     lastMove: null,
     plySans: [],
+    diceTurnLog: [],
     seats: { w: null, b: null },
     hostId: clientId,
     status: "waiting",
@@ -369,6 +372,10 @@ io.on("connection", (socket) => {
         room.plySans = payload.plySans.map(String);
       }
 
+      if (payload && Array.isArray(payload.diceTurnLog)) {
+        room.diceTurnLog = payload.diceTurnLog;
+      }
+
       if (payload && Object.prototype.hasOwnProperty.call(payload, "dice")) {
         room.dice = payload.dice == null ? null : payload.dice;
         const dc = payload.dice && payload.dice.diceCount;
@@ -385,6 +392,7 @@ io.on("connection", (socket) => {
         move: room.lastMove,
         fen: room.fen,
         plySans: room.plySans.slice(),
+        diceTurnLog: Array.isArray(room.diceTurnLog) ? room.diceTurnLog : [],
         status: room.status,
         by: seat,
         dice: room.dice || null,
@@ -414,6 +422,7 @@ io.on("connection", (socket) => {
       room.fen = START_FEN;
       room.lastMove = null;
       room.plySans = [];
+      room.diceTurnLog = [];
       room.dice = null;
       room.status = room.seats.w && room.seats.b ? "playing" : "waiting";
       touch(room);

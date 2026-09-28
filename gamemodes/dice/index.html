@@ -293,6 +293,7 @@
           mpSeatOffline: "офлайн",
           mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
           mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
+          mpPlayingHint: "Ходите своей фигурой. Бот отключён.",
           mpBotOff: "Бот отключён в мультиплеере",
           mpRoomFull: "Комната заполнена",
           mpNotFound: "Комната не найдена",
@@ -300,7 +301,13 @@
           mpYourTurn: "Ваш ход (онлайн)",
           mpOppTurn: "Ход соперника…",
           turnOpponent: "Соперник",
-          metaOpp: "Противник"
+          metaOpp: "Противник",
+          histWhiteTurn: "Белые",
+          histBlackTurn: "Чёрные",
+          histPass: "пасс",
+          histSkipped: "пропуск",
+          histUsed: "сыграно",
+          histPly: "ход"
         },
         en: {
           docTitle: "BoardHack — Hack the Board",
@@ -398,6 +405,7 @@
           mpSeatOffline: "offline",
           mpWaitingHint: "Share the code or link. Bot is disabled.",
           mpSeatPickHint: "While alone — click a color to switch side",
+          mpPlayingHint: "Move your pieces. Bot is disabled.",
           mpBotOff: "Bot disabled in multiplayer",
           mpRoomFull: "Room is full",
           mpNotFound: "Room not found",
@@ -405,7 +413,13 @@
           mpYourTurn: "Your move (online)",
           mpOppTurn: "Opponent's turn…",
           turnOpponent: "Opponent",
-          metaOpp: "Opponent"
+          metaOpp: "Opponent",
+          histWhiteTurn: "White",
+          histBlackTurn: "Black",
+          histPass: "pass",
+          histSkipped: "skip",
+          histUsed: "used",
+          histPly: "move"
         }
       };
 
@@ -544,6 +558,8 @@
       var botSchedGen = 0;
       var undoStack = [];
       var plySans = [];
+      // Dice-mode turn log: [{side, dice:[{value,type,status}], plies:[{san,piece}], passed, closed}]
+      var diceTurnLog = [];
 
       // Dice Chess: 1=p, 2=n, 3=b, 4=r, 5=q, 6=k
       // Each die = one required move of that type this turn (duplicates = multiple moves).
@@ -734,8 +750,7 @@
         } else {
           $("#mpSeatPickHint").addClass("mp-hidden").text("");
         }
-        var bothSeated = mpBothSeated();
-        $("#mpActiveHint").toggleClass("mp-hidden", bothSeated).text(bothSeated ? "" : t("mpWaitingHint"));
+        $("#mpActiveHint").text(mpBothSeated() ? t("mpPlayingHint") : t("mpWaitingHint"));
         $("#sideSelectWrap").addClass("mp-hidden");
         $("#difficultyWrap").addClass("mp-hidden");
         $("#spGameBtns").addClass("mp-hidden");
@@ -935,6 +950,7 @@
         if (forceReset || game.fen() !== fen) {
           game.load(fen);
           if (Array.isArray(mpRoom.plySans)) plySans = mpRoom.plySans.slice();
+          if (Array.isArray(mpRoom.diceTurnLog)) diceTurnLog = cloneDiceTurnLog(mpRoom.diceTurnLog);
           gameOver = false;
           if (board) board.position(game.fen(), false);
           clearSelection();
@@ -953,6 +969,9 @@
           else if (msg.move && msg.move.san && plySans[plySans.length - 1] !== msg.move.san) {
             plySans.push(msg.move.san);
           }
+          if (Array.isArray(msg.diceTurnLog)) {
+            diceTurnLog = cloneDiceTurnLog(msg.diceTurnLog);
+          }
           if (!msg.stateSync) playMoveSound();
           if (Object.prototype.hasOwnProperty.call(msg, "dice")) {
             applyDiceState(msg.dice);
@@ -969,6 +988,7 @@
           if (mpRoom) {
             mpRoom.fen = msg.fen || mpRoom.fen;
             mpRoom.plySans = plySans.slice();
+            if (Array.isArray(msg.diceTurnLog)) mpRoom.diceTurnLog = cloneDiceTurnLog(msg.diceTurnLog);
             if (msg.move) mpRoom.lastMove = msg.move;
             if (msg.status) mpRoom.status = msg.status;
             if (Object.prototype.hasOwnProperty.call(msg, "dice")) mpRoom.dice = msg.dice;
@@ -1050,12 +1070,14 @@
           fen: game.fen(),
           san: san,
           plySans: plySans.slice(),
+          diceTurnLog: cloneDiceTurnLog(diceTurnLog),
           gameOver: !!gameOver,
           dice: dice
         });
         if (mpRoom) {
           mpRoom.fen = game.fen();
           mpRoom.plySans = plySans.slice();
+          mpRoom.diceTurnLog = cloneDiceTurnLog(diceTurnLog);
           mpRoom.lastMove = { from: from, to: to, san: san, color: mpSeat };
           mpRoom.dice = dice;
         }
@@ -1069,6 +1091,7 @@
           code: mpRoomCode,
           fen: game.fen(),
           plySans: plySans.slice(),
+          diceTurnLog: cloneDiceTurnLog(diceTurnLog),
           gameOver: !!gameOver,
           dice: dice,
           stateSync: true
@@ -1076,6 +1099,7 @@
         if (mpRoom) {
           mpRoom.fen = game.fen();
           mpRoom.plySans = plySans.slice();
+          mpRoom.diceTurnLog = cloneDiceTurnLog(diceTurnLog);
           mpRoom.dice = dice;
         }
       }
@@ -1203,6 +1227,75 @@
         return out;
       }
 
+      function cloneDiceTurnLog(list) {
+        var out = [];
+        if (!list) return out;
+        for (var i = 0; i < list.length; i++) {
+          var t = list[i];
+          var plies = [];
+          if (t.plies) {
+            for (var j = 0; j < t.plies.length; j++) {
+              plies.push({ san: t.plies[j].san, piece: t.plies[j].piece });
+            }
+          }
+          out.push({
+            side: t.side,
+            dice: cloneDiceList(t.dice || []),
+            plies: plies,
+            passed: !!t.passed,
+            closed: !!t.closed
+          });
+        }
+        return out;
+      }
+
+      /** True if side has at least one piece of this type on the board. */
+      function sideHasPieceType(side, pieceType) {
+        var boardState = game.board();
+        for (var r = 0; r < 8; r++) {
+          for (var c = 0; c < 8; c++) {
+            var p = boardState[r][c];
+            if (p && p.color === side && p.type === pieceType) return true;
+          }
+        }
+        return false;
+      }
+
+      function startDiceTurnLogEntry(side) {
+        diceTurnLog.push({
+          side: side,
+          dice: cloneDiceList(diceRoll),
+          plies: [],
+          passed: false,
+          closed: false
+        });
+      }
+
+      function syncOpenDiceTurnFaces() {
+        if (!diceTurnLog.length) return;
+        var last = diceTurnLog[diceTurnLog.length - 1];
+        if (last.closed) return;
+        last.dice = cloneDiceList(diceRoll);
+      }
+
+      function appendDiceTurnPly(san, piece) {
+        if (!diceTurnLog.length) return;
+        var last = diceTurnLog[diceTurnLog.length - 1];
+        if (last.closed) return;
+        last.plies.push({ san: san, piece: piece });
+        last.passed = false;
+        last.dice = cloneDiceList(diceRoll);
+      }
+
+      function closeDiceTurnLogEntry() {
+        if (!diceTurnLog.length) return;
+        var last = diceTurnLog[diceTurnLog.length - 1];
+        if (last.closed) return;
+        last.dice = cloneDiceList(diceRoll);
+        if (!last.plies.length) last.passed = true;
+        last.closed = true;
+      }
+
       function clearDiceReveal() {
         if (diceRevealTimerId != null) {
           clearTimeout(diceRevealTimerId);
@@ -1260,17 +1353,36 @@
           $("#diceAllowedHint").text("");
           return;
         }
+        syncOpenDiceTurnFaces();
         var html = "";
         var colorChar = diceSide || game.turn() || "w";
+        var evalSide = diceSide || game.turn() || "w";
         for (var i = 0; i < diceRoll.length; i++) {
           var d = diceRoll[i];
           var cls = "die";
-          if (d.status === "used") cls += " used";
-          if (d.status === "skipped") cls += " skipped";
+          var statusLabel = "";
+          if (d.status === "used") {
+            cls += " used";
+            statusLabel = t("histUsed");
+          } else if (d.status === "skipped") {
+            cls += " skipped";
+            statusLabel = t("histSkipped");
+          } else {
+            // pending: green = playable geometry, red = on board but blocked, dim = missing
+            var onBoard = sideHasPieceType(evalSide, d.type);
+            if (!onBoard) {
+              cls += " missing";
+            } else if (hasLegalForType(d.type)) {
+              cls += " playable";
+            } else {
+              cls += " blocked";
+            }
+          }
           var pieceCode = colorChar + d.type.toUpperCase();
           var imgSrc = PIECE_THEME.replace("{piece}", pieceCode);
+          var title = pieceName(d.type) + (statusLabel ? " — " + statusLabel : "");
           html +=
-            '<div class="' + cls + '" title="' + pieceName(d.type) + '">' +
+            '<div class="' + cls + '" title="' + title + '">' +
             '<img class="die-piece-img" src="' + imgSrc + '" alt="' + pieceName(d.type) + '" />' +
             "</div>";
         }
@@ -1495,7 +1607,9 @@
           var winner = winnerColor === userColor ? t("winnerYou") : loserLabel;
           setStatus(t("kingCaptureWin").replace("{winner}", winner), "danger");
           $turnLabel.text(t("turnOver"));
+          closeDiceTurnLogEntry();
           updateDiceUI();
+          updateMoveList();
           return true;
         }
 
@@ -1530,7 +1644,9 @@
           diceSide = null;
           setStatus(t("drawRepetition"), "warn");
           $turnLabel.text(t("turnDraw"));
+          closeDiceTurnLogEntry();
           updateDiceUI();
+          updateMoveList();
           return true;
         }
 
@@ -1540,7 +1656,9 @@
           diceSide = null;
           setStatus(t("drawMaterial"), "warn");
           $turnLabel.text(t("turnDraw"));
+          closeDiceTurnLogEntry();
           updateDiceUI();
+          updateMoveList();
           return true;
         }
 
@@ -1552,7 +1670,9 @@
           diceSide = null;
           setStatus(t("draw"), "warn");
           $turnLabel.text(t("turnDraw"));
+          closeDiceTurnLogEntry();
           updateDiceUI();
+          updateMoveList();
           return true;
         }
 
@@ -1791,7 +1911,9 @@
           passTurnNoMove();
         }
         diceSide = null;
+        closeDiceTurnLogEntry();
         updateDiceUI();
+        updateMoveList();
         return true;
       }
 
@@ -1801,6 +1923,9 @@
           clearDiceState();
           return;
         }
+        // Close previous turn log before overwriting diceRoll faces
+        closeDiceTurnLogEntry();
+        updateMoveList();
         diceSide = side;
         diceRoll = [];
         remainingDice = [];
@@ -1812,6 +1937,7 @@
           remainingDice.push({ value: roll, type: pt });
         }
         // Keep all dice on roll — even types with no legal move yet
+        startDiceTurnLogEntry(side);
         updateDiceUI();
         noteDiceReveal();
       }
@@ -1902,7 +2028,8 @@
           diceRoll: cloneDiceList(diceRoll),
           remainingDice: cloneDiceList(remainingDice),
           diceSide: diceSide,
-          lastSkipMsg: lastSkipMsg
+          lastSkipMsg: lastSkipMsg,
+          diceTurnLog: cloneDiceTurnLog(diceTurnLog)
         });
       }
 
@@ -1913,6 +2040,7 @@
         remainingDice = s.remainingDice ? cloneDiceList(s.remainingDice) : [];
         diceSide = s.diceSide != null ? s.diceSide : null;
         lastSkipMsg = s.lastSkipMsg || "";
+        diceTurnLog = s.diceTurnLog ? cloneDiceTurnLog(s.diceTurnLog) : [];
       }
 
       // chess.js move (O-O / O-O-O); dice may use geometry when in check/mate
@@ -1935,6 +2063,7 @@
         playMoveSound();
         if (isDiceMode()) {
           consumeDie(move.piece);
+          appendDiceTurnPly(move.san, move.piece);
         }
         return true;
       }
@@ -1959,7 +2088,9 @@
           return false;
         }
         diceSide = null;
+        closeDiceTurnLogEntry();
         updateDiceUI();
+        updateMoveList();
         return true;
       }
 
@@ -2126,7 +2257,78 @@
           });
       }
 
+      function dieFaceMiniHtml(d, side) {
+        var colorChar = side || "w";
+        var pieceCode = colorChar + String(d.type || "p").toUpperCase();
+        var imgSrc = PIECE_THEME.replace("{piece}", pieceCode);
+        var st = d.status || "pending";
+        var cls = "hist-die hist-die-" + st;
+        return (
+          '<span class="' + cls + '" title="' + pieceName(d.type) + '">' +
+          '<img src="' + imgSrc + '" alt="' + pieceName(d.type) + '" />' +
+          "</span>"
+        );
+      }
+
       function updateMoveList() {
+        if (isDiceMode()) {
+          syncOpenDiceTurnFaces();
+          var totalPlies = 0;
+          for (var ti = 0; ti < diceTurnLog.length; ti++) {
+            totalPlies += (diceTurnLog[ti].plies && diceTurnLog[ti].plies.length) || 0;
+          }
+          $moveCount.text(String(totalPlies));
+          if (!diceTurnLog.length) {
+            $moveList.html('<div class="empty-moves"></div>');
+            $moveList.find(".empty-moves").text(t("emptyMoves"));
+            return;
+          }
+          var html = "";
+          var turnNum = 0;
+          for (var i = 0; i < diceTurnLog.length; i++) {
+            var entry = diceTurnLog[i];
+            if (entry.side === "w") turnNum++;
+            var sideLabel = entry.side === "w" ? t("histWhiteTurn") : t("histBlackTurn");
+            var isOpp =
+              (isMultiplayer() && entry.side !== userColor) ||
+              (!isMultiplayer() && entry.side !== userColor);
+            var diceHtml = "";
+            for (var di = 0; di < (entry.dice || []).length; di++) {
+              diceHtml += dieFaceMiniHtml(entry.dice[di], entry.side);
+            }
+            var body = "";
+            if (entry.passed || !(entry.plies && entry.plies.length)) {
+              if (entry.closed || entry.passed) {
+                body = '<span class="hist-pass">' + t("histPass") + "</span>";
+              } else {
+                body = '<span class="hist-pass hist-pass-pending">…</span>';
+              }
+            } else {
+              for (var pi = 0; pi < entry.plies.length; pi++) {
+                var ply = entry.plies[pi];
+                body +=
+                  '<span class="hist-ply' + (isOpp ? " bot" : "") + '">' +
+                  '<span class="hist-ply-idx">' + (pi + 1) + ".</span> " +
+                  ply.san +
+                  "</span>";
+              }
+            }
+            html +=
+              '<div class="hist-turn' + (isOpp ? " hist-turn-opp" : "") + (entry.closed ? "" : " hist-turn-open") + '">' +
+              '<div class="hist-turn-head">' +
+              '<span class="hist-turn-num">' + (entry.side === "w" ? turnNum + "." : "") + "</span>" +
+              '<span class="hist-turn-side">' + sideLabel + "</span>" +
+              '<span class="hist-turn-dice">' + diceHtml + "</span>" +
+              "</div>" +
+              '<div class="hist-turn-body">' + body + "</div>" +
+              "</div>";
+          }
+          $moveList.html(html);
+          $moveList.scrollTop($moveList[0].scrollHeight);
+          return;
+        }
+
+        // Classic: plain SAN pair rows (unchanged)
         var history = plySans;
         $moveCount.text(String(history.length));
         if (!history.length) {
@@ -2134,19 +2336,19 @@
           $moveList.find(".empty-moves").text(t("emptyMoves"));
           return;
         }
-        var html = "";
-        for (var i = 0; i < history.length; i += 2) {
-          var num = Math.floor(i / 2) + 1;
-          var white = history[i] ? history[i] : "";
-          var black = history[i + 1] ? history[i + 1] : "";
-          html +=
+        var htmlC = "";
+        for (var ci = 0; ci < history.length; ci += 2) {
+          var num = Math.floor(ci / 2) + 1;
+          var white = history[ci] ? history[ci] : "";
+          var black = history[ci + 1] ? history[ci + 1] : "";
+          htmlC +=
             '<div class="move-row">' +
             '<span class="move-num">' + num + ".</span>" +
             '<span class="move-san' + (userColor === "b" ? " bot" : "") + '">' + white + "</span>" +
             '<span class="move-san' + (userColor === "w" ? " bot" : "") + '">' + black + "</span>" +
             "</div>";
         }
-        $moveList.html(html);
+        $moveList.html(htmlC);
         $moveList.scrollTop($moveList[0].scrollHeight);
       }
 
@@ -2347,7 +2549,10 @@
               }
               plySans.push(moved.san);
               playMoveSound();
-              if (isDiceMode()) consumeDie(moved.piece);
+              if (isDiceMode()) {
+                consumeDie(moved.piece);
+                appendDiceTurnPly(moved.san, moved.piece);
+              }
               board.position(game.fen());
               updateMoveList();
               updateDiceUI();
@@ -2532,6 +2737,7 @@
           }
           undoStack = [];
           plySans = [];
+          diceTurnLog = [];
           game.load(START_FEN);
           gameOver = false;
           botThinking = false;
@@ -2546,6 +2752,7 @@
         }
         undoStack = [];
         plySans = [];
+        diceTurnLog = [];
         game.load(START_FEN);
         gameOver = false;
         botThinking = false;
