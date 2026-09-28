@@ -128,7 +128,7 @@
             <div class="mp-room-list" id="mpRoomListSection">
               <div class="mp-room-list-head">
                 <span class="mp-room-list-title" id="mpRoomsTitle">Комнаты</span>
-                <button type="button" class="btn btn-ghost" id="mpRoomsRefreshBtn">Обновить</button>
+                <button type="button" class="btn btn-ghost mp-rooms-refresh" id="mpRoomsRefreshBtn">Обновить</button>
               </div>
               <div class="mp-rooms-list" id="mpRoomsList"></div>
               <p class="mp-hint" id="mpRoomsEmpty">Нет открытых комнат</p>
@@ -316,6 +316,7 @@
           mpOpponentGone: "соперник отключился",
           mpError: "ошибка связи",
           mpSeatEmpty: "свободно",
+          mpPlayerStub: "Игрок",
           mpSeatYou: "вы",
           mpSeatOpp: "соперник",
           mpSeatOffline: "офлайн",
@@ -437,6 +438,7 @@
           mpOpponentGone: "opponent disconnected",
           mpError: "connection error",
           mpSeatEmpty: "open",
+          mpPlayerStub: "Player",
           mpSeatYou: "you",
           mpSeatOpp: "opponent",
           mpSeatOffline: "offline",
@@ -755,14 +757,25 @@
         $("#mpConnText").text(label);
       }
 
+      function displayNickOrStub(raw) {
+        var nick = sanitizeNickClient(raw || "");
+        return nick || t("mpPlayerStub");
+      }
+
+      function roomListSeatText(raw) {
+        // null/undefined => empty seat; string (incl. "") => occupied
+        if (raw == null) return t("mpSeatEmpty");
+        return displayNickOrStub(raw);
+      }
+
       function seatLabel(color) {
         if (!mpRoom || !mpRoom.seats) return t("mpSeatEmpty");
         var s = mpRoom.seats[color];
         if (!s || !s.occupied) return t("mpSeatEmpty");
-        var nick = sanitizeNickClient(s.nick || "");
-        if (mpSeat === color) return nick ? (nick + " (" + t("mpSeatYou") + ")") : t("mpSeatYou");
-        if (!s.connected) return nick ? (nick + " (" + t("mpSeatOffline") + ")") : t("mpSeatOffline");
-        return nick || t("mpSeatOpp");
+        var nick = displayNickOrStub(s.nick || "");
+        if (mpSeat === color) return nick + " (" + t("mpSeatYou") + ")";
+        if (!s.connected) return nick + " (" + t("mpSeatOffline") + ")";
+        return nick;
       }
 
 
@@ -1058,16 +1071,14 @@
         $empty.addClass("mp-hidden");
         mpLastRoomList.forEach(function (r) {
           if (!r || !r.code) return;
-          var wNick = (r.seats && r.seats.w) ? sanitizeNickClient(r.seats.w) : "";
-          var bNick = (r.seats && r.seats.b) ? sanitizeNickClient(r.seats.b) : "";
-          var seatsTxt = (wNick || t("mpSeatEmpty")) + " \u00b7 " + (bNick || t("mpSeatEmpty"));
+          var seatsTxt = roomListSeatText(r.seats ? r.seats.w : null) + " \u00b7 " + roomListSeatText(r.seats ? r.seats.b : null);
           var $info = $('<div class="mp-room-info"></div>');
           $info.append($('<span class="mp-room-code"></span>').text(r.code));
           $info.append($('<span class="mp-room-seats"></span>').text(seatsTxt));
           if (typeof r.spectatorCount === "number" && r.spectatorCount > 0) {
             $info.append($('<span class="mp-room-specs"></span>').text(t("mpSpectators") + ": " + r.spectatorCount));
           }
-          var $actions = $('<div class="mp-room-actions"></div>');
+          var $actions = $('<div class="mp-room-actions btn-row"></div>');
           if (r.joinable) {
             $actions.append(
               $('<button type="button" class="btn btn-primary"></button>')
@@ -1243,11 +1254,11 @@
         var oppColor = mpSeat === "w" ? "b" : (mpSeat === "b" ? "w" : null);
         var nick = "";
         if (oppColor && mpRoom && mpRoom.seats && mpRoom.seats[oppColor] && mpRoom.seats[oppColor].occupied) {
-          nick = sanitizeNickClient(mpRoom.seats[oppColor].nick || "");
+          nick = displayNickOrStub(mpRoom.seats[oppColor].nick || "");
         }
         if (mpSpectating) {
-          var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? sanitizeNickClient(mpRoom.seats.w.nick || "") : "";
-          var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? sanitizeNickClient(mpRoom.seats.b.nick || "") : "";
+          var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? displayNickOrStub(mpRoom.seats.w.nick || "") : "";
+          var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? displayNickOrStub(mpRoom.seats.b.nick || "") : "";
           $botLabel.text((wn || t("sideWhite")) + " vs " + (bn || t("sideBlack")));
         } else {
           $botLabel.text(nick || t("mpOpponent") || t("metaOpp"));

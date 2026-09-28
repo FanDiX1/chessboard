@@ -381,8 +381,9 @@ function roomListEntry(room) {
     code: room.code,
     mode: room.mode,
     seats: {
-      w: w ? sanitizeNick(w.nick || "") : "",
-      b: b ? sanitizeNick(b.nick || "") : "",
+      // null = empty seat; "" = occupied but no nick (client shows stub)
+      w: w ? sanitizeNick(w.nick || "") : null,
+      b: b ? sanitizeNick(b.nick || "") : null,
     },
     spectatorCount: spectatorCount(room),
     createdAt: room.createdAt || room.updatedAt || 0,

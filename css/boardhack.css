@@ -1186,7 +1186,7 @@ button.btn:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.55rem;
 }
 .mp-room-list-title {
   font-size: 0.78rem;
@@ -1195,10 +1195,20 @@ button.btn:disabled {
   color: var(--text-muted);
   font-weight: 600;
 }
+#mpRoomsRefreshBtn,
+.mp-rooms-refresh {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: auto;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
 .mp-rooms-list {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.5rem;
   max-height: 14rem;
   overflow-y: auto;
 }
@@ -1207,45 +1217,72 @@ button.btn:disabled {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.45rem 0.6rem;
-  padding: 0.5rem 0.6rem;
+  gap: 0.5rem 0.75rem;
+  padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-elevated);
 }
 .mp-room-info {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  align-items: flex-start;
+  gap: 0.28rem;
   min-width: 0;
-  flex: 1 1 8rem;
+  flex: 1 1 9rem;
 }
 .mp-room-code {
+  display: inline-block;
   font-family: var(--mono);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 700;
   color: var(--accent);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(159, 239, 0, 0.28);
+  background: rgba(159, 239, 0, 0.08);
+  line-height: 1.3;
 }
 .mp-room-seats {
+  display: block;
   font-size: 0.78rem;
   color: var(--text-muted);
   word-break: break-word;
+  line-height: 1.35;
+}
+.mp-room-seats .mp-seat-sep {
+  margin: 0 0.35rem;
+  opacity: 0.65;
 }
 .mp-room-specs {
+  display: block;
   font-size: 0.72rem;
   color: var(--text-muted);
-  opacity: 0.9;
+  opacity: 0.85;
 }
 .mp-room-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+.mp-room-actions.btn-row {
+  flex: 0 0 auto;
+  width: auto;
 }
 .mp-room-actions .btn {
-  padding: 0.35rem 0.65rem;
+  flex: 0 0 auto;
+  min-width: 0;
+  width: auto;
+  padding: 0.4rem 0.75rem;
   font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 #mpRoomsEmpty {
-  margin: 0.25rem 0 0;
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
 }

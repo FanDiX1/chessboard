@@ -210,7 +210,7 @@
           <div class="mp-room-list" id="mpRoomListSection">
             <div class="mp-room-list-head">
               <span class="mp-room-list-title" id="mpRoomsTitle">Комнаты</span>
-              <button type="button" class="btn btn-ghost" id="mpRoomsRefreshBtn">Обновить</button>
+              <button type="button" class="btn btn-ghost mp-rooms-refresh" id="mpRoomsRefreshBtn">Обновить</button>
             </div>
             <div class="mp-rooms-list" id="mpRoomsList"></div>
             <p class="mp-hint" id="mpRoomsEmpty">Нет открытых комнат</p>
@@ -354,6 +354,7 @@
       mpOpponentGone: "соперник отключился",
       mpError: "ошибка связи",
       mpSeatEmpty: "свободно",
+      mpPlayerStub: "Игрок",
       mpSeatYou: "вы",
       mpSeatOpp: "соперник",
       mpSeatOffline: "офлайн",
@@ -429,6 +430,7 @@
       mpOpponentGone: "opponent disconnected",
       mpError: "connection error",
       mpSeatEmpty: "open",
+      mpPlayerStub: "Player",
       mpSeatYou: "you",
       mpSeatOpp: "opponent",
       mpSeatOffline: "offline",
@@ -903,14 +905,25 @@
     document.getElementById("mpConnText").textContent = label;
   }
 
+  function displayNickOrStub(raw) {
+    var nick = sanitizeNickClient(raw || "");
+    return nick || t("mpPlayerStub");
+  }
+
+  function roomListSeatText(raw) {
+    // null/undefined => empty seat; string (incl. "") => occupied
+    if (raw == null) return t("mpSeatEmpty");
+    return displayNickOrStub(raw);
+  }
+
   function seatLabel(color) {
     if (!mpRoom || !mpRoom.seats) return t("mpSeatEmpty");
     var s = mpRoom.seats[color];
     if (!s || !s.occupied) return t("mpSeatEmpty");
-    var nick = sanitizeNickClient(s.nick || "");
-    if (mpSeat === color) return nick ? (nick + " (" + t("mpSeatYou") + ")") : t("mpSeatYou");
-    if (!s.connected) return nick ? (nick + " (" + t("mpSeatOffline") + ")") : t("mpSeatOffline");
-    return nick || t("mpSeatOpp");
+    var nick = displayNickOrStub(s.nick || "");
+    if (mpSeat === color) return nick + " (" + t("mpSeatYou") + ")";
+    if (!s.connected) return nick + " (" + t("mpSeatOffline") + ")";
+    return nick;
   }
 
   function mpAloneCanSwitch() {
@@ -1109,8 +1122,7 @@
       captureChain = nextChain;
       if (Array.isArray(mpRoom.plySans)) moveHistory = mpRoom.plySans.slice();
       gameOver = null;
-      selected = captureChain && captureChain.color === turn ? { r: captureChain.current.r, c: captureChain.current.c } : null;
-      legalForSelected = selected ? movesFromSquare(selected.r, selected.c) : [];
+      refreshMoveHighlights();
       lastMove = mpRoom.lastMove ? {
         from: algebraicToRC(mpRoom.lastMove.from) || mpRoom.lastMove.from,
         to: algebraicToRC(mpRoom.lastMove.to) || mpRoom.lastMove.to
@@ -1149,10 +1161,9 @@
         var to = algebraicToRC(msg.move.to);
         if (fr && to) lastMove = { from: fr, to: to };
       }
-      selected = captureChain && captureChain.color === turn ? { r: captureChain.current.r, c: captureChain.current.c } : null;
-      legalForSelected = selected ? movesFromSquare(selected.r, selected.c) : [];
       gameOver = null;
       checkGameOver();
+      refreshMoveHighlights();
       if (msg.status === "finished" && !gameOver) {
         // client already set via checkGameOver; keep
       }
@@ -1215,9 +1226,7 @@
     if (empty) empty.classList.add("mp-hidden");
     mpLastRoomList.forEach(function (r) {
       if (!r || !r.code) return;
-      var wNick = (r.seats && r.seats.w) ? sanitizeNickClient(r.seats.w) : "";
-      var bNick = (r.seats && r.seats.b) ? sanitizeNickClient(r.seats.b) : "";
-      var seatsTxt = (wNick || t("mpSeatEmpty")) + " \u00b7 " + (bNick || t("mpSeatEmpty"));
+      var seatsTxt = roomListSeatText(r.seats ? r.seats.w : null) + " \u00b7 " + roomListSeatText(r.seats ? r.seats.b : null);
       var row = document.createElement("div");
       row.className = "mp-room-row";
       var info = document.createElement("div");
@@ -1237,7 +1246,7 @@
         info.appendChild(specEl);
       }
       var actions = document.createElement("div");
-      actions.className = "mp-room-actions";
+      actions.className = "mp-room-actions btn-row";
       if (r.joinable) {
         var joinBtn = document.createElement("button");
         joinBtn.type = "button";
@@ -1399,6 +1408,23 @@
     return turn === userColor;
   }
 
+  function clearMoveHighlights() {
+    selected = null;
+    legalForSelected = [];
+  }
+
+  /** Keep/restore selection only on the local user's turn (e.g. multi-capture). */
+  function refreshMoveHighlights() {
+    if (gameOver || botThinking || !isUserTurn()) {
+      clearMoveHighlights();
+      return;
+    }
+    if (captureChain && captureChain.color === turn) {
+      selected = { r: captureChain.current.r, c: captureChain.current.c };
+      legalForSelected = movesFromSquare(selected.r, selected.c);
+    }
+  }
+
   function sqLabel(r, c) {
     return String.fromCharCode(97 + c) + (8 - r);
   }
@@ -1423,11 +1449,11 @@
       var oppColor = mpSeat === "w" ? "b" : (mpSeat === "b" ? "w" : null);
       var nick = "";
       if (oppColor && mpRoom && mpRoom.seats && mpRoom.seats[oppColor] && mpRoom.seats[oppColor].occupied) {
-        nick = sanitizeNickClient(mpRoom.seats[oppColor].nick || "");
+        nick = displayNickOrStub(mpRoom.seats[oppColor].nick || "");
       }
       if (mpSpectating) {
-        var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? sanitizeNickClient(mpRoom.seats.w.nick || "") : "";
-        var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? sanitizeNickClient(mpRoom.seats.b.nick || "") : "";
+        var wn = (mpRoom && mpRoom.seats && mpRoom.seats.w && mpRoom.seats.w.occupied) ? displayNickOrStub(mpRoom.seats.w.nick || "") : "";
+        var bn = (mpRoom && mpRoom.seats && mpRoom.seats.b && mpRoom.seats.b.occupied) ? displayNickOrStub(mpRoom.seats.b.nick || "") : "";
         label = (wn || t("sideWhite")) + " vs " + (bn || t("sideBlack"));
       } else {
         label = nick || t("mpOpponent");
@@ -1561,10 +1587,13 @@
     el.classList.toggle("flipped", boardFlip());
     el.innerHTML = "";
 
+    var showHighlights = !gameOver && !botThinking && isUserTurn();
     var legalTargets = {};
-    for (var i = 0; i < legalForSelected.length; i++) {
-      var m = legalForSelected[i];
-      legalTargets[keySq(m.to.r, m.to.c)] = m;
+    if (showHighlights) {
+      for (var i = 0; i < legalForSelected.length; i++) {
+        var m = legalForSelected[i];
+        legalTargets[keySq(m.to.r, m.to.c)] = m;
+      }
     }
 
     for (var r = 0; r < 8; r++) {
@@ -1575,14 +1604,15 @@
         sq.dataset.r = r;
         sq.dataset.c = c;
 
-        if (selected && selected.r === r && selected.c === c) sq.classList.add("selected");
+        if (showHighlights && selected && selected.r === r && selected.c === c) sq.classList.add("selected");
         if (lastMove && lastMove.from && lastMove.to) {
           if (lastMove.from.r === r && lastMove.from.c === c) sq.classList.add("last-from");
           if (lastMove.to.r === r && lastMove.to.c === c) sq.classList.add("last-to");
         }
         var tk = keySq(r, c);
-        if (legalTargets[tk]) {
-          sq.classList.add(legalTargets[tk].captures.length ? "legal-capture" : "legal");
+        if (showHighlights && legalTargets[tk]) {
+          sq.classList.add("legal");
+          if (legalTargets[tk].captures.length) sq.classList.add("legal-capture");
         }
 
         var p = board[r][c];
@@ -1737,17 +1767,21 @@
   function checkGameOver() {
     var w = countPieces(board, "w");
     var b = countPieces(board, "b");
-    if (w.n === 0) { gameOver = "b"; return; }
-    if (b.n === 0) { gameOver = "w"; return; }
+    if (w.n === 0) { gameOver = "b"; clearMoveHighlights(); return; }
+    if (b.n === 0) { gameOver = "w"; clearMoveHighlights(); return; }
     if (captureChain) {
       var cp = board[captureChain.current.r] && board[captureChain.current.r][captureChain.current.c];
       if (!cp || cp.color !== turn || !captureStepMovesFrom(board, captureChain.current.r, captureChain.current.c, cp).length) {
         captureChain = null;
         turn = turn === "w" ? "b" : "w";
+        clearMoveHighlights();
       }
     }
     var moves = allMoves(board, turn);
-    if (moves.length === 0) gameOver = turn === "w" ? "b" : "w";
+    if (moves.length === 0) {
+      gameOver = turn === "w" ? "b" : "w";
+      clearMoveHighlights();
+    }
   }
 
   function playMove(move, opts) {
@@ -1765,11 +1799,10 @@
       }
     }
     captureChain = nextChain;
-    selected = nextChain ? { r: nextChain.current.r, c: nextChain.current.c } : null;
-    legalForSelected = nextChain ? movesFromSquare(selected.r, selected.c) : [];
     if (!nextChain) turn = turn === "w" ? "b" : "w";
     gameOver = null;
     checkGameOver();
+    refreshMoveHighlights();
     updateMeta();
     updateStatus();
     renderHistory();
@@ -1783,8 +1816,10 @@
   function maybeBotTurn() {
     if (gameOver || isMultiplayer()) return;
     if (turn === userColor) return;
+    clearMoveHighlights();
     botThinking = true;
     document.getElementById("thinking").classList.add("show");
+    renderBoard();
     updateStatus();
     var delay = difficulty === "easy" ? 180 : difficulty === "hard" ? 420 : 280;
     setTimeout(function () {
