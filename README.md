@@ -8,8 +8,8 @@ Dark-themed multi-game hub: chess, checkers, and backgammon. Local bots and mult
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
 - **Checkers → Classic** — Russian draughts vs local bot or online multiplayer
-- **Backgammon → Classic** — short/Western backgammon vs local bot (hitting, bar, bearing off)
-- **Backgammon → Long** — Russian long nardy vs local bot (same direction, no hitting, head rule)
+- **Backgammon → Classic** — short/Western backgammon vs local bot or online multiplayer (hitting, bar, bearing off)
+- **Backgammon → Long** — Russian long nardy vs local bot or online multiplayer (same direction, no hitting, head rule)
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
 - **Multiplayer** — room codes via Socket.IO server (`server/`)
 - **i18n** — Russian / English UI

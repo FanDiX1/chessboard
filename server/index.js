@@ -9,6 +9,7 @@ const PORT = Number(process.env.PORT) || 3001;
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 // Russian draughts: dark squares only; w/W white man/king, b/B black; white to move
 const CHECKERS_START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
+const BG_START_FEN = "bg w"; // turn marker for backgammon modes (full state in room.bg)
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
 const CODE_LEN = 6;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000; // 6h idle cleanup
@@ -37,7 +38,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode  // classic | dice | checkers
+ * @property {string} mode  // classic | dice | checkers | backgammon | backgammon-long
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -49,6 +50,7 @@ const rooms = new Map();
  * @property {object|null} dice  // diceCount, diceRoll, remainingDice, diceSide, lastSkipMsg
  * @property {{color:string,current:string}|null} checkersChain // active stepwise capture
  * @property {number} diceCount  // 1|2|3 authoritative MP dice count (host-controlled)
+ * @property {object|null} bg  // backgammon full state (points, bar?, off, turn, dice, phase, history)
  */
 
 function genCode() {
@@ -73,7 +75,9 @@ function publicRoom(room, forClientId) {
     if (room.seats.w && room.seats.w.clientId === forClientId) yourSeat = "w";
     if (room.seats.b && room.seats.b.clientId === forClientId) yourSeat = "b";
   }
-  const turn = (room.fen.split(" ")[1] || "w");
+  const turn = isBgMode(room.mode) && room.bg && room.bg.turn
+    ? room.bg.turn
+    : (room.fen.split(" ")[1] || "w");
   return {
     code: room.code,
     mode: room.mode,
@@ -96,6 +100,7 @@ function publicRoom(room, forClientId) {
     dice: room.dice || null,
     diceCount: room.diceCount === 1 || room.diceCount === 3 ? room.diceCount : 2,
     chain: room.checkersChain || null,
+    bg: room.bg || null,
   };
 }
 
@@ -120,14 +125,115 @@ function emitRoom(room) {
   }
 }
 
+function isBgMode(mode) {
+  return mode === "backgammon" || mode === "backgammon-long";
+}
+
 function normalizeMode(mode) {
   if (mode === "dice") return "dice";
   if (mode === "checkers" || mode === "checkers-classic") return "checkers";
+  if (mode === "backgammon" || mode === "bg-classic" || mode === "bg") return "backgammon";
+  if (mode === "backgammon-long" || mode === "bg-long" || mode === "long-nardy") return "backgammon-long";
   return "classic";
 }
 
+function emptyBgPoint() {
+  return { color: null, count: 0 };
+}
+
+function initialBgState(mode) {
+  const pts = new Array(25);
+  for (let i = 0; i <= 24; i++) pts[i] = emptyBgPoint();
+  if (mode === "backgammon-long") {
+    pts[24] = { color: "w", count: 15 };
+    pts[12] = { color: "b", count: 15 };
+    return {
+      points: pts,
+      off: { w: 0, b: 0 },
+      turn: "w",
+      winner: null,
+      phase: "roll",
+      rolledDice: [],
+      remainingDice: [],
+      headLeft: 1,
+      history: [],
+    };
+  }
+  // classic short / Western
+  pts[24] = { color: "w", count: 2 };
+  pts[13] = { color: "w", count: 5 };
+  pts[8] = { color: "w", count: 3 };
+  pts[6] = { color: "w", count: 5 };
+  pts[1] = { color: "b", count: 2 };
+  pts[12] = { color: "b", count: 5 };
+  pts[17] = { color: "b", count: 3 };
+  pts[19] = { color: "b", count: 5 };
+  return {
+    points: pts,
+    bar: { w: 0, b: 0 },
+    off: { w: 0, b: 0 },
+    turn: "w",
+    winner: null,
+    phase: "roll",
+    rolledDice: [],
+    remainingDice: [],
+    history: [],
+  };
+}
+
+function sanitizeBgState(raw, mode) {
+  if (!raw || typeof raw !== "object") return null;
+  const turn = raw.turn === "b" ? "b" : "w";
+  const phase = raw.phase === "move" || raw.phase === "over" ? raw.phase : "roll";
+  const winner = raw.winner === "w" || raw.winner === "b" ? raw.winner : null;
+  const pts = new Array(25);
+  for (let i = 0; i <= 24; i++) pts[i] = emptyBgPoint();
+  if (Array.isArray(raw.points)) {
+    for (let i = 1; i <= 24; i++) {
+      const p = raw.points[i];
+      if (!p) continue;
+      const color = p.color === "w" || p.color === "b" ? p.color : null;
+      const count = Math.max(0, Math.min(15, Number(p.count) || 0));
+      pts[i] = { color: count > 0 ? color : null, count };
+    }
+  }
+  const offW = Math.max(0, Math.min(15, Number(raw.off && raw.off.w) || 0));
+  const offB = Math.max(0, Math.min(15, Number(raw.off && raw.off.b) || 0));
+  const rolled = Array.isArray(raw.rolledDice)
+    ? raw.rolledDice.map((d) => Math.max(1, Math.min(6, Number(d) || 1))).slice(0, 4)
+    : [];
+  const remaining = Array.isArray(raw.remainingDice)
+    ? raw.remainingDice.map((d) => Math.max(1, Math.min(6, Number(d) || 1))).slice(0, 4)
+    : [];
+  const history = Array.isArray(raw.history)
+    ? raw.history.map(String).slice(-80)
+    : (Array.isArray(raw.plySans) ? raw.plySans.map(String).slice(-80) : []);
+  /** @type {object} */
+  const out = {
+    points: pts,
+    off: { w: offW, b: offB },
+    turn,
+    winner,
+    phase,
+    rolledDice: rolled,
+    remainingDice: remaining,
+    history,
+  };
+  if (mode === "backgammon-long") {
+    out.headLeft = raw.headLeft === 0 ? 0 : 1;
+  } else {
+    out.bar = {
+      w: Math.max(0, Math.min(15, Number(raw.bar && raw.bar.w) || 0)),
+      b: Math.max(0, Math.min(15, Number(raw.bar && raw.bar.b) || 0)),
+    };
+  }
+  return out;
+}
+
 function startFenForMode(mode) {
-  return mode === "checkers" ? CHECKERS_START_FEN : START_FEN;
+  if (mode === "checkers") return CHECKERS_START_FEN;
+  if (isBgMode(mode)) return BG_START_FEN;
+  return START_FEN;
 }
 
 function createRoom(clientId, mode) {
@@ -148,6 +254,7 @@ function createRoom(clientId, mode) {
     dice: null,
     diceCount: 2,
     checkersChain: null,
+    bg: isBgMode(norm) ? initialBgState(norm) : null,
   };
   rooms.set(code, room);
   return room;
@@ -351,7 +458,10 @@ io.on("connection", (socket) => {
       if (room.status === "waiting") return ack && ack({ ok: false, error: "waiting_for_opponent" });
 
       const isStateSync = !!(payload && (payload.stateSync || payload.pass));
-      const turn = (room.fen.split(" ")[1] || "w");
+      const isBg = isBgMode(room.mode);
+      const turn = isBg && room.bg && room.bg.turn
+        ? room.bg.turn
+        : (room.fen.split(" ")[1] || "w");
       // Dice mid-turn / pass / roll sync: FEN turn may already have flipped on a pass.
       // For normal moves require seat === turn; for stateSync allow either seated player
       // (authoritative client sends post-pass fen + dice).
@@ -363,29 +473,53 @@ io.on("connection", (socket) => {
       const to = payload && payload.to;
       const fen = payload && payload.fen;
       const san = payload && payload.san;
-      if (!fen) {
-        return ack && ack({ ok: false, error: "invalid_move_payload" });
-      }
-      if (!isStateSync && (!from || !to || !san)) {
-        return ack && ack({ ok: false, error: "invalid_move_payload" });
-      }
+      const bgPayload = payload && payload.bg;
 
-      room.fen = String(fen);
-      if (!isStateSync) {
-        room.lastMove = {
-          from: String(from),
-          to: String(to),
-          san: String(san),
-          color: seat,
-          promotion: payload.promotion || null,
-        };
-        if (Array.isArray(payload.plySans)) {
-          room.plySans = payload.plySans.map(String);
-        } else {
-          room.plySans.push(String(san));
+      if (isBg) {
+        if (!bgPayload) {
+          return ack && ack({ ok: false, error: "invalid_move_payload" });
         }
-      } else if (Array.isArray(payload.plySans)) {
-        room.plySans = payload.plySans.map(String);
+        const sanitized = sanitizeBgState(bgPayload, room.mode);
+        if (!sanitized) {
+          return ack && ack({ ok: false, error: "invalid_move_payload" });
+        }
+        room.bg = sanitized;
+        room.fen = "bg " + sanitized.turn;
+        room.plySans = Array.isArray(sanitized.history) ? sanitized.history.slice() : [];
+        if (!isStateSync && from != null && to != null) {
+          room.lastMove = {
+            from: String(from),
+            to: String(to),
+            san: String(san || ""),
+            color: seat,
+            promotion: null,
+          };
+        }
+      } else {
+        if (!fen) {
+          return ack && ack({ ok: false, error: "invalid_move_payload" });
+        }
+        if (!isStateSync && (!from || !to || !san)) {
+          return ack && ack({ ok: false, error: "invalid_move_payload" });
+        }
+
+        room.fen = String(fen);
+        if (!isStateSync) {
+          room.lastMove = {
+            from: String(from),
+            to: String(to),
+            san: String(san),
+            color: seat,
+            promotion: payload.promotion || null,
+          };
+          if (Array.isArray(payload.plySans)) {
+            room.plySans = payload.plySans.map(String);
+          } else {
+            room.plySans.push(String(san));
+          }
+        } else if (Array.isArray(payload.plySans)) {
+          room.plySans = payload.plySans.map(String);
+        }
       }
 
       if (payload && Array.isArray(payload.diceTurnLog)) {
@@ -409,7 +543,7 @@ io.on("connection", (socket) => {
       touch(room);
 
       // Detect finished by FEN side-effects is client-driven; optional flag:
-      if (payload.gameOver) room.status = "finished";
+      if (payload.gameOver || (isBg && room.bg && room.bg.winner)) room.status = "finished";
       else if (room.status !== "finished") room.status = "playing";
 
       const movePayload = {
@@ -422,6 +556,7 @@ io.on("connection", (socket) => {
         dice: room.dice || null,
         stateSync: isStateSync,
         chain: room.checkersChain || null,
+        bg: room.bg || null,
       };
       io.to(code).emit("moveApplied", movePayload);
       emitRoom(room);
@@ -450,6 +585,7 @@ io.on("connection", (socket) => {
       room.diceTurnLog = [];
       room.dice = null;
       room.checkersChain = null;
+      room.bg = isBgMode(room.mode) ? initialBgState(room.mode) : null;
       room.status = room.seats.w && room.seats.b ? "playing" : "waiting";
       touch(room);
       io.to(code).emit("gameReset", { room: publicRoom(room, null) });
