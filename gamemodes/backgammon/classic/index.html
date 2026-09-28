@@ -1398,6 +1398,47 @@
     maybeBotRoll();
   }
 
+  // Simple pointer drag: grab chip → release on target point/off
+  var dragFrom = null;
+  document.getElementById("bgBoard").addEventListener("pointerdown", function (e) {
+    if (!isUserTurn() || phase !== "move" || botThinking) return;
+    var chip = e.target.closest(".bg-chip");
+    if (!chip) return;
+    var f = chip.getAttribute("data-from");
+    if (f == null || f === "off") return;
+    var from = Number(f);
+    if (from === 0) {
+      if (state.bar[state.turn] <= 0) return;
+    } else if (!state.points[from] || state.points[from].color !== state.turn) {
+      return;
+    }
+    var legal = legalNextMoves().filter(function (m) { return m.from === from; });
+    if (!legal.length) return;
+    dragFrom = from;
+    selectedFrom = from;
+    renderBoard();
+    try { chip.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  document.getElementById("bgBoard").addEventListener("pointerup", function (e) {
+    if (dragFrom == null) return;
+    var from = dragFrom;
+    dragFrom = null;
+    var off = e.target.closest("[data-off]");
+    if (off && off.getAttribute("data-off") === state.turn) {
+      trySelectTo("off");
+      return;
+    }
+    var point = e.target.closest("[data-point]");
+    if (point) {
+      var n = Number(point.getAttribute("data-point"));
+      selectedFrom = from;
+      trySelectTo(n);
+      return;
+    }
+    // release elsewhere keeps selection
+    renderBoard();
+  });
+
   // Events
   document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
   document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
