@@ -38,7 +38,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode  // classic | dice | custom | checkers | backgammon | backgammon-long
+ * @property {string} mode  // classic | dice | checkers | checkers-custom | backgammon | backgammon-long
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -50,7 +50,7 @@ const rooms = new Map();
  * @property {object|null} dice  // diceCount, diceRoll, remainingDice, diceSide, lastSkipMsg
  * @property {{color:string,current:string}|null} checkersChain // active stepwise capture
  * @property {number} diceCount  // 1|2|3 authoritative MP dice count (host-controlled)
- * @property {object|null} customSettings  // chess-custom: backwardCapture, mandatoryCapture, moveTimer
+ * @property {object|null} customSettings  // checkers-custom: backwardCapture, mandatoryCapture, moveTimer
  * @property {object|null} bg  // backgammon full state (points, bar?, off, turn, dice, phase, history)
  */
 
@@ -157,7 +157,7 @@ function publicRoom(room, forClientId) {
     spectatorCount: spectatorCount(room),
     dice: room.dice || null,
     diceCount: room.diceCount === 1 || room.diceCount === 3 ? room.diceCount : 2,
-    customSettings: room.mode === "custom"
+    customSettings: room.mode === "checkers-custom"
       ? sanitizeCustomSettings(room.customSettings)
       : null,
     chain: room.checkersChain || null,
@@ -200,15 +200,19 @@ function isBgMode(mode) {
 
 function normalizeMode(mode) {
   if (mode === "dice") return "dice";
-  if (mode === "custom" || mode === "chess-custom") return "custom";
+  if (mode === "checkers-custom") return "checkers-custom";
   if (mode === "checkers" || mode === "checkers-classic") return "checkers";
   if (mode === "backgammon" || mode === "bg-classic" || mode === "bg") return "backgammon";
   if (mode === "backgammon-long" || mode === "bg-long" || mode === "long-nardy") return "backgammon-long";
   return "classic";
 }
 
+function isCheckersMode(mode) {
+  return mode === "checkers" || mode === "checkers-custom";
+}
+
 function defaultCustomSettings() {
-  return { backwardCapture: false, mandatoryCapture: false, moveTimer: 0 };
+  return { backwardCapture: true, mandatoryCapture: true, moveTimer: 0 };
 }
 
 function sanitizeCustomSettings(raw) {
@@ -216,8 +220,12 @@ function sanitizeCustomSettings(raw) {
   if (!raw || typeof raw !== "object") return base;
   const timer = Number(raw.moveTimer);
   return {
-    backwardCapture: !!raw.backwardCapture,
-    mandatoryCapture: !!raw.mandatoryCapture,
+    backwardCapture: Object.prototype.hasOwnProperty.call(raw, "backwardCapture")
+      ? !!raw.backwardCapture
+      : base.backwardCapture,
+    mandatoryCapture: Object.prototype.hasOwnProperty.call(raw, "mandatoryCapture")
+      ? !!raw.mandatoryCapture
+      : base.mandatoryCapture,
     moveTimer: timer === 10 || timer === 30 || timer === 60 || timer === 120 ? timer : 0,
   };
 }
@@ -316,7 +324,7 @@ function sanitizeBgState(raw, mode) {
 }
 
 function startFenForMode(mode) {
-  if (mode === "checkers") return CHECKERS_START_FEN;
+  if (isCheckersMode(mode)) return CHECKERS_START_FEN;
   if (isBgMode(mode)) return BG_START_FEN;
   return START_FEN;
 }
@@ -340,7 +348,7 @@ function createRoom(clientId, mode) {
     updatedAt: Date.now(),
     dice: null,
     diceCount: 2,
-    customSettings: norm === "custom" ? defaultCustomSettings() : null,
+    customSettings: norm === "checkers-custom" ? defaultCustomSettings() : null,
     checkersChain: null,
     bg: isBgMode(norm) ? initialBgState(norm) : null,
   };
@@ -429,7 +437,7 @@ function lobbyChannel(mode) {
   return "lobby:" + normalizeMode(mode);
 }
 
-const LOBBY_MODES = ["classic", "dice", "custom", "checkers", "backgammon", "backgammon-long"];
+const LOBBY_MODES = ["classic", "dice", "checkers", "checkers-custom", "backgammon", "backgammon-long"];
 
 function broadcastRoomList(modeOrRoom) {
   let modes;
@@ -483,7 +491,7 @@ io.on("connection", (socket) => {
       const room = createRoom(clientId, mode);
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
-      if (room.mode === "custom" && payload && payload.customSettings) {
+      if (room.mode === "checkers-custom" && payload && payload.customSettings) {
         room.customSettings = sanitizeCustomSettings(payload.customSettings);
       }
       const nick = sanitizeNick(payload && payload.nick);
@@ -802,7 +810,7 @@ io.on("connection", (socket) => {
         if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       }
 
-      if (payload && payload.customSettings && room.mode === "custom") {
+      if (payload && payload.customSettings && room.mode === "checkers-custom") {
         // Host / white seat may update settings before first ply; after that keep locked.
         const canEditSettings =
           room.hostId === clientId ||
@@ -813,7 +821,7 @@ io.on("connection", (socket) => {
         }
       }
 
-      if (room.mode === "checkers") {
+      if (isCheckersMode(room.mode)) {
         const chain = payload && payload.chain;
         room.checkersChain = chain && (chain.color === "w" || chain.color === "b")
           && typeof chain.current === "string" && /^[a-h][1-8]$/.test(chain.current)
@@ -835,7 +843,7 @@ io.on("connection", (socket) => {
         status: room.status,
         by: seat,
         dice: room.dice || null,
-        customSettings: room.mode === "custom" ? sanitizeCustomSettings(room.customSettings) : null,
+        customSettings: room.mode === "checkers-custom" ? sanitizeCustomSettings(room.customSettings) : null,
         stateSync: isStateSync,
         chain: room.checkersChain || null,
         bg: room.bg || null,
@@ -860,7 +868,7 @@ io.on("connection", (socket) => {
 
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
-      if (room.mode === "custom" && payload && payload.customSettings) {
+      if (room.mode === "checkers-custom" && payload && payload.customSettings) {
         room.customSettings = sanitizeCustomSettings(payload.customSettings);
       }
 
@@ -889,7 +897,7 @@ io.on("connection", (socket) => {
         .trim();
       const room = rooms.get(code);
       if (!room) return ack && ack({ ok: false, error: "room_not_found" });
-      if (room.mode !== "custom") return ack && ack({ ok: false, error: "wrong_mode" });
+      if (room.mode !== "checkers-custom") return ack && ack({ ok: false, error: "wrong_mode" });
       const seat = findSeatByClient(room, clientId);
       if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
       const canEdit =

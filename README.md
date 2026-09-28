@@ -1,14 +1,14 @@
 # BoardHack
 
-Dark-themed multi-game hub: chess (classic / dice / customizable), checkers, and backgammon. Local bots and multiplayer rooms (RU/EN).
+Dark-themed multi-game hub: chess (classic / dice), checkers (classic / customizable), and backgammon. Local bots and multiplayer rooms (RU/EN).
 
 ## Features
 
 - **Hub** — game tabs (Chess / Checkers / Backgammon / Mahjong) with mode cards
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
-- **Chess → Customizable** — house rules (backward pawn capture, mandatory capture, move timer)
 - **Checkers → Classic** — Russian draughts vs local bot or online multiplayer
+- **Checkers → Customizable** — house rules (backward capture for men, mandatory capture, move timer)
 - **Backgammon → Classic** — Russian long nardy vs local bot or online multiplayer (same direction, no hitting, head rule)
 - **Backgammon → Short** — short/Western backgammon vs local bot or online multiplayer (hitting, bar, bearing off)
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
@@ -17,7 +17,7 @@ Dark-themed multi-game hub: chess (classic / dice / customizable), checkers, and
 
 ## Quick start (static site)
 
-Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/classic/index.html` / `gamemodes/backgammon/*/index.html` in a browser.
+Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/*/index.html` / `gamemodes/backgammon/*/index.html` in a browser.
 
 Stockfish needs HTTP(S) (not `file://`) for WASM workers.
 
@@ -43,8 +43,8 @@ index.html                 # multi-game hub
 css/                       # BoardHack styles
 gamemodes/chess/classic/   # classic chess
 gamemodes/chess/dice/      # dice chess
-gamemodes/chess/custom/    # customizable house-rule chess
 gamemodes/checkers/classic/# Russian draughts
+gamemodes/checkers/custom/ # customizable draughts house rules
 gamemodes/backgammon/long/   # classic long nardy (классика)
 gamemodes/backgammon/classic/# short backgammon (короткие)
 js/                        # Stockfish bot helper

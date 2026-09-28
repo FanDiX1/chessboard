@@ -57,7 +57,7 @@
       <section class="hub-panel active" id="panelChess" role="tabpanel" aria-labelledby="tabChess" data-game="chess">
         <div class="hub-panel-head">
           <h2 id="panelChessTitle">Шахматы</h2>
-          <p class="hub-panel-desc" id="panelChessDesc">Классика, кости и настраиваемый режим — локальный Stockfish и мультиплеер.</p>
+          <p class="hub-panel-desc" id="panelChessDesc">Классика и кости — локальный Stockfish и мультиплеер.</p>
         </div>
         <div class="mode-cards">
           <a class="mode-card" href="gamemodes/chess/classic/index.html">
@@ -70,24 +70,24 @@
             <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
             <div class="go" id="cardDiceGo">Открыть →</div>
           </a>
-          <a class="mode-card" href="gamemodes/chess/custom/index.html">
-            <h2>⚙ <span id="cardCustomTitle">Настраиваемый</span></h2>
-            <p id="cardCustomDesc">Шахматы с правилами на выбор: взятие назад, обязательное взятие, таймер хода. Бот или онлайн-комната.</p>
-            <div class="go" id="cardCustomGo">Открыть →</div>
-          </a>
         </div>
       </section>
 
       <section class="hub-panel" id="panelCheckers" role="tabpanel" aria-labelledby="tabCheckers" data-game="checkers" hidden>
         <div class="hub-panel-head">
           <h2 id="panelCheckersTitle">Шашки</h2>
-          <p class="hub-panel-desc" id="panelCheckersDesc">Русские шашки — локальный бот или мультиплеер по коду.</p>
+          <p class="hub-panel-desc" id="panelCheckersDesc">Русские шашки и настраиваемый режим — бот или мультиплеер по коду.</p>
         </div>
         <div class="mode-cards">
           <a class="mode-card" href="gamemodes/checkers/classic/index.html">
             <h2>⬤ <span id="cardCheckersClassicTitle">Классика</span></h2>
             <p id="cardCheckersClassicDesc">Русские шашки 8×8: дамка, обязательное взятие, бот или онлайн-комната.</p>
             <div class="go" id="cardCheckersClassicGo">Открыть →</div>
+          </a>
+          <a class="mode-card" href="gamemodes/checkers/custom/index.html">
+            <h2>⚙ <span id="cardCheckersCustomTitle">Настраиваемый</span></h2>
+            <p id="cardCheckersCustomDesc">Шашки с правилами на выбор: взятие назад, обязательное взятие, таймер хода. Бот или онлайн-комната.</p>
+            <div class="go" id="cardCheckersCustomGo">Открыть →</div>
           </a>
         </div>
       </section>
@@ -144,9 +144,9 @@
           tabMahjong: "Маджонг",
           tabBackgammon: "Нарды",
           panelChessTitle: "Шахматы",
-          panelChessDesc: "Классика, кости и настраиваемый режим — локальный Stockfish и мультиплеер.",
+          panelChessDesc: "Классика и кости — локальный Stockfish и мультиплеер.",
           panelCheckersTitle: "Шашки",
-          panelCheckersDesc: "Русские шашки — локальный бот или мультиплеер по коду.",
+          panelCheckersDesc: "Русские шашки и настраиваемый режим — бот или мультиплеер по коду.",
           panelMahjongTitle: "Маджонг",
           panelMahjongDesc: "Режимы маджонга появятся здесь.",
           panelBackgammonTitle: "Нарды",
@@ -157,12 +157,12 @@
           cardDiceTitle: "Кости",
           cardDiceDesc: "Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.",
           cardDiceGo: "Открыть →",
-          cardCustomTitle: "Настраиваемый",
-          cardCustomDesc: "Шахматы с правилами на выбор: взятие назад, обязательное взятие, таймер хода. Бот или онлайн-комната.",
-          cardCustomGo: "Открыть →",
           cardCheckersClassicTitle: "Классика",
           cardCheckersClassicDesc: "Русские шашки 8×8: дамка, обязательное взятие, бот или онлайн-комната.",
           cardCheckersClassicGo: "Открыть →",
+          cardCheckersCustomTitle: "Настраиваемый",
+          cardCheckersCustomDesc: "Шашки с правилами на выбор: взятие назад, обязательное взятие, таймер хода. Бот или онлайн-комната.",
+          cardCheckersCustomGo: "Открыть →",
           cardMahjongSoonTitle: "Скоро",
           cardMahjongSoonDesc: "Режимы маджонга в разработке. Загляните позже.",
           cardMahjongSoonGo: "Скоро",
@@ -182,9 +182,9 @@
           tabMahjong: "Mahjong",
           tabBackgammon: "Backgammon",
           panelChessTitle: "Chess",
-          panelChessDesc: "Classic, dice, and customizable — local Stockfish and multiplayer.",
+          panelChessDesc: "Classic and dice — local Stockfish and multiplayer.",
           panelCheckersTitle: "Checkers",
-          panelCheckersDesc: "Russian draughts — local bot or online multiplayer.",
+          panelCheckersDesc: "Russian draughts and customizable — local bot or online multiplayer.",
           panelMahjongTitle: "Mahjong",
           panelMahjongDesc: "Mahjong modes will land here.",
           panelBackgammonTitle: "Backgammon",
@@ -195,12 +195,12 @@
           cardDiceTitle: "Dice Chess",
           cardDiceDesc: "Each turn rolls dice — move only the rolled piece types. 1–3 dice.",
           cardDiceGo: "Open →",
-          cardCustomTitle: "Customizable",
-          cardCustomDesc: "Chess with optional house rules: backward capture, mandatory capture, move timer. Bot or online room.",
-          cardCustomGo: "Open →",
           cardCheckersClassicTitle: "Classic",
           cardCheckersClassicDesc: "Russian draughts 8×8: flying kings, mandatory captures, bot or online room.",
           cardCheckersClassicGo: "Open →",
+          cardCheckersCustomTitle: "Customizable",
+          cardCheckersCustomDesc: "Draughts with optional house rules: backward capture, mandatory capture, move timer. Bot or online room.",
+          cardCheckersCustomGo: "Open →",
           cardMahjongSoonTitle: "Coming soon",
           cardMahjongSoonDesc: "Mahjong modes are in the works. Check back later.",
           cardMahjongSoonGo: "Coming soon",
@@ -253,12 +253,12 @@
         document.getElementById("cardDiceTitle").textContent = t("cardDiceTitle");
         document.getElementById("cardDiceDesc").textContent = t("cardDiceDesc");
         document.getElementById("cardDiceGo").textContent = t("cardDiceGo");
-        document.getElementById("cardCustomTitle").textContent = t("cardCustomTitle");
-        document.getElementById("cardCustomDesc").textContent = t("cardCustomDesc");
-        document.getElementById("cardCustomGo").textContent = t("cardCustomGo");
         document.getElementById("cardCheckersClassicTitle").textContent = t("cardCheckersClassicTitle");
         document.getElementById("cardCheckersClassicDesc").textContent = t("cardCheckersClassicDesc");
         document.getElementById("cardCheckersClassicGo").textContent = t("cardCheckersClassicGo");
+        document.getElementById("cardCheckersCustomTitle").textContent = t("cardCheckersCustomTitle");
+        document.getElementById("cardCheckersCustomDesc").textContent = t("cardCheckersCustomDesc");
+        document.getElementById("cardCheckersCustomGo").textContent = t("cardCheckersCustomGo");
         document.getElementById("cardMahjongSoonTitle").textContent = t("cardMahjongSoonTitle");
         document.getElementById("cardMahjongSoonDesc").textContent = t("cardMahjongSoonDesc");
         document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");

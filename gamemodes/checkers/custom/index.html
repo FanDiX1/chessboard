@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BoardHack — Шашки</title>
+  <title>BoardHack — Настраиваемые шашки</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -126,7 +126,7 @@
         <div class="brand-mark">♞</div>
         <div>Board<span class="accent">Hack</span></div>
       </a>
-      <span class="mode-badge" id="modeBadge">checkers</span>
+      <span class="mode-badge" id="modeBadge">checkers · custom</span>
     </div>
     <div class="topbar-actions">
       <div class="lang-switch" role="group" aria-label="Language">
@@ -239,6 +239,46 @@
         </div>
       </section>
 
+
+      <section class="card" id="customSettingsCard">
+        <div class="card-title" id="customSettingsTitle">Настройки</div>
+        <div class="custom-settings" id="customSettingsPanel">
+          <div class="custom-setting-row">
+            <div class="custom-setting-text">
+              <span class="custom-setting-label" id="setBackwardLabel">Взятие при ходьбе назад</span>
+              <span class="custom-setting-hint" id="setBackwardHint"></span>
+            </div>
+            <button type="button" class="custom-toggle" id="setBackwardToggle" role="switch" aria-checked="true" aria-labelledby="setBackwardLabel">
+              <span class="custom-toggle-knob" aria-hidden="true"></span>
+            </button>
+          </div>
+          <div class="custom-setting-row">
+            <div class="custom-setting-text">
+              <span class="custom-setting-label" id="setMandatoryLabel">Обязательно бить если можно</span>
+              <span class="custom-setting-hint" id="setMandatoryHint"></span>
+            </div>
+            <button type="button" class="custom-toggle" id="setMandatoryToggle" role="switch" aria-checked="true" aria-labelledby="setMandatoryLabel">
+              <span class="custom-toggle-knob" aria-hidden="true"></span>
+            </button>
+          </div>
+          <div class="custom-setting-row">
+            <div class="custom-setting-text">
+              <span class="custom-setting-label" id="setTimerLabel">Таймер хода</span>
+              <span class="custom-setting-hint" id="setTimerHint"></span>
+            </div>
+            <select id="setMoveTimer" class="custom-timer-select" aria-labelledby="setTimerLabel">
+              <option value="0">Off</option>
+              <option value="10">10</option>
+              <option value="30">30</option>
+              <option value="60">60</option>
+              <option value="120">120</option>
+            </select>
+          </div>
+          <p class="custom-settings-locked mp-hidden" id="customSettingsLocked"></p>
+          <p class="mp-hint" id="moveTimerStatus" aria-live="polite"></p>
+        </div>
+      </section>
+
       <section class="card">
         <div class="card-title" id="sessionTitle"></div>
         <div class="meta-grid">
@@ -287,26 +327,26 @@
   "use strict";
 
   var LANG_KEY = "boardhack-lang";
-  var COLOR_KEY = "boardhack-checkers-color";
-  var DIFF_KEY = "boardhack-checkers-diff";
+  var COLOR_KEY = "boardhack-checkers-custom-color";
+  var DIFF_KEY = "boardhack-checkers-custom-diff";
   var CLIENT_ID_KEY = "boardhack-client-id";
-  var MP_ROOM_KEY = "boardhack-checkers-mp-room";
-  var GAME_MODE = "checkers";
+  var MP_ROOM_KEY = "boardhack-checkers-custom-mp-room";
+  var GAME_MODE = "checkers-custom";
   var DEFAULT_SERVER = "https://chessboard-ulhg.onrender.com";
   var START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
 
   var I18N = {
     ru: {
-      docTitle: "BoardHack — Русские шашки",
-      modeBadge: "шашки · классика",
+      docTitle: "BoardHack — Настраиваемые шашки",
+      modeBadge: "шашки · настраиваемый",
       playArea: "Игровая зона",
       mission: "Управление",
       session: "Сессия",
       history: "История ходов",
       rulesButton: "Правила",
-      rulesTitle: "Правила русских шашек",
+      rulesTitle: "Настраиваемые шашки",
       rulesClose: "Закрыть правила",
-      rulesHtml: "<ul><li><strong>Обычная шашка:</strong> ходит по диагонали вперёд.</li><li><strong>Взятие обязательно:</strong> можно бить вперёд и назад. Если есть несколько цепочек, выбирайте любую.</li><li><strong>Дамка:</strong> ходит и бьёт на любое расстояние по диагонали.</li><li><strong>Серия взятий:</strong> продолжайте бой, пока есть следующий прыжок.</li><li><strong>Победа:</strong> у соперника не осталось шашек или ходов.</li></ul>",
+      rulesHtml: "<ul><li><strong>База:</strong> русские шашки 8×8, дамка летает.</li><li><strong>Взятие назад:</strong> если включено — простые шашки бьют вперёд и назад (как в русских); если выкл. — только вперёд (как в международных).</li><li><strong>Обязательное взятие:</strong> если включено — нельзя ходить тихо, когда есть бой; если выкл. — тихий ход разрешён.</li><li><strong>Таймер хода:</strong> выкл. / 10 / 30 / 60 / 120 сек. Просрочка — поражение стороны, чей ход.</li><li><strong>Мультиплеер:</strong> создатель / белые правят настройками до первого хода; если соперник вышел — партия продолжается против бота.</li></ul>",
       sideSelectLabel: "Играть за",
       sideWhite: "Белые",
       sideBlack: "Чёрные",
@@ -373,19 +413,34 @@
       mpRoomsEmpty: "Нет открытых комнат",
       mpYourTurn: "Ваш ход (онлайн)",
       mpOppTurn: "Ход соперника…",
-      mpContinueBot: "Соперник вышел — продолжаем против бота"
+      mpContinueBot: "Соперник вышел — продолжаем против бота",
+      customSettingsTitle: "Настройки",
+      setBackwardLabel: "Взятие при ходьбе назад",
+      setBackwardHint: "Вкл. — простые бьют назад (русские); выкл. — только вперёд",
+      setMandatoryLabel: "Обязательно бить если можно",
+      setMandatoryHint: "Выкл. — можно ходить без взятия, даже если бой есть",
+      setTimerLabel: "Таймер хода",
+      setTimerHint: "Секунды на ход; 0 — без таймера",
+      timerOff: "Выкл.",
+      timerStatus: "Таймер: {n} с",
+      timerTimeoutLoss: "Время вышло — {loser} проиграли",
+      winnerYou: "вы",
+      winnerOpp: "соперник",
+      winnerBot: "бот",
+      customSettingsLocked: "Настройки зафиксированы до конца партии",
+      customSettingsHostOnly: "Только создатель комнаты / белые меняют настройки до старта"
     },
     en: {
-      docTitle: "BoardHack — Russian draughts",
-      modeBadge: "checkers · classic",
+      docTitle: "BoardHack — Customizable draughts",
+      modeBadge: "checkers · custom",
       playArea: "Play area",
       mission: "Controls",
       session: "Session",
       history: "Move history",
       rulesButton: "Rules",
-      rulesTitle: "Russian draughts rules",
+      rulesTitle: "Customizable draughts",
       rulesClose: "Close rules",
-      rulesHtml: "<ul><li><strong>Man:</strong> moves diagonally forward.</li><li><strong>Capture is mandatory:</strong> capture forward or backward. If several chains are available, choose any.</li><li><strong>King:</strong> moves and captures any distance diagonally.</li><li><strong>Multi-capture:</strong> keep jumping while another capture is available.</li><li><strong>Win:</strong> the opponent has no pieces or no legal moves.</li></ul>",
+      rulesHtml: "<ul><li><strong>Base:</strong> Russian draughts 8×8 with flying kings.</li><li><strong>Backward capture:</strong> ON — men capture both ways (Russian); OFF — men capture forward only (international-like).</li><li><strong>Mandatory capture:</strong> ON — quiet moves illegal when a capture exists; OFF — quiet moves allowed.</li><li><strong>Move timer:</strong> off / 10 / 30 / 60 / 120 s. Timeout loses for the side to move.</li><li><strong>Multiplayer:</strong> creator / White owns settings until the first move; if the opponent leaves, continue vs bot.</li></ul>",
       sideSelectLabel: "Play as",
       sideWhite: "White",
       sideBlack: "Black",
@@ -451,7 +506,22 @@
       mpRoomsEmpty: "No open rooms",
       mpYourTurn: "Your move (online)",
       mpOppTurn: "Opponent's turn…",
-      mpContinueBot: "Opponent left — continuing vs bot"
+      mpContinueBot: "Opponent left — continuing vs bot",
+      customSettingsTitle: "Settings",
+      setBackwardLabel: "Capture while moving backward",
+      setBackwardHint: "ON — men capture both ways (Russian); OFF — forward only",
+      setMandatoryLabel: "Must capture if possible",
+      setMandatoryHint: "OFF — quiet moves allowed even when a capture exists",
+      setTimerLabel: "Move timer",
+      setTimerHint: "Seconds per move; 0 = off",
+      timerOff: "Off",
+      timerStatus: "Timer: {n}s",
+      timerTimeoutLoss: "Time out — {loser} lose",
+      winnerYou: "you",
+      winnerOpp: "opponent",
+      winnerBot: "bot",
+      customSettingsLocked: "Settings locked for this game",
+      customSettingsHostOnly: "Only the room creator / White can change settings before the first move"
     }
   };
 
@@ -503,6 +573,10 @@
   function manForwardDirs(color) {
     return color === "w" ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
   }
+  function manCaptureDirs(color) {
+    if (customSettings.backwardCapture) return DIRS;
+    return manForwardDirs(color);
+  }
   function keySq(r, c) { return r + "," + c; }
 
   function boardToFen(brd, side) {
@@ -547,8 +621,9 @@
 
     function dfs(brd, cr, cc, isKing, caps, path) {
       var extended = false;
-      for (var di = 0; di < 4; di++) {
-        var dr = DIRS[di][0], dc = DIRS[di][1];
+      var dirs = isKing ? DIRS : manCaptureDirs(piece.color);
+      for (var di = 0; di < dirs.length; di++) {
+        var dr = dirs[di][0], dc = dirs[di][1];
         if (!isKing) {
           var mr = cr + dr, mc = cc + dc;
           var lr = cr + 2 * dr, lc = cc + 2 * dc;
@@ -643,7 +718,6 @@
         for (var i = 0; i < caps.length; i++) captures.push(caps[i]);
       }
     }
-    if (captures.length) return captures;
     for (var r2 = 0; r2 < 8; r2++) {
       for (var c2 = 0; c2 < 8; c2++) {
         var p2 = board[r2][c2];
@@ -652,6 +726,8 @@
         for (var j = 0; j < qs.length; j++) quiets.push(qs[j]);
       }
     }
+    if (captures.length && customSettings.mandatoryCapture) return captures;
+    if (captures.length && !customSettings.mandatoryCapture) return captures.concat(quiets);
     return quiets;
   }
 
@@ -695,7 +771,6 @@
         for (var i = 0; i < caps.length; i++) captures.push(caps[i]);
       }
     }
-    if (captures.length > 0) return captures;
     for (var r2 = 0; r2 < 8; r2++) {
       for (var c2 = 0; c2 < 8; c2++) {
         var p2 = board[r2][c2];
@@ -704,6 +779,8 @@
         for (var j = 0; j < q.length; j++) quiets.push(q[j]);
       }
     }
+    if (captures.length > 0 && customSettings.mandatoryCapture) return captures;
+    if (captures.length > 0 && !customSettings.mandatoryCapture) return captures.concat(quiets);
     return quiets;
   }
 
@@ -782,6 +859,168 @@
       if (s > bestScore) { bestScore = s; best = m; }
     }
     return best;
+  }
+
+
+  var CUSTOM_SETTINGS_KEY = "boardhack-checkers-custom-settings";
+  var customSettings = { backwardCapture: true, mandatoryCapture: true, moveTimer: 0 };
+  try {
+    var rawCs = localStorage.getItem(CUSTOM_SETTINGS_KEY);
+    if (rawCs) {
+      var parsedCs = JSON.parse(rawCs);
+      if (parsedCs && typeof parsedCs === "object") {
+        customSettings.backwardCapture = parsedCs.backwardCapture !== false;
+        customSettings.mandatoryCapture = parsedCs.mandatoryCapture !== false;
+        var mt0 = Number(parsedCs.moveTimer);
+        customSettings.moveTimer = (mt0 === 10 || mt0 === 30 || mt0 === 60 || mt0 === 120) ? mt0 : 0;
+      }
+    }
+  } catch (e) {}
+  var moveTimerId = null;
+  var moveDeadline = 0;
+  var settingsLockedLocal = false;
+
+  function cloneCustomSettings(s) {
+    s = s || customSettings;
+    return {
+      backwardCapture: !!s.backwardCapture,
+      mandatoryCapture: !!s.mandatoryCapture,
+      moveTimer: (s.moveTimer === 10 || s.moveTimer === 30 || s.moveTimer === 60 || s.moveTimer === 120) ? s.moveTimer : 0
+    };
+  }
+  function persistCustomSettings() {
+    try { localStorage.setItem(CUSTOM_SETTINGS_KEY, JSON.stringify(cloneCustomSettings())); } catch (e) {}
+  }
+  function canEditCustomSettings() {
+    if (!isMultiplayer()) return !settingsLockedLocal;
+    if (!mpRoom) return false;
+    if (moveHistory.length > 0) return false;
+    if (mpRoom.plySans && mpRoom.plySans.length > 0) return false;
+    var cid = getOrCreateClientId();
+    if (mpRoom.hostId && mpRoom.hostId === cid) return true;
+    if (mpSeat === "w") return true;
+    return false;
+  }
+  function applyCustomSettingsObject(obj, fromRemote) {
+    if (!obj || typeof obj !== "object") return;
+    customSettings.backwardCapture = !!obj.backwardCapture;
+    customSettings.mandatoryCapture = !!obj.mandatoryCapture;
+    var mt = Number(obj.moveTimer);
+    customSettings.moveTimer = (mt === 10 || mt === 30 || mt === 60 || mt === 120) ? mt : 0;
+    if (!fromRemote) persistCustomSettings();
+    updateCustomSettingsUI();
+    if (!gameOver) restartMoveTimer();
+  }
+  function updateCustomSettingsUI() {
+    var card = document.getElementById("customSettingsCard");
+    if (!card) return;
+    var editable = canEditCustomSettings();
+    var bt = document.getElementById("setBackwardToggle");
+    var mtog = document.getElementById("setMandatoryToggle");
+    var sel = document.getElementById("setMoveTimer");
+    if (bt) { bt.setAttribute("aria-checked", customSettings.backwardCapture ? "true" : "false"); bt.disabled = !editable; }
+    if (mtog) { mtog.setAttribute("aria-checked", customSettings.mandatoryCapture ? "true" : "false"); mtog.disabled = !editable; }
+    if (sel) { sel.value = String(customSettings.moveTimer || 0); sel.disabled = !editable; }
+    var lockedEl = document.getElementById("customSettingsLocked");
+    var locked = isMultiplayer()
+      ? (!editable && (moveHistory.length > 0 || (mpRoom && mpRoom.plySans && mpRoom.plySans.length > 0)))
+      : settingsLockedLocal;
+    if (lockedEl) {
+      if (locked) { lockedEl.classList.remove("mp-hidden"); lockedEl.textContent = t("customSettingsLocked"); }
+      else if (isMultiplayer() && !editable) { lockedEl.classList.remove("mp-hidden"); lockedEl.textContent = t("customSettingsHostOnly"); }
+      else { lockedEl.classList.add("mp-hidden"); lockedEl.textContent = ""; }
+    }
+    var hintB = document.getElementById("setBackwardHint");
+    var hintM = document.getElementById("setMandatoryHint");
+    var hintT = document.getElementById("setTimerHint");
+    if (hintB) hintB.textContent = t("setBackwardHint");
+    if (hintM) hintM.textContent = t("setMandatoryHint");
+    if (hintT) hintT.textContent = t("setTimerHint");
+    if (sel && sel.options[0]) sel.options[0].textContent = t("timerOff");
+  }
+  function publishCustomSettings() {
+    if (!isMultiplayer() || !canMpAct() || !mpSocket || !mpRoomCode) return;
+    mpSocket.emit("updateCustomSettings", {
+      clientId: getOrCreateClientId(),
+      code: mpRoomCode,
+      customSettings: cloneCustomSettings()
+    }, function (res) {
+      if (res && res.ok && res.room && res.room.customSettings) {
+        applyCustomSettingsObject(res.room.customSettings, true);
+        if (mpRoom) mpRoom.customSettings = cloneCustomSettings(res.room.customSettings);
+      }
+    });
+  }
+  function setCustomToggle(key, on) {
+    if (!canEditCustomSettings()) return;
+    customSettings[key] = !!on;
+    persistCustomSettings();
+    updateCustomSettingsUI();
+    if (isMultiplayer()) publishCustomSettings();
+    else {
+      settingsLockedLocal = false;
+      clearMoveHighlights();
+      selected = null;
+      legalForSelected = [];
+      renderBoard();
+      updateStatus();
+      restartMoveTimer();
+    }
+  }
+  function clearMoveTimer() {
+    if (moveTimerId) { clearInterval(moveTimerId); moveTimerId = null; }
+    moveDeadline = 0;
+    var el = document.getElementById("moveTimerStatus");
+    if (el) el.textContent = "";
+  }
+  function restartMoveTimer() {
+    clearMoveTimer();
+    if (gameOver) return;
+    var secs = customSettings.moveTimer;
+    if (!secs || secs <= 0) return;
+    if (isMultiplayer() && !mpBothSeated()) return;
+    if (mpSpectating) return;
+    moveDeadline = Date.now() + secs * 1000;
+    moveTimerId = setInterval(tickMoveTimer, 200);
+    tickMoveTimer();
+  }
+  function tickMoveTimer() {
+    if (!moveDeadline || gameOver) { clearMoveTimer(); return; }
+    var left = Math.ceil((moveDeadline - Date.now()) / 1000);
+    if (left <= 0) { clearMoveTimer(); onMoveTimeout(); return; }
+    var el = document.getElementById("moveTimerStatus");
+    if (el) el.textContent = t("timerStatus").replace("{n}", String(left));
+  }
+  function onMoveTimeout() {
+    if (gameOver) return;
+    var loser = turn;
+    gameOver = loser === "w" ? "b" : "w";
+    clearMoveTimer();
+    botThinking = false;
+    document.getElementById("thinking").classList.remove("show");
+    var loserLabel;
+    if (isMultiplayer()) loserLabel = loser === userColor ? t("winnerYou") : t("winnerOpp");
+    else loserLabel = loser === userColor ? t("winnerYou") : t("winnerBot");
+    var dot = document.getElementById("statusDot");
+    var text = document.getElementById("statusText");
+    if (dot) { dot.className = "status-dot danger"; }
+    if (text) text.textContent = t("timerTimeoutLoss").replace("{loser}", loserLabel);
+    clearMoveHighlights();
+    renderBoard();
+    if (isMultiplayer() && canMpAct() && mpSocket) {
+      try {
+        mpSocket.emit("makeMove", {
+          clientId: getOrCreateClientId(),
+          code: mpRoomCode,
+          stateSync: true,
+          fen: boardToFen(board, turn),
+          plySans: moveHistory.slice(),
+          gameOver: true,
+          chain: chainPayload(),
+          customSettings: cloneCustomSettings()
+        });
+      } catch (e) {}
+    }
   }
 
   /* ---- UI state ---- */
@@ -1096,19 +1335,24 @@
     }
     mpActive = true;
     try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
+    if (mpRoom && mpRoom.customSettings) {
+      applyCustomSettingsObject(mpRoom.customSettings, true);
+    }
     if (!mpSpectating && moveHistory.length > 0 && mpRoom && mpRoom.seats) {
-      var other = mpSeat === "w" ? "b" : "w";
-      var otherSeat = mpRoom.seats[other];
-      if (!otherSeat || !otherSeat.occupied) {
+      var otherA = mpSeat === "w" ? "b" : "w";
+      var otherSeatA = mpRoom.seats[otherA];
+      if (!otherSeatA || !otherSeatA.occupied) {
         if (promoteMpToLocalBot()) return;
       }
     }
     setMpConn(mpBothSeated() ? "playing" : "waiting");
     updateMpUI();
+    updateCustomSettingsUI();
     botThinking = false;
     document.getElementById("thinking").classList.remove("show");
     syncBoardFromMpRoom(false);
     updateStatus();
+    restartMoveTimer();
   }
 
   function parseCaptureChain(chain) {
@@ -1290,6 +1534,7 @@
       mpSocket.emit("createRoom", {
         clientId: getOrCreateClientId(),
         mode: GAME_MODE,
+        customSettings: cloneCustomSettings(),
         preferredSeat: userColor === "b" ? "b" : "w",
         nick: getNick()
       }, function (res) {
@@ -1366,11 +1611,13 @@
       try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
       mpSocket = null;
     }
+    clearMoveTimer();
+    settingsLockedLocal = false;
     setMpConn("offline");
     updateMpUI();
+    updateCustomSettingsUI();
     newGame();
   }
-
 
   /** Opponent left mid-game: keep position and continue vs local bot. */
   function promoteMpToLocalBot() {
@@ -1413,6 +1660,7 @@
     document.getElementById("thinking").classList.remove("show");
     selected = null;
     legalForSelected = [];
+    updateCustomSettingsUI();
     updateMeta();
     renderHistory();
     renderBoard();
@@ -1420,6 +1668,7 @@
     var textEl = document.getElementById("statusText");
     if (dot) { dot.className = "status-dot warn"; }
     if (textEl) textEl.textContent = t("mpContinueBot");
+    restartMoveTimer();
     maybeBotTurn();
     return true;
   }
@@ -1438,7 +1687,8 @@
       san: notation,
       plySans: moveHistory.slice(),
       gameOver: !!gameOver,
-      chain: chainPayload()
+      chain: chainPayload(),
+      customSettings: cloneCustomSettings()
     });
     if (mpRoom) {
       mpRoom.fen = fen;
@@ -1583,6 +1833,15 @@
     document.getElementById("mpCopyBtn").textContent = t("mpCopy");
     document.getElementById("mpLeaveBtn").textContent = t("mpLeave");
     document.getElementById("mpResetBtn").textContent = t("newGame");
+    var cst = document.getElementById("customSettingsTitle");
+    if (cst) cst.textContent = t("customSettingsTitle");
+    var sbl = document.getElementById("setBackwardLabel");
+    if (sbl) sbl.textContent = t("setBackwardLabel");
+    var sml = document.getElementById("setMandatoryLabel");
+    if (sml) sml.textContent = t("setMandatoryLabel");
+    var stl = document.getElementById("setTimerLabel");
+    if (stl) stl.textContent = t("setTimerLabel");
+    updateCustomSettingsUI();
     document.getElementById("langRu").classList.toggle("active", lang === "ru");
     document.getElementById("langEn").classList.toggle("active", lang === "en");
     updateMpUI();
@@ -1624,8 +1883,10 @@
       text.textContent = t("mpWaiting");
       return;
     }
-    var moves = allMoves(board, turn);
-    var mustCap = moves.length > 0 && moves[0].captures.length > 0;
+    var moves = interactiveMoves(board, turn);
+    var hasCap = false;
+    for (var mi = 0; mi < moves.length; mi++) { if (moves[mi].captures.length) { hasCap = true; break; } }
+    var mustCap = hasCap && customSettings.mandatoryCapture;
     if (isUserTurn()) {
       text.textContent = (isMultiplayer() ? t("mpYourTurn") : t("statusYour")) +
         (mustCap ? " · " + t("statusMustCapture") : "");
@@ -1882,6 +2143,9 @@
     if (!opts.silent && isMultiplayer() && !mpApplyingRemote) {
       publishMpMove(move, notation);
     }
+    if (moveHistory.length > 0) settingsLockedLocal = true;
+    updateCustomSettingsUI();
+    restartMoveTimer();
     if (!opts.silent) maybeBotTurn();
   }
 
@@ -1909,7 +2173,11 @@
 
   function newGame() {
     if (isMultiplayer() && mpSocket && mpRoomCode) {
-      mpSocket.emit("resetGame", { clientId: getOrCreateClientId(), code: mpRoomCode });
+      mpSocket.emit("resetGame", {
+        clientId: getOrCreateClientId(),
+        code: mpRoomCode,
+        customSettings: cloneCustomSettings()
+      });
       return;
     }
     board = initialBoard();
@@ -1921,11 +2189,14 @@
     lastMove = null;
     gameOver = null;
     botThinking = false;
+    settingsLockedLocal = false;
     document.getElementById("thinking").classList.remove("show");
+    updateCustomSettingsUI();
     updateMeta();
     updateStatus();
     renderHistory();
     renderBoard();
+    restartMoveTimer();
     maybeBotTurn();
   }
 
@@ -2030,6 +2301,31 @@
   document.getElementById("sideSelect").value = userColor;
   document.getElementById("difficulty").value = difficulty;
   wireMp();
+
+  function wireCustomSettings() {
+    var bt = document.getElementById("setBackwardToggle");
+    var mtog = document.getElementById("setMandatoryToggle");
+    var sel = document.getElementById("setMoveTimer");
+    if (bt) bt.addEventListener("click", function () {
+      if (bt.disabled) return;
+      setCustomToggle("backwardCapture", bt.getAttribute("aria-checked") !== "true");
+    });
+    if (mtog) mtog.addEventListener("click", function () {
+      if (mtog.disabled) return;
+      setCustomToggle("mandatoryCapture", mtog.getAttribute("aria-checked") !== "true");
+    });
+    if (sel) sel.addEventListener("change", function () {
+      if (sel.disabled || !canEditCustomSettings()) return;
+      var v = Number(sel.value);
+      customSettings.moveTimer = (v === 10 || v === 30 || v === 60 || v === 120) ? v : 0;
+      persistCustomSettings();
+      updateCustomSettingsUI();
+      if (isMultiplayer()) publishCustomSettings();
+      restartMoveTimer();
+    });
+  }
+  wireCustomSettings();
+
   applyLang();
   setMpConn("offline");
 
