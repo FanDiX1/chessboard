@@ -47,6 +47,7 @@ const rooms = new Map();
  * @property {'waiting'|'playing'|'finished'} status
  * @property {number} updatedAt
  * @property {object|null} dice  // diceCount, diceRoll, remainingDice, diceSide, lastSkipMsg
+ * @property {{color:string,current:string}|null} checkersChain // active stepwise capture
  * @property {number} diceCount  // 1|2|3 authoritative MP dice count (host-controlled)
  */
 
@@ -94,6 +95,7 @@ function publicRoom(room, forClientId) {
     yourSeat,
     dice: room.dice || null,
     diceCount: room.diceCount === 1 || room.diceCount === 3 ? room.diceCount : 2,
+    chain: room.checkersChain || null,
   };
 }
 
@@ -145,6 +147,7 @@ function createRoom(clientId, mode) {
     updatedAt: Date.now(),
     dice: null,
     diceCount: 2,
+    checkersChain: null,
   };
   rooms.set(code, room);
   return room;
@@ -395,6 +398,14 @@ io.on("connection", (socket) => {
         if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       }
 
+      if (room.mode === "checkers") {
+        const chain = payload && payload.chain;
+        room.checkersChain = chain && (chain.color === "w" || chain.color === "b")
+          && typeof chain.current === "string" && /^[a-h][1-8]$/.test(chain.current)
+          ? { color: chain.color, current: chain.current }
+          : null;
+      }
+
       touch(room);
 
       // Detect finished by FEN side-effects is client-driven; optional flag:
@@ -410,6 +421,7 @@ io.on("connection", (socket) => {
         by: seat,
         dice: room.dice || null,
         stateSync: isStateSync,
+        chain: room.checkersChain || null,
       };
       io.to(code).emit("moveApplied", movePayload);
       emitRoom(room);
@@ -437,6 +449,7 @@ io.on("connection", (socket) => {
       room.plySans = [];
       room.diceTurnLog = [];
       room.dice = null;
+      room.checkersChain = null;
       room.status = room.seats.w && room.seats.b ? "playing" : "waiting";
       touch(room);
       io.to(code).emit("gameReset", { room: publicRoom(room, null) });

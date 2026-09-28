@@ -559,6 +559,52 @@
     return results;
   }
 
+  // Return only the next landing square of each available capture sequence.
+  // This keeps a multi-capture interactive: every jump is a separate move while
+  // the same piece (and turn) remain active until no capture is left.
+  function captureStepMovesFrom(board, r, c, piece) {
+    var sequences = captureSequencesFrom(board, r, c, piece, {});
+    var moves = [], seen = {};
+    for (var i = 0; i < sequences.length; i++) {
+      var seq = sequences[i];
+      if (!seq.path.length || !seq.captures.length) continue;
+      var first = seq.path[0];
+      var key = keySq(first.r, first.c);
+      if (seen[key]) continue;
+      seen[key] = true;
+      moves.push({
+        from: { r: r, c: c },
+        to: { r: first.r, c: first.c },
+        path: [{ r: first.r, c: first.c }],
+        captures: [{ r: seq.captures[0].r, c: seq.captures[0].c }],
+        promote: !piece.king && ((piece.color === "w" && first.r === 0) || (piece.color === "b" && first.r === 7))
+      });
+    }
+    return moves;
+  }
+
+  function interactiveMoves(board, color) {
+    var captures = [], quiets = [];
+    for (var r = 0; r < 8; r++) {
+      for (var c = 0; c < 8; c++) {
+        var p = board[r][c];
+        if (!p || p.color !== color) continue;
+        var caps = captureStepMovesFrom(board, r, c, p);
+        for (var i = 0; i < caps.length; i++) captures.push(caps[i]);
+      }
+    }
+    if (captures.length) return captures;
+    for (var r2 = 0; r2 < 8; r2++) {
+      for (var c2 = 0; c2 < 8; c2++) {
+        var p2 = board[r2][c2];
+        if (!p2 || p2.color !== color) continue;
+        var qs = quietMovesFrom(board, r2, c2, p2);
+        for (var j = 0; j < qs.length; j++) quiets.push(qs[j]);
+      }
+    }
+    return quiets;
+  }
+
   function quietMovesFrom(board, r, c, piece) {
     var moves = [];
     if (piece.king) {
@@ -699,6 +745,7 @@
   var lastMove = null;
   var gameOver = null;
   var botThinking = false;
+  var captureChain = null; // { color, current: { r, c } } while a capture continues
   var mpApplyingRemote = false;
 
   var dragState = null; // { r, c, pieceEl, moved }
@@ -876,7 +923,7 @@
     mpSocket.on("moveApplied", function (msg) {
       if (!mpActive || !msg) return;
       if (msg.by === mpSeat && !mpApplyingRemote) {
-        if (msg.fen && msg.fen !== boardToFen(board, turn)) applyRemotePosition(msg);
+        if (msg.fen && (msg.fen !== boardToFen(board, turn) || !sameCaptureChain(captureChain, parseCaptureChain(msg.chain)))) applyRemotePosition(msg);
         return;
       }
       applyRemotePosition(msg);
@@ -914,18 +961,35 @@
     updateStatus();
   }
 
+  function parseCaptureChain(chain) {
+    if (!chain || (chain.color !== "w" && chain.color !== "b")) return null;
+    var current = algebraicToRC(chain.current);
+    return current ? { color: chain.color, current: current } : null;
+  }
+
+  function sameCaptureChain(a, b) {
+    if (!a || !b) return !a && !b;
+    return a.color === b.color && a.current.r === b.current.r && a.current.c === b.current.c;
+  }
+
+  function chainPayload() {
+    return captureChain ? { color: captureChain.color, current: sqLabel(captureChain.current.r, captureChain.current.c) } : null;
+  }
+
   function syncBoardFromMpRoom(forceReset) {
     if (!mpRoom) return;
     var fen = mpRoom.fen || START_FEN;
+    var nextChain = parseCaptureChain(mpRoom.chain);
     var cur = boardToFen(board, turn);
-    if (forceReset || cur !== fen) {
+    if (forceReset || cur !== fen || !sameCaptureChain(captureChain, nextChain)) {
       var parsed = fenToBoard(fen);
       board = parsed.board;
       turn = parsed.turn;
+      captureChain = nextChain;
       if (Array.isArray(mpRoom.plySans)) moveHistory = mpRoom.plySans.slice();
       gameOver = null;
-      selected = null;
-      legalForSelected = [];
+      selected = captureChain && captureChain.color === turn ? { r: captureChain.current.r, c: captureChain.current.c } : null;
+      legalForSelected = selected ? movesFromSquare(selected.r, selected.c) : [];
       lastMove = mpRoom.lastMove ? {
         from: algebraicToRC(mpRoom.lastMove.from) || mpRoom.lastMove.from,
         to: algebraicToRC(mpRoom.lastMove.to) || mpRoom.lastMove.to
@@ -954,6 +1018,7 @@
         board = parsed.board;
         turn = parsed.turn;
       }
+      captureChain = parseCaptureChain(msg.chain);
       if (Array.isArray(msg.plySans)) moveHistory = msg.plySans.slice();
       else if (msg.move && msg.move.san && moveHistory[moveHistory.length - 1] !== msg.move.san) {
         moveHistory.push(msg.move.san);
@@ -963,8 +1028,8 @@
         var to = algebraicToRC(msg.move.to);
         if (fr && to) lastMove = { from: fr, to: to };
       }
-      selected = null;
-      legalForSelected = [];
+      selected = captureChain && captureChain.color === turn ? { r: captureChain.current.r, c: captureChain.current.c } : null;
+      legalForSelected = selected ? movesFromSquare(selected.r, selected.c) : [];
       gameOver = null;
       checkGameOver();
       if (msg.status === "finished" && !gameOver) {
@@ -979,6 +1044,7 @@
         mpRoom.plySans = moveHistory.slice();
         mpRoom.lastMove = msg.move || mpRoom.lastMove;
         if (msg.status) mpRoom.status = msg.status;
+        mpRoom.chain = msg.chain || null;
       }
     } finally {
       mpApplyingRemote = false;
@@ -1054,11 +1120,13 @@
       fen: fen,
       san: notation,
       plySans: moveHistory.slice(),
-      gameOver: !!gameOver
+      gameOver: !!gameOver,
+      chain: chainPayload()
     });
     if (mpRoom) {
       mpRoom.fen = fen;
       mpRoom.plySans = moveHistory.slice();
+      mpRoom.chain = chainPayload();
       mpRoom.lastMove = { from: from, to: to, san: notation, color: mpSeat };
       if (gameOver) mpRoom.status = "finished";
     }
@@ -1266,7 +1334,12 @@
   }
 
   function movesFromSquare(r, c) {
-    return allMoves(board, turn).filter(function (m) {
+    if (captureChain) {
+      if (captureChain.color !== turn || captureChain.current.r !== r || captureChain.current.c !== c) return [];
+      var chainedPiece = board[r][c];
+      return chainedPiece ? captureStepMovesFrom(board, r, c, chainedPiece) : [];
+    }
+    return interactiveMoves(board, turn).filter(function (m) {
       return m.from.r === r && m.from.c === c;
     });
   }
@@ -1398,6 +1471,13 @@
     var b = countPieces(board, "b");
     if (w.n === 0) { gameOver = "b"; return; }
     if (b.n === 0) { gameOver = "w"; return; }
+    if (captureChain) {
+      var cp = board[captureChain.current.r] && board[captureChain.current.r][captureChain.current.c];
+      if (!cp || cp.color !== turn || !captureStepMovesFrom(board, captureChain.current.r, captureChain.current.c, cp).length) {
+        captureChain = null;
+        turn = turn === "w" ? "b" : "w";
+      }
+    }
     var moves = allMoves(board, turn);
     if (moves.length === 0) gameOver = turn === "w" ? "b" : "w";
   }
@@ -1408,9 +1488,18 @@
     var notation = moveNotation(move);
     moveHistory.push(notation);
     lastMove = { from: move.from, to: move.to };
-    selected = null;
-    legalForSelected = [];
-    turn = turn === "w" ? "b" : "w";
+    var nextChain = null;
+    if (move.captures.length) {
+      var landing = move.path[move.path.length - 1];
+      var landed = board[landing.r] && board[landing.r][landing.c];
+      if (landed && captureStepMovesFrom(board, landing.r, landing.c, landed).length) {
+        nextChain = { color: landed.color, current: { r: landing.r, c: landing.c } };
+      }
+    }
+    captureChain = nextChain;
+    selected = nextChain ? { r: nextChain.current.r, c: nextChain.current.c } : null;
+    legalForSelected = nextChain ? movesFromSquare(selected.r, selected.c) : [];
+    if (!nextChain) turn = turn === "w" ? "b" : "w";
     gameOver = null;
     checkGameOver();
     updateMeta();
@@ -1450,6 +1539,7 @@
     }
     board = initialBoard();
     turn = "w";
+    captureChain = null;
     selected = null;
     legalForSelected = [];
     moveHistory = [];
