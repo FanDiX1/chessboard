@@ -7,6 +7,8 @@ const { Server } = require("socket.io");
 
 const PORT = Number(process.env.PORT) || 3001;
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+// Russian draughts: dark squares only; w/W white man/king, b/B black; white to move
+const CHECKERS_START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
 const CODE_LEN = 6;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000; // 6h idle cleanup
@@ -35,7 +37,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode
+ * @property {string} mode  // classic | dice | checkers
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -116,13 +118,24 @@ function emitRoom(room) {
   }
 }
 
+function normalizeMode(mode) {
+  if (mode === "dice") return "dice";
+  if (mode === "checkers" || mode === "checkers-classic") return "checkers";
+  return "classic";
+}
+
+function startFenForMode(mode) {
+  return mode === "checkers" ? CHECKERS_START_FEN : START_FEN;
+}
+
 function createRoom(clientId, mode) {
   const code = uniqueCode();
+  const norm = normalizeMode(mode);
   /** @type {Room} */
   const room = {
     code,
-    mode: mode === "dice" ? "dice" : "classic",
-    fen: START_FEN,
+    mode: norm,
+    fen: startFenForMode(norm),
     lastMove: null,
     plySans: [],
     diceTurnLog: [],
@@ -203,7 +216,7 @@ io.on("connection", (socket) => {
       if (!room) return ack && ack({ ok: false, error: "room_not_found" });
 
       const wantMode = payload && payload.mode;
-      if (wantMode && room.mode && wantMode !== room.mode) {
+      if (wantMode && room.mode && normalizeMode(wantMode) !== room.mode) {
         return ack && ack({ ok: false, error: "wrong_mode" });
       }
 
@@ -419,7 +432,7 @@ io.on("connection", (socket) => {
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
 
-      room.fen = START_FEN;
+      room.fen = startFenForMode(room.mode);
       room.lastMove = null;
       room.plySans = [];
       room.diceTurnLog = [];

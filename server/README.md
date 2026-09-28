@@ -1,6 +1,6 @@
 # BoardHack multiplayer server
 
-Room-by-code WebSocket server for BoardHack classic chess. No accounts — invite a friend with a short room code.
+Room-by-code WebSocket server for BoardHack (chess classic/dice and checkers). Modes are isolated so rooms do not collide. No accounts — invite a friend with a short room code.
 
 ## Run
 
@@ -16,12 +16,13 @@ Health check: `GET http://localhost:3001/health`
 
 ## Client connection
 
-Open classic mode in a browser:
+Open a game mode in a browser:
 
-- Static site: open `gamemodes/chess/classic/index.html` (or serve the repo root with any static server).
-- Default server URL: `http://localhost:3001`
-- Override via query: `?server=http://HOST:3001`
-- Join link: `gamemodes/chess/classic/index.html?room=ABC123` (optional `&server=...`)
+- Static site: open `gamemodes/chess/classic/index.html` or `gamemodes/checkers/classic/index.html` (or serve the repo root).
+- Default production server: `https://chessboard-ulhg.onrender.com`
+- Local: `http://localhost:3001` — override via `?server=http://HOST:3001`
+- Join link: `...?room=ABC123` (optional `&server=...`)
+- `createRoom` / `joinRoom` `mode`: `classic` | `dice` | `checkers` (alias `checkers-classic`)
 
 Flow:
 
@@ -44,3 +45,5 @@ Flow:
 | `opponentJoined` / `opponentLeft` / `opponentDisconnected` / `opponentReconnected` | S→C | presence |
 
 Room codes are 6 characters (`A–Z` / `2–9`, no ambiguous `0/O/1/I`).
+
+Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black) with starting position for Russian draughts; chess rooms keep standard FIDE FEN.

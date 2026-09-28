@@ -1,13 +1,13 @@
 # BoardHack
 
-Dark-themed multi-game hub (TryHackMe-ish UI): chess first, more board games planned. Local Stockfish bot and multiplayer rooms for chess (RU/EN).
+Dark-themed multi-game hub (TryHackMe-ish UI): chess and checkers. Local bots and multiplayer rooms (RU/EN).
 
 ## Features
 
 - **Hub** — game tabs (Chess / Checkers / Mahjong) with mode cards
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
-- **Checkers → Classic** — Russian draughts (шашки) vs local bot or hotseat
+- **Checkers → Classic** — Russian draughts (шашки) vs local bot or online multiplayer
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
 - **Multiplayer** — room codes via Socket.IO server (`server/`)
 - **i18n** — Russian / English UI

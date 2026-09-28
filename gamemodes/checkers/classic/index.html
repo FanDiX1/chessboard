@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../../css/boardhack.css" />
   <style>
-    /* Russian draughts board (page-local) */
     .ck-board {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
@@ -20,6 +19,8 @@
       overflow: hidden;
       box-shadow: 0 0 0 1px var(--border-soft), 0 12px 40px rgba(0, 0, 0, 0.45);
       user-select: none;
+      touch-action: none;
+      position: relative;
     }
     .ck-board.flipped { transform: rotate(180deg); }
     .ck-board.flipped .ck-piece { transform: rotate(180deg); }
@@ -41,6 +42,7 @@
       background: rgba(159, 239, 0, 0.55);
       position: absolute;
       pointer-events: none;
+      z-index: 2;
     }
     .ck-sq.legal-capture::after {
       width: 78%;
@@ -52,16 +54,22 @@
     .ck-sq.last-from, .ck-sq.last-to {
       box-shadow: inset 0 0 0 3px rgba(159, 239, 0, 0.45);
     }
+    .ck-sq.drop-hover { box-shadow: inset 0 0 0 3px rgba(159, 239, 0, 0.9); }
     .ck-piece {
       width: 72%;
       height: 72%;
       border-radius: 50%;
-      cursor: pointer;
+      cursor: grab;
       z-index: 1;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.18);
       transition: transform 0.12s ease;
+      touch-action: none;
     }
     .ck-piece:hover { transform: scale(1.05); }
+    .ck-piece.dragging {
+      opacity: 0.35;
+      cursor: grabbing;
+    }
     .ck-piece.w {
       background: radial-gradient(circle at 35% 30%, #f5f7fa, #d0d5dd 55%, #9aa3b0);
       border: 2px solid #e8edf2;
@@ -81,6 +89,33 @@
       text-shadow: 0 0 6px var(--accent-glow);
     }
     .ck-piece.b.king::before { color: var(--accent); }
+    .ck-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      border-radius: 50%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.55), inset 0 2px 4px rgba(255,255,255,0.18);
+      opacity: 0.95;
+      display: none;
+    }
+    .ck-ghost.show { display: block; }
+    .ck-ghost.w {
+      background: radial-gradient(circle at 35% 30%, #f5f7fa, #d0d5dd 55%, #9aa3b0);
+      border: 2px solid #e8edf2;
+    }
+    .ck-ghost.b {
+      background: radial-gradient(circle at 35% 30%, #3a4048, #1a1d21 55%, #0b0e11);
+      border: 2px solid #2a2f36;
+    }
+    .ck-ghost.king::before {
+      content: "♛";
+      display: grid;
+      place-items: center;
+      height: 100%;
+      font-size: clamp(0.7rem, 3.2vw, 1.15rem);
+      color: var(--accent);
+      text-shadow: 0 0 6px var(--accent-glow);
+    }
     .rules-box {
       font-size: 0.8rem;
       color: var(--text-muted);
@@ -128,16 +163,9 @@
     </section>
 
     <aside class="side-stack">
-      <section class="card">
+      <section class="card" id="missionCard">
         <div class="card-title" id="missionTitle"></div>
         <div class="controls">
-          <div>
-            <label class="field-label" for="oppSelect" id="oppSelectLabel"></label>
-            <select id="oppSelect">
-              <option value="bot" selected></option>
-              <option value="hotseat"></option>
-            </select>
-          </div>
           <div id="sideSelectWrap">
             <label class="field-label" for="sideSelect" id="sideSelectLabel"></label>
             <select id="sideSelect">
@@ -145,9 +173,56 @@
               <option value="b"></option>
             </select>
           </div>
+          <div id="difficultyWrap">
+            <label class="field-label" for="difficulty" id="diffLabel"></label>
+            <select id="difficulty">
+              <option value="easy"></option>
+              <option value="medium" selected></option>
+              <option value="hard"></option>
+            </select>
+          </div>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="newGameBtn"></button>
           </div>
+        </div>
+      </section>
+
+      <section class="card mp-card" id="mpCard">
+        <div class="card-title" id="mpTitle">Мультиплеер</div>
+        <div class="mp-conn" id="mpConnRow">
+          <span class="mp-conn-dot" id="mpConnDot"></span>
+          <span id="mpConnText">офлайн</span>
+        </div>
+        <div id="mpLobby">
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="mpCreateBtn">Создать комнату</button>
+            <button type="button" class="btn btn-ghost" id="mpJoinToggleBtn">Войти</button>
+          </div>
+          <div id="mpJoinPanel" class="mp-hidden" style="margin-top:0.65rem">
+            <div class="mp-join-row">
+              <input type="text" id="mpJoinCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
+              <button type="button" class="btn btn-primary" id="mpJoinBtn">OK</button>
+            </div>
+          </div>
+          <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
+        </div>
+        <div id="mpActive" class="mp-hidden">
+          <div class="mp-code-box">
+            <div class="mp-code-label" id="mpCodeLabel">Код комнаты</div>
+            <div class="mp-code-value" id="mpCodeValue">------</div>
+            <div class="mp-share-link" id="mpShareLink"></div>
+          </div>
+          <div class="mp-seats">
+            <div class="mp-seat" id="mpSeatW" role="button" tabindex="0">White — …</div>
+            <div class="mp-seat" id="mpSeatB" role="button" tabindex="0">Black — …</div>
+          </div>
+          <p class="mp-seat-pick-hint mp-hidden" id="mpSeatPickHint"></p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать</button>
+            <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
+            <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn"></button>
+          </div>
+          <p class="mp-hint" id="mpActiveHint"></p>
         </div>
       </section>
 
@@ -187,13 +262,21 @@
   <footer class="footer">BoardHack</footer>
 </main>
 
+<div id="ckGhost" class="ck-ghost" aria-hidden="true"></div>
+
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <script>
 (function () {
   "use strict";
 
   var LANG_KEY = "boardhack-lang";
   var COLOR_KEY = "boardhack-checkers-color";
-  var OPP_KEY = "boardhack-checkers-opp";
+  var DIFF_KEY = "boardhack-checkers-diff";
+  var CLIENT_ID_KEY = "boardhack-client-id";
+  var MP_ROOM_KEY = "boardhack-checkers-mp-room";
+  var GAME_MODE = "checkers";
+  var DEFAULT_SERVER = "https://chessboard-ulhg.onrender.com";
+  var START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
 
   var I18N = {
     ru: {
@@ -205,29 +288,58 @@
       history: "История ходов",
       rulesTitle: "Правила",
       rulesHtml: "<strong>Русские шашки</strong> (8×8). Простые ходят вперёд по диагонали; рубят вперёд и назад. Взятие обязательно (выбор любой цепочки). Дамка ходит и рубит на любое число клеток. Бой продолжается, пока есть взятия. Выигрыш — нет шашек или ходов у соперника.",
-      oppSelectLabel: "Соперник",
-      oppBot: "Бот (локальный)",
-      oppHotseat: "Вдвоём (один экран)",
       sideSelectLabel: "Играть за",
       sideWhite: "Белые",
       sideBlack: "Чёрные",
+      diffLabel: "Сложность бота",
+      diffEasy: "Легко",
+      diffMedium: "Средне",
+      diffHard: "Сложно",
       newGame: "Новая игра",
       metaSide: "Сторона",
       metaTurn: "Ход",
       metaMoves: "Ходы",
-      metaOpp: "Режим",
+      metaOpp: "Противник",
+      metaBot: "Бот",
       turnWhite: "Белые",
       turnBlack: "Чёрные",
       statusYour: "Ваш ход",
       statusOpp: "Ход соперника",
-      statusHotseat: "Ход — ",
       statusMustCapture: "Нужно взять",
       statusThinking: "Бот думает…",
       statusWinW: "Белые победили",
       statusWinB: "Чёрные победили",
       statusDraw: "Ничья",
       thinking: "Думаю…",
-      noMoves: "Пока нет ходов"
+      noMoves: "Пока нет ходов",
+      mpTitle: "Мультиплеер",
+      mpCreate: "Создать комнату",
+      mpJoin: "Войти",
+      mpJoinOk: "OK",
+      mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
+      mpCodeLabel: "Код комнаты",
+      mpCopy: "Копировать",
+      mpCopied: "Скопировано",
+      mpLeave: "Выйти",
+      mpOffline: "офлайн",
+      mpConnecting: "подключение…",
+      mpConnected: "на сервере",
+      mpWaiting: "ожидание соперника…",
+      mpPlaying: "игра идёт",
+      mpOpponentGone: "соперник отключился",
+      mpError: "ошибка связи",
+      mpSeatEmpty: "свободно",
+      mpSeatYou: "вы",
+      mpSeatOpp: "соперник",
+      mpSeatOffline: "офлайн",
+      mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
+      mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
+      mpBotOff: "Бот отключён в мультиплеере",
+      mpRoomFull: "Комната заполнена",
+      mpNotFound: "Комната не найдена",
+      mpWrongMode: "Комната другого режима",
+      mpYourTurn: "Ваш ход (онлайн)",
+      mpOppTurn: "Ход соперника…"
     },
     en: {
       docTitle: "BoardHack — Russian draughts",
@@ -238,29 +350,58 @@
       history: "Move history",
       rulesTitle: "Rules",
       rulesHtml: "<strong>Russian draughts</strong> (8×8). Men move forward diagonally; capture forward and backward. Captures are mandatory (any chain if several). Flying kings move/capture any distance. Multi-jumps continue while captures remain. Win: opponent has no pieces or no moves.",
-      oppSelectLabel: "Opponent",
-      oppBot: "Bot (local)",
-      oppHotseat: "Hotseat (same screen)",
       sideSelectLabel: "Play as",
       sideWhite: "White",
       sideBlack: "Black",
+      diffLabel: "Bot difficulty",
+      diffEasy: "Easy",
+      diffMedium: "Medium",
+      diffHard: "Hard",
       newGame: "New game",
       metaSide: "Side",
       metaTurn: "Turn",
       metaMoves: "Moves",
-      metaOpp: "Mode",
+      metaOpp: "Opponent",
+      metaBot: "Bot",
       turnWhite: "White",
       turnBlack: "Black",
       statusYour: "Your turn",
       statusOpp: "Opponent's turn",
-      statusHotseat: "Turn — ",
       statusMustCapture: "Capture required",
       statusThinking: "Bot thinking…",
       statusWinW: "White wins",
       statusWinB: "Black wins",
       statusDraw: "Draw",
       thinking: "Thinking…",
-      noMoves: "No moves yet"
+      noMoves: "No moves yet",
+      mpTitle: "Multiplayer",
+      mpCreate: "Create room",
+      mpJoin: "Join",
+      mpJoinOk: "OK",
+      mpHint: "Invite a friend with a room code. No account needed.",
+      mpCodeLabel: "Room code",
+      mpCopy: "Copy",
+      mpCopied: "Copied",
+      mpLeave: "Leave",
+      mpOffline: "offline",
+      mpConnecting: "connecting…",
+      mpConnected: "on server",
+      mpWaiting: "waiting for opponent…",
+      mpPlaying: "match live",
+      mpOpponentGone: "opponent disconnected",
+      mpError: "connection error",
+      mpSeatEmpty: "open",
+      mpSeatYou: "you",
+      mpSeatOpp: "opponent",
+      mpSeatOffline: "offline",
+      mpWaitingHint: "Share the code or link. Bot is disabled.",
+      mpSeatPickHint: "While alone — click a color to switch side",
+      mpBotOff: "Bot disabled in multiplayer",
+      mpRoomFull: "Room is full",
+      mpNotFound: "Room not found",
+      mpWrongMode: "Wrong game mode room",
+      mpYourTurn: "Your move (online)",
+      mpOppTurn: "Opponent's turn…"
     }
   };
 
@@ -275,10 +416,7 @@
     return pack[key] != null ? pack[key] : (I18N.en[key] || key);
   }
 
-  /* ---- Board model ---- */
-  // Rows 0..7 top→bottom (black side at top). Dark squares: (r+c) odd.
-  // White at bottom (rows 5–7), Black at top (rows 0–2). White moves first.
-
+  /* ---- Board model (Russian draughts) ---- */
   function emptyBoard() {
     var b = [];
     for (var r = 0; r < 8; r++) {
@@ -311,26 +449,56 @@
   }
 
   function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
-
   var DIRS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-
   function manForwardDirs(color) {
     return color === "w" ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
   }
-
   function keySq(r, c) { return r + "," + c; }
 
-  /** Collect all capture sequences from (r,c). Each seq: { from, to, path:[{r,c}], captures:[{r,c}], promote } */
+  function boardToFen(brd, side) {
+    var rows = [];
+    for (var r = 0; r < 8; r++) {
+      var empty = 0, row = "";
+      for (var c = 0; c < 8; c++) {
+        var p = brd[r][c];
+        if (!p) { empty++; continue; }
+        if (empty) { row += empty; empty = 0; }
+        row += p.color === "w" ? (p.king ? "W" : "w") : (p.king ? "B" : "b");
+      }
+      if (empty) row += empty;
+      rows.push(row || "8");
+    }
+    return rows.join("/") + " " + (side === "b" ? "b" : "w");
+  }
+
+  function fenToBoard(fen) {
+    var parts = String(fen || "").trim().split(/\s+/);
+    var rows = (parts[0] || "").split("/");
+    var side = parts[1] === "b" ? "b" : "w";
+    var brd = emptyBoard();
+    for (var r = 0; r < 8; r++) {
+      var c = 0, row = rows[r] || "";
+      for (var i = 0; i < row.length; i++) {
+        var ch = row[i];
+        if (ch >= "1" && ch <= "8") { c += +ch; continue; }
+        if (ch === "w") brd[r][c] = { color: "w", king: false };
+        else if (ch === "W") brd[r][c] = { color: "w", king: true };
+        else if (ch === "b") brd[r][c] = { color: "b", king: false };
+        else if (ch === "B") brd[r][c] = { color: "b", king: true };
+        c++;
+      }
+    }
+    return { board: brd, turn: side };
+  }
+
   function captureSequencesFrom(board, r, c, piece, capturedSet) {
     var results = [];
     var enemy = piece.color === "w" ? "b" : "w";
 
     function dfs(brd, cr, cc, isKing, caps, path) {
       var extended = false;
-
       for (var di = 0; di < 4; di++) {
         var dr = DIRS[di][0], dc = DIRS[di][1];
-
         if (!isKing) {
           var mr = cr + dr, mc = cc + dc;
           var lr = cr + 2 * dr, lc = cc + 2 * dc;
@@ -340,7 +508,6 @@
           if (brd[lr][lc]) continue;
           var ck = keySq(mr, mc);
           if (caps[ck]) continue;
-
           var nb = cloneBoard(brd);
           nb[cr][cc] = null;
           nb[mr][mc] = null;
@@ -373,7 +540,6 @@
           }
         }
       }
-
       if (!extended && path.length > 0) {
         var capList = Object.keys(caps).map(function (k) {
           var parts = k.split(",");
@@ -389,7 +555,6 @@
         });
       }
     }
-
     dfs(board, r, c, !!piece.king, capturedSet || {}, []);
     return results;
   }
@@ -402,11 +567,8 @@
         var nr = r + dr, nc = c + dc;
         while (inBounds(nr, nc) && !board[nr][nc]) {
           moves.push({
-            from: { r: r, c: c },
-            to: { r: nr, c: nc },
-            path: [{ r: nr, c: nc }],
-            captures: [],
-            promote: false
+            from: { r: r, c: c }, to: { r: nr, c: nc },
+            path: [{ r: nr, c: nc }], captures: [], promote: false
           });
           nr += dr; nc += dc;
         }
@@ -418,11 +580,8 @@
         if (!inBounds(nr2, nc2) || board[nr2][nc2]) continue;
         var promo = (piece.color === "w" && nr2 === 0) || (piece.color === "b" && nr2 === 7);
         moves.push({
-          from: { r: r, c: c },
-          to: { r: nr2, c: nc2 },
-          path: [{ r: nr2, c: nc2 }],
-          captures: [],
-          promote: promo
+          from: { r: r, c: c }, to: { r: nr2, c: nc2 },
+          path: [{ r: nr2, c: nc2 }], captures: [], promote: promo
         });
       }
     }
@@ -438,9 +597,6 @@
         if (!p || p.color !== color) continue;
         var caps = captureSequencesFrom(board, r, c, p, {});
         for (var i = 0; i < caps.length; i++) captures.push(caps[i]);
-        if (captures.length === 0) {
-          // defer quiets until we know no captures exist globally
-        }
       }
     }
     if (captures.length > 0) return captures;
@@ -466,8 +622,6 @@
     var last = move.path[move.path.length - 1];
     var king = piece.king;
     if (!king && ((piece.color === "w" && last.r === 0) || (piece.color === "b" && last.r === 7))) king = true;
-    // Mid-sequence promotion already handled in capture gen for continuing as king;
-    // final piece is king if any landing was on last rank or started as king.
     if (!king) {
       for (var k = 0; k < move.path.length; k++) {
         var sq = move.path[k];
@@ -496,32 +650,32 @@
       for (var c = 0; c < 8; c++) {
         var p = board[r][c];
         if (!p || p.king) continue;
-        if (p.color === color) {
-          score += color === "w" ? (7 - r) * 0.3 : r * 0.3;
-        } else {
-          score -= p.color === "w" ? (7 - r) * 0.3 : r * 0.3;
-        }
+        if (p.color === color) score += color === "w" ? (7 - r) * 0.3 : r * 0.3;
+        else score -= p.color === "w" ? (7 - r) * 0.3 : r * 0.3;
       }
     }
     return score;
   }
 
-  function pickBotMove(board, color) {
+  function pickBotMove(board, color, diff) {
     var moves = allMoves(board, color);
     if (moves.length === 0) return null;
-    // Prefer longer captures; then evaluate 1-ply with light lookahead
+    if (diff === "easy") {
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
     var best = null;
     var bestScore = -Infinity;
+    var replyLimit = diff === "hard" ? 24 : 12;
+    var noise = diff === "hard" ? 0.15 : 0.5;
     for (var i = 0; i < moves.length; i++) {
       var m = moves[i];
       var nb = applyMove(board, m);
-      var s = evaluate(nb, color) + m.captures.length * 4 + Math.random() * 0.5;
-      // one-ply reply
+      var s = evaluate(nb, color) + m.captures.length * 4 + Math.random() * noise;
       var replies = allMoves(nb, color === "w" ? "b" : "w");
       if (replies.length === 0) s += 50;
       else {
         var worst = Infinity;
-        var lim = Math.min(replies.length, 12);
+        var lim = Math.min(replies.length, replyLimit);
         for (var j = 0; j < lim; j++) {
           var rb = applyMove(nb, replies[j]);
           var rs = evaluate(rb, color);
@@ -538,31 +692,408 @@
   var board = initialBoard();
   var turn = "w";
   var userColor = "w";
-  var oppMode = "bot";
+  var difficulty = "medium";
   var selected = null;
   var legalForSelected = [];
   var moveHistory = [];
   var lastMove = null;
-  var gameOver = null; // 'w' | 'b' | 'draw' | null
+  var gameOver = null;
   var botThinking = false;
+  var mpApplyingRemote = false;
+
+  var dragState = null; // { r, c, pieceEl, moved }
+  var ghostEl = document.getElementById("ckGhost");
 
   try {
     var sc = localStorage.getItem(COLOR_KEY);
     if (sc === "w" || sc === "b") userColor = sc;
-    var so = localStorage.getItem(OPP_KEY);
-    if (so === "bot" || so === "hotseat") oppMode = so;
+    var sd = localStorage.getItem(DIFF_KEY);
+    if (sd === "easy" || sd === "medium" || sd === "hard") difficulty = sd;
   } catch (e) {}
+
+  /* ---- Multiplayer ---- */
+  var mpActive = false;
+  var mpSocket = null;
+  var mpRoomCode = null;
+  var mpSeat = null;
+  var mpRoom = null;
+  var mpConnState = "offline";
+  var mpServerUrl = DEFAULT_SERVER;
+
+  function getOrCreateClientId() {
+    var id = null;
+    try { id = localStorage.getItem(CLIENT_ID_KEY); } catch (e) {}
+    if (!id || id.length < 8) {
+      id = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      try { localStorage.setItem(CLIENT_ID_KEY, id); } catch (e) {}
+    }
+    return id;
+  }
+
+  function resolveServerUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var s = params.get("server");
+    if (s) {
+      s = s.trim();
+      if (s.indexOf("://") === -1) s = "http://" + s;
+      return s.replace(/\/$/, "");
+    }
+    return DEFAULT_SERVER;
+  }
+
+  function isMultiplayer() { return mpActive && !!mpSeat; }
+
+  function mpBothSeated() {
+    if (!mpRoom || !mpRoom.seats) return false;
+    return !!(mpRoom.seats.w && mpRoom.seats.w.occupied && mpRoom.seats.b && mpRoom.seats.b.occupied);
+  }
+
+  function buildShareLink(code) {
+    var u = new URL(window.location.href);
+    u.searchParams.set("room", code);
+    if (mpServerUrl && mpServerUrl !== DEFAULT_SERVER) u.searchParams.set("server", mpServerUrl);
+    else u.searchParams.delete("server");
+    return u.toString();
+  }
+
+  function setMpConn(state, detail) {
+    mpConnState = state;
+    var dot = document.getElementById("mpConnDot");
+    dot.className = "mp-conn-dot";
+    var label = t("mpOffline");
+    if (state === "connecting") { dot.classList.add("waiting"); label = t("mpConnecting"); }
+    else if (state === "connected") { dot.classList.add("online"); label = t("mpConnected"); }
+    else if (state === "waiting") { dot.classList.add("waiting"); label = t("mpWaiting"); }
+    else if (state === "playing") { dot.classList.add("online"); label = t("mpPlaying"); }
+    else if (state === "error") { dot.classList.add("error"); label = detail || t("mpError"); }
+    else { dot.classList.add("offline"); }
+    document.getElementById("mpConnText").textContent = label;
+  }
+
+  function seatLabel(color) {
+    if (!mpRoom || !mpRoom.seats) return t("mpSeatEmpty");
+    var s = mpRoom.seats[color];
+    if (!s || !s.occupied) return t("mpSeatEmpty");
+    if (mpSeat === color) return t("mpSeatYou");
+    return s.connected ? t("mpSeatOpp") : t("mpSeatOffline");
+  }
+
+  function mpAloneCanSwitch() {
+    if (!isMultiplayer() || !mpRoom || !mpRoom.seats || !mpSeat) return false;
+    if (mpBothSeated()) return false;
+    var wOcc = !!(mpRoom.seats.w && mpRoom.seats.w.occupied);
+    var bOcc = !!(mpRoom.seats.b && mpRoom.seats.b.occupied);
+    return (wOcc ? 1 : 0) + (bOcc ? 1 : 0) === 1;
+  }
+
+  function claimMpSeat(color) {
+    color = color === "b" ? "b" : "w";
+    if (!mpAloneCanSwitch() || !mpSocket || !mpRoomCode) return;
+    if (color === mpSeat) return;
+    mpSocket.emit("claimSeat", { clientId: getOrCreateClientId(), code: mpRoomCode, seat: color }, function (res) {
+      if (!res || !res.ok) {
+        if (res && res.error === "seats_locked") return;
+        setMpConn("error", (res && res.error) || t("mpError"));
+        return;
+      }
+      applyMpRoom(res);
+    });
+  }
+
+  function toggleClass(el, cls, on) {
+    if (!el) return;
+    if (on) el.classList.add(cls); else el.classList.remove(cls);
+  }
+
+  function updateMpUI() {
+    document.getElementById("mpTitle").textContent = t("mpTitle");
+    toggleClass(document.getElementById("missionCard"), "mp-hidden", isMultiplayer());
+    var showReset = isMultiplayer() && mpRoom && mpRoom.hostId === getOrCreateClientId();
+    toggleClass(document.getElementById("mpResetBtn"), "mp-hidden", !showReset);
+    if (!mpActive) {
+      toggleClass(document.getElementById("mpLobby"), "mp-hidden", false);
+      toggleClass(document.getElementById("mpActive"), "mp-hidden", true);
+      toggleClass(document.getElementById("sideSelectWrap"), "mp-hidden", false);
+      toggleClass(document.getElementById("difficultyWrap"), "mp-hidden", false);
+      return;
+    }
+    toggleClass(document.getElementById("mpLobby"), "mp-hidden", true);
+    toggleClass(document.getElementById("mpActive"), "mp-hidden", false);
+    toggleClass(document.getElementById("sideSelectWrap"), "mp-hidden", true);
+    toggleClass(document.getElementById("difficultyWrap"), "mp-hidden", true);
+    document.getElementById("mpCodeValue").textContent = mpRoomCode || "------";
+    document.getElementById("mpShareLink").textContent = mpRoomCode ? buildShareLink(mpRoomCode) : "";
+    var canPick = mpAloneCanSwitch();
+    var seatW = document.getElementById("mpSeatW");
+    var seatB = document.getElementById("mpSeatB");
+    seatW.textContent = t("sideWhite") + " — " + seatLabel("w");
+    seatB.textContent = t("sideBlack") + " — " + seatLabel("b");
+    toggleClass(seatW, "you", mpSeat === "w");
+    toggleClass(seatB, "you", mpSeat === "b");
+    toggleClass(seatW, "filled", !!(mpRoom && mpRoom.seats.w && mpRoom.seats.w.occupied));
+    toggleClass(seatB, "filled", !!(mpRoom && mpRoom.seats.b && mpRoom.seats.b.occupied));
+    toggleClass(seatW, "pickable", canPick && mpSeat !== "w");
+    toggleClass(seatB, "pickable", canPick && mpSeat !== "b");
+    var hint = document.getElementById("mpSeatPickHint");
+    if (canPick) { toggleClass(hint, "mp-hidden", false); hint.textContent = t("mpSeatPickHint"); }
+    else { toggleClass(hint, "mp-hidden", true); hint.textContent = ""; }
+    var both = mpBothSeated();
+    var ah = document.getElementById("mpActiveHint");
+    toggleClass(ah, "mp-hidden", both);
+    ah.textContent = both ? "" : t("mpWaitingHint");
+    document.getElementById("sideSelect").value = userColor;
+    document.getElementById("sideLabel").textContent = userColor === "w" ? t("sideWhite") : t("sideBlack");
+    updateOpponentLabel();
+  }
+
+  function ensureMpSocket(cb) {
+    mpServerUrl = resolveServerUrl();
+    if (mpSocket && mpSocket.connected) { if (cb) cb(null); return; }
+    if (typeof io === "undefined") { setMpConn("error", t("mpError")); if (cb) cb(new Error("socket.io missing")); return; }
+    setMpConn("connecting");
+    if (mpSocket) { try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {} mpSocket = null; }
+    mpSocket = io(mpServerUrl, { transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 12, timeout: 8000 });
+    mpSocket.on("connect", function () {
+      setMpConn(mpBothSeated() ? "playing" : (mpActive ? "waiting" : "connected"));
+      if (mpActive && mpRoomCode) {
+        mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }, function (res) {
+          if (res && res.ok) applyMpRoom(res);
+        });
+      }
+      if (cb) { var f = cb; cb = null; f(null); }
+    });
+    mpSocket.on("connect_error", function () {
+      setMpConn("error", t("mpError"));
+      if (cb) { var f = cb; cb = null; f(new Error("connect_error")); }
+    });
+    mpSocket.on("disconnect", function () {
+      if (mpActive) setMpConn("error", t("mpError"));
+      else setMpConn("offline");
+    });
+    mpSocket.on("roomState", function (msg) {
+      if (msg && msg.room) applyMpRoom({ room: msg.room, seat: msg.room.yourSeat || mpSeat, code: msg.room.code });
+    });
+    mpSocket.on("moveApplied", function (msg) {
+      if (!mpActive || !msg) return;
+      if (msg.by === mpSeat && !mpApplyingRemote) {
+        if (msg.fen && msg.fen !== boardToFen(board, turn)) applyRemotePosition(msg);
+        return;
+      }
+      applyRemotePosition(msg);
+    });
+    mpSocket.on("gameReset", function (msg) {
+      if (!mpActive) return;
+      if (msg && msg.room) applyMpRoom({ room: msg.room, seat: mpSeat, code: mpRoomCode });
+      syncBoardFromMpRoom(true);
+    });
+    mpSocket.on("opponentJoined", function () { updateMpUI(); updateStatus(); });
+    mpSocket.on("opponentLeft", function () { setMpConn("waiting"); updateMpUI(); updateStatus(); });
+    mpSocket.on("opponentDisconnected", function () { setMpConn("waiting"); updateMpUI(); updateStatus(); });
+    mpSocket.on("opponentReconnected", function () {
+      setMpConn(mpBothSeated() ? "playing" : "waiting");
+      updateMpUI(); updateStatus();
+    });
+  }
+
+  function applyMpRoom(res) {
+    if (!res) return;
+    if (res.room) mpRoom = res.room;
+    if (res.code) mpRoomCode = res.code;
+    if (res.seat) { mpSeat = res.seat; userColor = res.seat; try { localStorage.setItem(COLOR_KEY, userColor); } catch (e) {} }
+    else if (res.room && res.room.yourSeat) {
+      mpSeat = res.room.yourSeat; userColor = mpSeat;
+      try { localStorage.setItem(COLOR_KEY, userColor); } catch (e) {}
+    }
+    mpActive = true;
+    try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
+    setMpConn(mpBothSeated() ? "playing" : "waiting");
+    updateMpUI();
+    botThinking = false;
+    document.getElementById("thinking").classList.remove("show");
+    syncBoardFromMpRoom(false);
+    updateStatus();
+  }
+
+  function syncBoardFromMpRoom(forceReset) {
+    if (!mpRoom) return;
+    var fen = mpRoom.fen || START_FEN;
+    var cur = boardToFen(board, turn);
+    if (forceReset || cur !== fen) {
+      var parsed = fenToBoard(fen);
+      board = parsed.board;
+      turn = parsed.turn;
+      if (Array.isArray(mpRoom.plySans)) moveHistory = mpRoom.plySans.slice();
+      gameOver = null;
+      selected = null;
+      legalForSelected = [];
+      lastMove = mpRoom.lastMove ? {
+        from: algebraicToRC(mpRoom.lastMove.from) || mpRoom.lastMove.from,
+        to: algebraicToRC(mpRoom.lastMove.to) || mpRoom.lastMove.to
+      } : null;
+      if (lastMove && typeof lastMove.from === "object" && lastMove.from.r == null) lastMove = null;
+      checkGameOver();
+      updateMeta();
+      renderHistory();
+      renderBoard();
+    }
+  }
+
+  function algebraicToRC(sq) {
+    if (!sq || typeof sq !== "string" || sq.length < 2) return null;
+    var c = sq.charCodeAt(0) - 97;
+    var r = 8 - parseInt(sq[1], 10);
+    if (r < 0 || r > 7 || c < 0 || c > 7) return null;
+    return { r: r, c: c };
+  }
+
+  function applyRemotePosition(msg) {
+    mpApplyingRemote = true;
+    try {
+      if (msg.fen) {
+        var parsed = fenToBoard(msg.fen);
+        board = parsed.board;
+        turn = parsed.turn;
+      }
+      if (Array.isArray(msg.plySans)) moveHistory = msg.plySans.slice();
+      else if (msg.move && msg.move.san && moveHistory[moveHistory.length - 1] !== msg.move.san) {
+        moveHistory.push(msg.move.san);
+      }
+      if (msg.move) {
+        var fr = algebraicToRC(msg.move.from);
+        var to = algebraicToRC(msg.move.to);
+        if (fr && to) lastMove = { from: fr, to: to };
+      }
+      selected = null;
+      legalForSelected = [];
+      gameOver = null;
+      checkGameOver();
+      if (msg.status === "finished" && !gameOver) {
+        // client already set via checkGameOver; keep
+      }
+      updateMeta();
+      updateStatus();
+      renderHistory();
+      renderBoard();
+      if (mpRoom) {
+        mpRoom.fen = msg.fen || mpRoom.fen;
+        mpRoom.plySans = moveHistory.slice();
+        mpRoom.lastMove = msg.move || mpRoom.lastMove;
+        if (msg.status) mpRoom.status = msg.status;
+      }
+    } finally {
+      mpApplyingRemote = false;
+    }
+  }
+
+  function enterMpFromCreate() {
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("createRoom", {
+        clientId: getOrCreateClientId(),
+        mode: GAME_MODE,
+        preferredSeat: userColor === "b" ? "b" : "w"
+      }, function (res) {
+        if (!res || !res.ok) { setMpConn("error", (res && res.error) || t("mpError")); return; }
+        applyMpRoom(res);
+      });
+    });
+  }
+
+  function enterMpFromJoin(code) {
+    code = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if (!code) return;
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("joinRoom", {
+        clientId: getOrCreateClientId(),
+        code: code,
+        mode: GAME_MODE
+      }, function (res) {
+        if (!res || !res.ok) {
+          var errKey = res && res.error;
+          var msg = t("mpError");
+          if (errKey === "room_not_found") msg = t("mpNotFound");
+          if (errKey === "room_full") msg = t("mpRoomFull");
+          if (errKey === "wrong_mode") msg = t("mpWrongMode");
+          setMpConn("error", msg);
+          return;
+        }
+        applyMpRoom(res);
+      });
+    });
+  }
+
+  function leaveMultiplayer() {
+    if (mpSocket && mpRoomCode) {
+      try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }); } catch (e) {}
+    }
+    mpActive = false;
+    mpRoomCode = null;
+    mpSeat = null;
+    mpRoom = null;
+    try { localStorage.removeItem(MP_ROOM_KEY); } catch (e) {}
+    if (mpSocket) {
+      try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
+      mpSocket = null;
+    }
+    setMpConn("offline");
+    updateMpUI();
+    newGame();
+  }
+
+  function publishMpMove(move, notation) {
+    if (!isMultiplayer() || !mpSocket) return;
+    var fen = boardToFen(board, turn);
+    var from = sqLabel(move.from.r, move.from.c);
+    var to = sqLabel(move.to.r, move.to.c);
+    mpSocket.emit("makeMove", {
+      clientId: getOrCreateClientId(),
+      code: mpRoomCode,
+      from: from,
+      to: to,
+      fen: fen,
+      san: notation,
+      plySans: moveHistory.slice(),
+      gameOver: !!gameOver
+    });
+    if (mpRoom) {
+      mpRoom.fen = fen;
+      mpRoom.plySans = moveHistory.slice();
+      mpRoom.lastMove = { from: from, to: to, san: notation, color: mpSeat };
+      if (gameOver) mpRoom.status = "finished";
+    }
+  }
+
+  function tryAutoRejoin() {
+    var params = new URLSearchParams(window.location.search);
+    var roomParam = params.get("room");
+    var saved = null;
+    try { saved = localStorage.getItem(MP_ROOM_KEY); } catch (e) {}
+    var code = (roomParam || saved || "").toUpperCase().trim();
+    if (!code) return;
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: code }, function (res) {
+        if (res && res.ok) { applyMpRoom(res); return; }
+        mpSocket.emit("joinRoom", { clientId: getOrCreateClientId(), code: code, mode: GAME_MODE }, function (res2) {
+          if (res2 && res2.ok) applyMpRoom(res2);
+          else if (roomParam) setMpConn("error", t("mpNotFound"));
+        });
+      });
+    });
+  }
 
   function isUserTurn() {
     if (gameOver) return false;
-    if (oppMode === "hotseat") return true;
+    if (isMultiplayer()) {
+      if (!mpBothSeated()) return false;
+      return turn === mpSeat;
+    }
     return turn === userColor;
   }
 
   function sqLabel(r, c) {
-    var file = String.fromCharCode(97 + c);
-    var rank = 8 - r;
-    return file + rank;
+    return String.fromCharCode(97 + c) + (8 - r);
   }
 
   function moveNotation(m) {
@@ -570,6 +1101,19 @@
     var s = sqLabel(m.from.r, m.from.c);
     for (var i = 0; i < m.path.length; i++) s += sep + sqLabel(m.path[i].r, m.path[i].c);
     return s;
+  }
+
+  function diffLabelKey() {
+    if (difficulty === "easy") return "diffEasy";
+    if (difficulty === "hard") return "diffHard";
+    return "diffMedium";
+  }
+
+  function updateOpponentLabel() {
+    document.getElementById("metaOppK").textContent = t("metaOpp");
+    document.getElementById("oppLabel").textContent = isMultiplayer()
+      ? ""
+      : (t("metaBot") + " — " + t(diffLabelKey()));
   }
 
   function applyLang() {
@@ -582,24 +1126,32 @@
     document.getElementById("historyTitle").textContent = t("history");
     document.getElementById("rulesTitle").textContent = t("rulesTitle");
     document.getElementById("rulesBox").innerHTML = t("rulesHtml");
-    document.getElementById("oppSelectLabel").textContent = t("oppSelectLabel");
     document.getElementById("sideSelectLabel").textContent = t("sideSelectLabel");
+    document.getElementById("diffLabel").textContent = t("diffLabel");
     document.getElementById("newGameBtn").textContent = t("newGame");
     document.getElementById("metaSideK").textContent = t("metaSide");
     document.getElementById("metaTurnK").textContent = t("metaTurn");
     document.getElementById("metaMovesK").textContent = t("metaMoves");
-    document.getElementById("metaOppK").textContent = t("metaOpp");
     document.getElementById("thinkingText").textContent = t("thinking");
-
-    var oppSel = document.getElementById("oppSelect");
-    oppSel.options[0].textContent = t("oppBot");
-    oppSel.options[1].textContent = t("oppHotseat");
     var sideSel = document.getElementById("sideSelect");
     sideSel.options[0].textContent = t("sideWhite");
     sideSel.options[1].textContent = t("sideBlack");
-
+    var diff = document.getElementById("difficulty");
+    diff.options[0].textContent = t("diffEasy");
+    diff.options[1].textContent = t("diffMedium");
+    diff.options[2].textContent = t("diffHard");
+    document.getElementById("mpTitle").textContent = t("mpTitle");
+    document.getElementById("mpCreateBtn").textContent = t("mpCreate");
+    document.getElementById("mpJoinToggleBtn").textContent = t("mpJoin");
+    document.getElementById("mpJoinBtn").textContent = t("mpJoinOk");
+    document.getElementById("mpHint").textContent = t("mpHint");
+    document.getElementById("mpCodeLabel").textContent = t("mpCodeLabel");
+    document.getElementById("mpCopyBtn").textContent = t("mpCopy");
+    document.getElementById("mpLeaveBtn").textContent = t("mpLeave");
+    document.getElementById("mpResetBtn").textContent = t("newGame");
     document.getElementById("langRu").classList.toggle("active", lang === "ru");
     document.getElementById("langEn").classList.toggle("active", lang === "en");
+    updateMpUI();
     updateMeta();
     updateStatus();
     renderHistory();
@@ -613,13 +1165,10 @@
   }
 
   function updateMeta() {
-    document.getElementById("sideLabel").textContent =
-      oppMode === "hotseat" ? (lang === "ru" ? "Оба" : "Both") :
-      (userColor === "w" ? t("sideWhite") : t("sideBlack"));
+    document.getElementById("sideLabel").textContent = userColor === "w" ? t("sideWhite") : t("sideBlack");
     document.getElementById("turnLabel").textContent = turn === "w" ? t("turnWhite") : t("turnBlack");
     document.getElementById("moveCount").textContent = String(moveHistory.length);
-    document.getElementById("oppLabel").textContent = oppMode === "bot" ? t("oppBot") : t("oppHotseat");
-    document.getElementById("sideSelectWrap").style.display = oppMode === "bot" ? "" : "none";
+    updateOpponentLabel();
   }
 
   function updateStatus() {
@@ -636,25 +1185,25 @@
       text.textContent = t("statusThinking");
       return;
     }
+    if (isMultiplayer() && !mpBothSeated()) {
+      dot.classList.add("info");
+      text.textContent = t("mpWaiting");
+      return;
+    }
     var moves = allMoves(board, turn);
     var mustCap = moves.length > 0 && moves[0].captures.length > 0;
-    if (oppMode === "hotseat") {
-      text.textContent = t("statusHotseat") + (turn === "w" ? t("turnWhite") : t("turnBlack")) +
+    if (isUserTurn()) {
+      text.textContent = (isMultiplayer() ? t("mpYourTurn") : t("statusYour")) +
         (mustCap ? " · " + t("statusMustCapture") : "");
-    } else if (turn === userColor) {
-      text.textContent = t("statusYour") + (mustCap ? " · " + t("statusMustCapture") : "");
     } else {
-      text.textContent = t("statusOpp");
+      text.textContent = isMultiplayer() ? t("mpOppTurn") : t("statusOpp");
       dot.classList.add("info");
     }
   }
 
   function renderHistory() {
     var el = document.getElementById("moveList");
-    if (!moveHistory.length) {
-      el.textContent = t("noMoves");
-      return;
-    }
+    if (!moveHistory.length) { el.textContent = t("noMoves"); return; }
     var html = "";
     for (var i = 0; i < moveHistory.length; i += 2) {
       var n = (i / 2) + 1;
@@ -666,17 +1215,20 @@
     el.scrollTop = el.scrollHeight;
   }
 
+  function boardFlip() {
+    if (isMultiplayer()) return userColor === "b";
+    return userColor === "b";
+  }
+
   function renderBoard() {
     var el = document.getElementById("board");
-    var flip = oppMode === "bot" && userColor === "b";
-    el.classList.toggle("flipped", flip);
+    el.classList.toggle("flipped", boardFlip());
     el.innerHTML = "";
 
     var legalTargets = {};
     for (var i = 0; i < legalForSelected.length; i++) {
       var m = legalForSelected[i];
-      var k = keySq(m.to.r, m.to.c);
-      legalTargets[k] = m;
+      legalTargets[keySq(m.to.r, m.to.c)] = m;
     }
 
     for (var r = 0; r < 8; r++) {
@@ -688,7 +1240,7 @@
         sq.dataset.c = c;
 
         if (selected && selected.r === r && selected.c === c) sq.classList.add("selected");
-        if (lastMove) {
+        if (lastMove && lastMove.from && lastMove.to) {
           if (lastMove.from.r === r && lastMove.from.c === c) sq.classList.add("last-from");
           if (lastMove.to.r === r && lastMove.to.c === c) sq.classList.add("last-to");
         }
@@ -703,6 +1255,7 @@
           piece.className = "ck-piece " + p.color + (p.king ? " king" : "");
           piece.dataset.r = r;
           piece.dataset.c = c;
+          piece.addEventListener("pointerdown", onPiecePointerDown);
           sq.appendChild(piece);
         }
 
@@ -713,30 +1266,21 @@
   }
 
   function movesFromSquare(r, c) {
-    var all = allMoves(board, turn);
-    return all.filter(function (m) { return m.from.r === r && m.from.c === c; });
+    return allMoves(board, turn).filter(function (m) {
+      return m.from.r === r && m.from.c === c;
+    });
   }
 
-  function onSquareClick(ev) {
-    if (gameOver || botThinking || !isUserTurn()) return;
-    var sq = ev.currentTarget;
-    var r = +sq.dataset.r, c = +sq.dataset.c;
+  function pickMoveTo(r, c) {
+    var opts = legalForSelected.filter(function (m) { return m.to.r === r && m.to.c === c; });
+    if (!opts.length) return null;
+    opts.sort(function (a, b) {
+      return b.captures.length - a.captures.length || b.path.length - a.path.length;
+    });
+    return opts[0];
+  }
 
-    // Try play legal target
-    if (selected) {
-      var opts = legalForSelected.filter(function (m) { return m.to.r === r && m.to.c === c; });
-      if (opts.length === 1) {
-        playMove(opts[0]);
-        return;
-      }
-      if (opts.length > 1) {
-        // Prefer longest capture if ambiguous landing
-        opts.sort(function (a, b) { return b.captures.length - a.captures.length || b.path.length - a.path.length; });
-        playMove(opts[0]);
-        return;
-      }
-    }
-
+  function selectSquare(r, c) {
     var p = board[r][c];
     if (p && p.color === turn) {
       var ms = movesFromSquare(r, c);
@@ -744,12 +1288,109 @@
         selected = { r: r, c: c };
         legalForSelected = ms;
         renderBoard();
-        return;
+        return true;
       }
     }
     selected = null;
     legalForSelected = [];
     renderBoard();
+    return false;
+  }
+
+  function onSquareClick(ev) {
+    if (dragState && dragState.moved) return;
+    if (gameOver || botThinking || !isUserTurn()) return;
+    var sq = ev.currentTarget;
+    var r = +sq.dataset.r, c = +sq.dataset.c;
+    if (selected) {
+      var mv = pickMoveTo(r, c);
+      if (mv) { playMove(mv); return; }
+    }
+    selectSquare(r, c);
+  }
+
+  /* ---- Drag and drop ---- */
+  function onPiecePointerDown(ev) {
+    if (gameOver || botThinking || !isUserTurn()) return;
+    if (ev.button != null && ev.button !== 0) return;
+    var piece = ev.currentTarget;
+    var r = +piece.dataset.r, c = +piece.dataset.c;
+    var p = board[r][c];
+    if (!p || p.color !== turn) return;
+    var ms = movesFromSquare(r, c);
+    if (!ms.length) return;
+
+    ev.preventDefault();
+    selected = { r: r, c: c };
+    legalForSelected = ms;
+    renderBoard();
+
+    // re-find piece after re-render
+    var fresh = document.querySelector('.ck-piece[data-r="' + r + '"][data-c="' + c + '"]');
+    if (!fresh) return;
+    fresh.classList.add("dragging");
+
+    var rect = fresh.getBoundingClientRect();
+    ghostEl.className = "ck-ghost show " + p.color + (p.king ? " king" : "");
+    ghostEl.style.width = rect.width + "px";
+    ghostEl.style.height = rect.height + "px";
+    moveGhost(ev.clientX, ev.clientY, rect.width, rect.height);
+
+    dragState = { r: r, c: c, pieceEl: fresh, moved: false, w: rect.width, h: rect.height };
+    try { fresh.setPointerCapture(ev.pointerId); } catch (e) {}
+    fresh.addEventListener("pointermove", onPiecePointerMove);
+    fresh.addEventListener("pointerup", onPiecePointerUp);
+    fresh.addEventListener("pointercancel", onPiecePointerUp);
+  }
+
+  function moveGhost(x, y, w, h) {
+    ghostEl.style.left = (x - w / 2) + "px";
+    ghostEl.style.top = (y - h / 2) + "px";
+  }
+
+  function onPiecePointerMove(ev) {
+    if (!dragState) return;
+    dragState.moved = true;
+    moveGhost(ev.clientX, ev.clientY, dragState.w, dragState.h);
+    var under = squareFromPoint(ev.clientX, ev.clientY);
+    document.querySelectorAll(".ck-sq.drop-hover").forEach(function (el) { el.classList.remove("drop-hover"); });
+    if (under) {
+      var mv = pickMoveTo(+under.dataset.r, +under.dataset.c);
+      if (mv) under.classList.add("drop-hover");
+    }
+  }
+
+  function squareFromPoint(x, y) {
+    var el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    var sq = el.closest ? el.closest(".ck-sq") : null;
+    return sq;
+  }
+
+  function onPiecePointerUp(ev) {
+    if (!dragState) return;
+    var st = dragState;
+    var pieceEl = st.pieceEl;
+    pieceEl.removeEventListener("pointermove", onPiecePointerMove);
+    pieceEl.removeEventListener("pointerup", onPiecePointerUp);
+    pieceEl.removeEventListener("pointercancel", onPiecePointerUp);
+    try { pieceEl.releasePointerCapture(ev.pointerId); } catch (e) {}
+    ghostEl.className = "ck-ghost";
+    document.querySelectorAll(".ck-sq.drop-hover").forEach(function (el) { el.classList.remove("drop-hover"); });
+
+    var played = false;
+    if (st.moved) {
+      var under = squareFromPoint(ev.clientX, ev.clientY);
+      if (under) {
+        var mv = pickMoveTo(+under.dataset.r, +under.dataset.c);
+        if (mv) { playMove(mv); played = true; }
+      }
+    }
+    dragState = null;
+    if (!played) {
+      // click-to-select already set; just re-render to clear dragging opacity
+      renderBoard();
+    }
   }
 
   function checkGameOver() {
@@ -758,14 +1399,14 @@
     if (w.n === 0) { gameOver = "b"; return; }
     if (b.n === 0) { gameOver = "w"; return; }
     var moves = allMoves(board, turn);
-    if (moves.length === 0) {
-      gameOver = turn === "w" ? "b" : "w";
-    }
+    if (moves.length === 0) gameOver = turn === "w" ? "b" : "w";
   }
 
-  function playMove(move) {
+  function playMove(move, opts) {
+    opts = opts || {};
     board = applyMove(board, move);
-    moveHistory.push(moveNotation(move));
+    var notation = moveNotation(move);
+    moveHistory.push(notation);
     lastMove = { from: move.from, to: move.to };
     selected = null;
     legalForSelected = [];
@@ -776,17 +1417,21 @@
     updateStatus();
     renderHistory();
     renderBoard();
-    maybeBotTurn();
+    if (!opts.silent && isMultiplayer() && !mpApplyingRemote) {
+      publishMpMove(move, notation);
+    }
+    if (!opts.silent) maybeBotTurn();
   }
 
   function maybeBotTurn() {
-    if (gameOver || oppMode !== "bot") return;
+    if (gameOver || isMultiplayer()) return;
     if (turn === userColor) return;
     botThinking = true;
     document.getElementById("thinking").classList.add("show");
     updateStatus();
+    var delay = difficulty === "easy" ? 180 : difficulty === "hard" ? 420 : 280;
     setTimeout(function () {
-      var m = pickBotMove(board, turn);
+      var m = pickBotMove(board, turn, difficulty);
       botThinking = false;
       document.getElementById("thinking").classList.remove("show");
       if (m) playMove(m);
@@ -795,10 +1440,14 @@
         updateStatus();
         renderBoard();
       }
-    }, 280 + Math.random() * 220);
+    }, delay + Math.random() * 220);
   }
 
   function newGame() {
+    if (isMultiplayer() && mpSocket && mpRoomCode) {
+      mpSocket.emit("resetGame", { clientId: getOrCreateClientId(), code: mpRoomCode });
+      return;
+    }
     board = initialBoard();
     turn = "w";
     selected = null;
@@ -815,24 +1464,90 @@
     maybeBotTurn();
   }
 
+  function wireMp() {
+    document.getElementById("mpCreateBtn").addEventListener("click", function () { enterMpFromCreate(); });
+    document.getElementById("mpJoinToggleBtn").addEventListener("click", function () {
+      var panel = document.getElementById("mpJoinPanel");
+      panel.classList.toggle("mp-hidden");
+      if (!panel.classList.contains("mp-hidden")) document.getElementById("mpJoinCode").focus();
+    });
+    document.getElementById("mpJoinBtn").addEventListener("click", function () {
+      enterMpFromJoin(document.getElementById("mpJoinCode").value);
+    });
+    document.getElementById("mpJoinCode").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") enterMpFromJoin(document.getElementById("mpJoinCode").value);
+    });
+    document.getElementById("mpCopyBtn").addEventListener("click", function () {
+      var link = buildShareLink(mpRoomCode);
+      var btn = document.getElementById("mpCopyBtn");
+      var done = function () {
+        btn.textContent = t("mpCopied");
+        setTimeout(function () { btn.textContent = t("mpCopy"); }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(done).catch(function () {
+          try { window.prompt(t("mpCodeLabel"), link); } catch (e) {}
+        });
+      } else {
+        try { window.prompt(t("mpCodeLabel"), link); done(); } catch (e) {}
+      }
+    });
+    function seatHandler(color) {
+      return function (e) {
+        if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+        if (e.type === "keydown") e.preventDefault();
+        claimMpSeat(color);
+      };
+    }
+    document.getElementById("mpSeatW").addEventListener("click", seatHandler("w"));
+    document.getElementById("mpSeatW").addEventListener("keydown", seatHandler("w"));
+    document.getElementById("mpSeatB").addEventListener("click", seatHandler("b"));
+    document.getElementById("mpSeatB").addEventListener("keydown", seatHandler("b"));
+    document.getElementById("mpLeaveBtn").addEventListener("click", function () { leaveMultiplayer(); });
+    document.getElementById("mpResetBtn").addEventListener("click", newGame);
+  }
+
   document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
   document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
   document.getElementById("newGameBtn").addEventListener("click", newGame);
-  document.getElementById("oppSelect").addEventListener("change", function (e) {
-    oppMode = e.target.value;
-    try { localStorage.setItem(OPP_KEY, oppMode); } catch (err) {}
-    newGame();
-  });
   document.getElementById("sideSelect").addEventListener("change", function (e) {
     userColor = e.target.value;
     try { localStorage.setItem(COLOR_KEY, userColor); } catch (err) {}
-    newGame();
+    if (!isMultiplayer()) newGame();
+  });
+  document.getElementById("difficulty").addEventListener("change", function (e) {
+    difficulty = e.target.value;
+    try { localStorage.setItem(DIFF_KEY, difficulty); } catch (err) {}
+    updateOpponentLabel();
+    if (!isMultiplayer()) newGame();
   });
 
-  document.getElementById("oppSelect").value = oppMode;
   document.getElementById("sideSelect").value = userColor;
+  document.getElementById("difficulty").value = difficulty;
+  wireMp();
   applyLang();
-  newGame();
+  setMpConn("offline");
+
+  var paramsEarly = new URLSearchParams(window.location.search);
+  var maybeMp = !!(paramsEarly.get("room") || (function () {
+    try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
+  })());
+  tryAutoRejoin();
+
+  if (!isMultiplayer() && !maybeMp) {
+    newGame();
+  } else if (!maybeMp) {
+    renderBoard();
+    updateMeta();
+    updateStatus();
+  } else {
+    // waiting for MP reconnect — show empty start until room sync
+    board = initialBoard();
+    turn = "w";
+    renderBoard();
+    updateMeta();
+    updateStatus();
+  }
 })();
 </script>
 </body>
