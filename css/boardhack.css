@@ -1099,8 +1099,9 @@ button.btn:disabled {
   padding: 0;
   overflow: hidden;
   color: var(--text);
-  background: var(--card);
-  border: 1px solid var(--border);
+  /* Keep the modal readable even if a stale theme stylesheet is cached. */
+  background: #0b1215;
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
 }
