@@ -293,7 +293,6 @@
           mpSeatOffline: "офлайн",
           mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
           mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
-          mpPlayingHint: "Ходите своей фигурой. Бот отключён.",
           mpBotOff: "Бот отключён в мультиплеере",
           mpRoomFull: "Комната заполнена",
           mpNotFound: "Комната не найдена",
@@ -399,7 +398,6 @@
           mpSeatOffline: "offline",
           mpWaitingHint: "Share the code or link. Bot is disabled.",
           mpSeatPickHint: "While alone — click a color to switch side",
-          mpPlayingHint: "Move your pieces. Bot is disabled.",
           mpBotOff: "Bot disabled in multiplayer",
           mpRoomFull: "Room is full",
           mpNotFound: "Room not found",
@@ -736,7 +734,8 @@
         } else {
           $("#mpSeatPickHint").addClass("mp-hidden").text("");
         }
-        $("#mpActiveHint").text(mpBothSeated() ? t("mpPlayingHint") : t("mpWaitingHint"));
+        var bothSeated = mpBothSeated();
+        $("#mpActiveHint").toggleClass("mp-hidden", bothSeated).text(bothSeated ? "" : t("mpWaitingHint"));
         $("#sideSelectWrap").addClass("mp-hidden");
         $("#difficultyWrap").addClass("mp-hidden");
         $("#spGameBtns").addClass("mp-hidden");
