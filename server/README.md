@@ -1,6 +1,6 @@
 # BoardHack multiplayer server
 
-Room-by-code WebSocket server for BoardHack (chess classic/dice/customizable, checkers classic/customizable, and backgammon classic/long). Modes are isolated so rooms do not collide. No accounts — invite a friend with a short room code.
+Room-by-code WebSocket server for BoardHack (chess classic/dice/customizable, checkers classic/customizable). Modes are isolated so rooms do not collide. No accounts — invite a friend with a short room code.
 
 ## Run
 
@@ -18,11 +18,11 @@ Health check: `GET http://localhost:3001/health`
 
 Open a game mode in a browser:
 
-- Static site: open `gamemodes/chess/classic/index.html`, `gamemodes/checkers/*/index.html`, or `gamemodes/backgammon/*/index.html` (or serve the repo root).
+- Static site: open `gamemodes/chess/classic/index.html` or `gamemodes/checkers/*/index.html` (or serve the repo root).
 - Default production server: `https://chessboard-ulhg.onrender.com`
 - Local: `http://localhost:3001` — override via `?server=http://HOST:3001`
 - Join link: `...?room=ABC123` (optional `&server=...`)
-- `createRoom` / `joinRoom` `mode`: `classic` | `dice` | `custom` (alias `chess-custom`) | `checkers` (alias `checkers-classic`) | `checkers-custom` | `backgammon` | `backgammon-long` (aliases `bg-classic` / `bg-long`)
+- `createRoom` / `joinRoom` `mode`: `classic` | `dice` | `custom` (alias `chess-custom`) | `checkers` (alias `checkers-classic`) | `checkers-custom`
 
 Flow:
 
@@ -41,7 +41,7 @@ Flow:
 | `joinRoom` | C→S | `{ clientId, code, mode?, nick? }` → `{ ok, code, seat, role, room }` |
 | `spectateRoom` | C→S | `{ clientId, code, mode?, nick? }` → join as spectator (no seat) |
 | `reconnectRoom` | C→S | `{ clientId, code, nick? }` reclaim seat after refresh |
-| `makeMove` | C→S | `{ clientId, code, from, to, fen, san, plySans?, gameOver?, bg?, stateSync? }` |
+| `makeMove` | C→S | `{ clientId, code, from, to, fen, san, plySans?, gameOver?, stateSync? }` |
 | `resetGame` | C→S | host only — back to start FEN |
 | `updateCustomSettings` | C→S | checkers-custom: `{ clientId, code, customSettings }` (host/white, before first ply) |
 | `updateSetup` | C→S | chess custom: `{ clientId, code, fen, ready? }` sync setup FEN / ready flags |
@@ -56,8 +56,8 @@ Customizable checkers rooms sync `customSettings` (`backwardCapture`, `mandatory
 
 Chess **custom** / `chess-custom` rooms use `phase` (`setup`|`play`) and sync free-setup FEN + `setupReady` before play. Do not confuse with `checkers-custom`.
 
-Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black) with starting position for Russian draughts; chess rooms keep standard FIDE FEN; backgammon rooms sync a `bg` state object (points, bar for classic, off, turn, dice, phase, history) with `fen` marker `bg w|b`.
+Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black) with starting position for Russian draughts; chess rooms keep standard FIDE FEN.
 
 ## Deploy note
 
-After pulling server changes (new chess `custom` / `chess-custom` mode, `updateSetup`, `startCustomGame`), **redeploy the Render service** so production picks up customizable chess rooms.
+After pulling server changes (removed backgammon modes; chess `custom` / `chess-custom` with `updateSetup` / `startCustomGame`), **redeploy the Render service** so production picks up the update.

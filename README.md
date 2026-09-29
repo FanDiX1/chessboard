@@ -1,24 +1,23 @@
 # BoardHack
 
-Dark-themed multi-game hub: chess (classic / dice / customizable), checkers (classic / customizable), and backgammon. Local bots and multiplayer rooms (RU/EN).
+Dark-themed multi-game hub: chess (classic / dice / customizable), checkers (classic / customizable), and Mahjong (stub). Local bots and multiplayer rooms (RU/EN).
 
 ## Features
 
-- **Hub** — game tabs (Chess / Checkers / Backgammon / Mahjong) with mode cards
+- **Hub** — game tabs (Chess / Checkers / Mahjong) with mode cards
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
 - **Chess → Customizable** — free piece setup (palette) before play; then classic rules vs Stockfish or MP
 - **Checkers → Classic** — Russian draughts vs local bot or online multiplayer
 - **Checkers → Customizable** — house rules (backward capture for men, mandatory capture, move timer)
-- **Backgammon → Classic** — Russian long nardy vs local bot or online multiplayer (same direction, no hitting, head rule)
-- **Backgammon → Short** — short/Western backgammon vs local bot or online multiplayer (hitting, bar, bearing off)
+- **Mahjong** — stub panel (modes coming soon)
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
 - **Multiplayer** — room codes via Socket.IO server (`server/`); nicknames + spectate by code; live public room list in each MP lobby
 - **i18n** — Russian / English UI
 
 ## Quick start (static site)
 
-Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/*/index.html` / `gamemodes/backgammon/*/index.html` in a browser.
+Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/*/index.html` in a browser.
 
 Stockfish needs HTTP(S) (not `file://`) for WASM workers.
 
@@ -47,8 +46,6 @@ gamemodes/chess/dice/      # dice chess
 gamemodes/chess/custom/    # free-setup customizable chess
 gamemodes/checkers/classic/# Russian draughts
 gamemodes/checkers/custom/ # customizable draughts house rules
-gamemodes/backgammon/long/   # classic long nardy (классика)
-gamemodes/backgammon/classic/# short backgammon (короткие)
 js/                        # Stockfish bot helper
 vendor/stockfish/          # Stockfish 18 lite WASM
 server/                    # Express + Socket.IO rooms (no node_modules in git)

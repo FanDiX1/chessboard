@@ -43,10 +43,6 @@
         <span class="hub-tab-icon">⬤</span>
         <span id="tabCheckersLabel">Шашки</span>
       </button>
-      <button type="button" class="hub-tab" role="tab" id="tabBackgammon" data-game="backgammon" aria-selected="false" aria-controls="panelBackgammon">
-        <span class="hub-tab-icon">⚪</span>
-        <span id="tabBackgammonLabel">Нарды</span>
-      </button>
       <button type="button" class="hub-tab" role="tab" id="tabMahjong" data-game="mahjong" aria-selected="false" aria-controls="panelMahjong">
         <span class="hub-tab-icon">🀄</span>
         <span id="tabMahjongLabel">Маджонг</span>
@@ -97,24 +93,6 @@
         </div>
       </section>
 
-      <section class="hub-panel" id="panelBackgammon" role="tabpanel" aria-labelledby="tabBackgammon" data-game="backgammon" hidden>
-        <div class="hub-panel-head">
-          <h2 id="panelBackgammonTitle">Нарды</h2>
-          <p class="hub-panel-desc" id="panelBackgammonDesc">Классика и короткие нарды — бот или онлайн-комната.</p>
-        </div>
-        <div class="mode-cards">
-          <a class="mode-card" href="gamemodes/backgammon/long/index.html">
-            <h2>⚫ <span id="cardBackgammonLongTitle">Классика</span></h2>
-            <p id="cardBackgammonLongDesc">Классические длинные нарды: одно направление, без сбивания, правило головы. Бот или онлайн-комната.</p>
-            <div class="go" id="cardBackgammonLongGo">Открыть →</div>
-          </a>
-          <a class="mode-card" href="gamemodes/backgammon/classic/index.html">
-            <h2>⚪ <span id="cardBackgammonClassicTitle">Короткие</span></h2>
-            <p id="cardBackgammonClassicDesc">Короткие нарды: взятие, бар, вывод, дубли — 4 хода. Бот или онлайн-комната.</p>
-            <div class="go" id="cardBackgammonClassicGo">Открыть →</div>
-          </a>
-        </div>
-      </section>
 
       <section class="hub-panel" id="panelMahjong" role="tabpanel" aria-labelledby="tabMahjong" data-game="mahjong" hidden>
         <div class="hub-panel-head">
@@ -147,15 +125,12 @@
           tabChess: "Шахматы",
           tabCheckers: "Шашки",
           tabMahjong: "Маджонг",
-          tabBackgammon: "Нарды",
           panelChessTitle: "Шахматы",
           panelChessDesc: "Классика, кости и настраиваемый — локальный Stockfish и мультиплеер.",
           panelCheckersTitle: "Шашки",
           panelCheckersDesc: "Русские шашки и настраиваемый режим — бот или мультиплеер по коду.",
           panelMahjongTitle: "Маджонг",
           panelMahjongDesc: "Режимы маджонга появятся здесь.",
-          panelBackgammonTitle: "Нарды",
-          panelBackgammonDesc: "Классика и короткие нарды — бот или онлайн-комната.",
           cardClassicTitle: "Классика",
           cardClassicDesc: "Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.",
           cardClassicGo: "Открыть →",
@@ -174,12 +149,6 @@
           cardMahjongSoonTitle: "Скоро",
           cardMahjongSoonDesc: "Режимы маджонга в разработке. Загляните позже.",
           cardMahjongSoonGo: "Скоро",
-          cardBackgammonClassicTitle: "Короткие",
-          cardBackgammonClassicDesc: "Короткие нарды: взятие, бар, вывод, дубли — 4 хода. Бот или онлайн-комната.",
-          cardBackgammonClassicGo: "Открыть →",
-          cardBackgammonLongTitle: "Классика",
-          cardBackgammonLongDesc: "Классические длинные нарды: одно направление, без сбивания, правило головы. Бот или онлайн-комната.",
-          cardBackgammonLongGo: "Открыть →"
         },
         en: {
           docTitle: "BoardHack — Hack the Board",
@@ -188,15 +157,12 @@
           tabChess: "Chess",
           tabCheckers: "Checkers",
           tabMahjong: "Mahjong",
-          tabBackgammon: "Backgammon",
           panelChessTitle: "Chess",
           panelChessDesc: "Classic, dice, and customizable — local Stockfish and multiplayer.",
           panelCheckersTitle: "Checkers",
           panelCheckersDesc: "Russian draughts and customizable — local bot or online multiplayer.",
           panelMahjongTitle: "Mahjong",
           panelMahjongDesc: "Mahjong modes will land here.",
-          panelBackgammonTitle: "Backgammon",
-          panelBackgammonDesc: "Classic and short nardy — local bot or online room.",
           cardClassicTitle: "Classic",
           cardClassicDesc: "Standard FIDE chess. Move by move, no piece restrictions.",
           cardClassicGo: "Open →",
@@ -215,12 +181,6 @@
           cardMahjongSoonTitle: "Coming soon",
           cardMahjongSoonDesc: "Mahjong modes are in the works. Check back later.",
           cardMahjongSoonGo: "Coming soon",
-          cardBackgammonClassicTitle: "Short",
-          cardBackgammonClassicDesc: "Short/Western backgammon: hitting, bar, bearing off, doubles = 4 moves. Bot or online room.",
-          cardBackgammonClassicGo: "Open →",
-          cardBackgammonLongTitle: "Classic",
-          cardBackgammonLongDesc: "Classic long nardy: same direction, no hitting, head rule. Bot or online room.",
-          cardBackgammonLongGo: "Open →"
         }
       };
 
@@ -233,7 +193,7 @@
       var game = "chess";
       try {
         var savedGame = localStorage.getItem(GAME_KEY);
-        if (savedGame === "chess" || savedGame === "checkers" || savedGame === "mahjong" || savedGame === "backgammon") game = savedGame;
+        if (savedGame === "chess" || savedGame === "checkers" || savedGame === "mahjong") game = savedGame;
       } catch (e) {}
 
       function t(key) {
@@ -249,15 +209,12 @@
         document.getElementById("tabChessLabel").textContent = t("tabChess");
         document.getElementById("tabCheckersLabel").textContent = t("tabCheckers");
         document.getElementById("tabMahjongLabel").textContent = t("tabMahjong");
-        document.getElementById("tabBackgammonLabel").textContent = t("tabBackgammon");
         document.getElementById("panelChessTitle").textContent = t("panelChessTitle");
         document.getElementById("panelChessDesc").textContent = t("panelChessDesc");
         document.getElementById("panelCheckersTitle").textContent = t("panelCheckersTitle");
         document.getElementById("panelCheckersDesc").textContent = t("panelCheckersDesc");
         document.getElementById("panelMahjongTitle").textContent = t("panelMahjongTitle");
         document.getElementById("panelMahjongDesc").textContent = t("panelMahjongDesc");
-        document.getElementById("panelBackgammonTitle").textContent = t("panelBackgammonTitle");
-        document.getElementById("panelBackgammonDesc").textContent = t("panelBackgammonDesc");
         document.getElementById("cardClassicTitle").textContent = t("cardClassicTitle");
         document.getElementById("cardClassicDesc").textContent = t("cardClassicDesc");
         document.getElementById("cardClassicGo").textContent = t("cardClassicGo");
@@ -276,12 +233,6 @@
         document.getElementById("cardMahjongSoonTitle").textContent = t("cardMahjongSoonTitle");
         document.getElementById("cardMahjongSoonDesc").textContent = t("cardMahjongSoonDesc");
         document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");
-        document.getElementById("cardBackgammonClassicTitle").textContent = t("cardBackgammonClassicTitle");
-        document.getElementById("cardBackgammonClassicDesc").textContent = t("cardBackgammonClassicDesc");
-        document.getElementById("cardBackgammonClassicGo").textContent = t("cardBackgammonClassicGo");
-        document.getElementById("cardBackgammonLongTitle").textContent = t("cardBackgammonLongTitle");
-        document.getElementById("cardBackgammonLongDesc").textContent = t("cardBackgammonLongDesc");
-        document.getElementById("cardBackgammonLongGo").textContent = t("cardBackgammonLongGo");
         document.getElementById("langRu").classList.toggle("active", lang === "ru");
         document.getElementById("langEn").classList.toggle("active", lang === "en");
       }
@@ -294,7 +245,7 @@
       }
 
       function setGame(next) {
-        if (next !== "chess" && next !== "checkers" && next !== "mahjong" && next !== "backgammon") return;
+        if (next !== "chess" && next !== "checkers" && next !== "mahjong") return;
         game = next;
         try { localStorage.setItem(GAME_KEY, game); } catch (e) {}
         var tabs = document.querySelectorAll(".hub-tab");

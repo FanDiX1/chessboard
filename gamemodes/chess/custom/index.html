@@ -258,7 +258,7 @@
           rulesButton: "Правила",
           rulesTitle: "Правила: настраиваемые шахматы",
           rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Расстановка:</strong> перед партией вы сами ставите фигуры на пустую или стандартную доску.</li><li><strong>Палитра:</strong> выберите фигуру (белую или чёрную), затем клетку — чтобы поставить. Повторный клик по клетке с той же фигурой снимает её; другая фигура заменяет.</li><li><strong>Старт:</strong> нужны ровно один белый и один чёрный король. Если сторона хода уже под матом — предупреждение, но начать можно.</li><li><strong>Игра:</strong> дальше как в классике — Stockfish, выбор стороны, онлайн-комнаты.</li><li><strong>Мультиплеер:</strong> расстановка синхронизируется (FEN); оба подтверждают старт или хост начинает, когда позиция готова. Зрители только смотрят.</li></ul>",
+          rulesHtml: "<ul><li><strong>Расстановка:</strong> перед партией вы сами ставите фигуры на пустую или стандартную доску.</li><li><strong>Палитра:</strong> выберите фигуру (белую или чёрную), затем клетку — чтобы поставить. Повторный клик по клетке с той же фигурой снимает её; другая фигура заменяет. Второй король того же цвета заменяет предыдущего (на доске не больше одного белого и одного чёрного короля).</li><li><strong>Старт:</strong> нужны ровно один белый и один чёрный король. Если сторона хода уже под матом — предупреждение, но начать можно.</li><li><strong>Игра:</strong> дальше как в классике — Stockfish, выбор стороны, онлайн-комнаты.</li><li><strong>Мультиплеер:</strong> расстановка синхронизируется (FEN); оба подтверждают старт или хост начинает, когда позиция готова. Зрители только смотрят.</li></ul>",
           sideSelectLabel: "Играть за",
           diffLabel: "Сложность бота",
           diffEasy: "Новичок",
@@ -289,11 +289,11 @@
           checkYou: "Шах! Ваш ход — защищайтесь или контратакуйте.",
           botThinking: "Бот думает…",
           botInCheck: "Бот под шахом — считает…",
-          checkmateWin: "Мат — победили {winner}!",
-          kingCaptureWin: "Король взят — победили {winner}!",
-          winnerYou: "вы",
-          winnerBot: "бот",
-          winnerOpp: "соперник",
+          checkmateWin: "Мат — {winner}!",
+          kingCaptureWin: "Король взят — {winner}!",
+          winnerYou: "вы победили",
+          winnerBot: "победил бот",
+          winnerOpp: "победил соперник",
           stalemate: "Пат — ничья.",
           drawRepetition: "Ничья — троекратное повторение.",
           drawMaterial: "Ничья — недостаточно материала.",
@@ -402,7 +402,7 @@
           rulesButton: "Rules",
           rulesTitle: "Rules: customizable chess",
           rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Setup:</strong> before play, place pieces freely on an empty or standard board.</li><li><strong>Palette:</strong> select a piece (white or black), then a square to place it. Clicking the same piece again removes it; another piece replaces it.</li><li><strong>Start:</strong> exactly one white and one black king. If the side to move is already mated — warning, but start is allowed.</li><li><strong>Play:</strong> same as classic — Stockfish, side select, online rooms.</li><li><strong>Multiplayer:</strong> setup FEN is synced; both confirm start or the host starts when ready. Spectators are read-only.</li></ul>",
+          rulesHtml: "<ul><li><strong>Setup:</strong> before play, place pieces freely on an empty or standard board.</li><li><strong>Palette:</strong> select a piece (white or black), then a square to place it. Clicking the same piece again removes it; another piece replaces it. Placing a second king of the same color replaces the previous one (at most one white and one black king).</li><li><strong>Start:</strong> exactly one white and one black king. If the side to move is already mated — warning, but start is allowed.</li><li><strong>Play:</strong> same as classic — Stockfish, side select, online rooms.</li><li><strong>Multiplayer:</strong> setup FEN is synced; both confirm start or the host starts when ready. Spectators are read-only.</li></ul>",
           sideSelectLabel: "Play as",
           diffLabel: "Bot difficulty",
           diffEasy: "Beginner",
@@ -433,11 +433,11 @@
           checkYou: "Check! Your move — defend or counter.",
           botThinking: "Bot thinking…",
           botInCheck: "Bot is in check — calculating…",
-          checkmateWin: "Checkmate — {winner} wins!",
-          kingCaptureWin: "King captured — {winner} wins!",
-          winnerYou: "you",
-          winnerBot: "bot",
-          winnerOpp: "opponent",
+          checkmateWin: "Checkmate — {winner}!",
+          kingCaptureWin: "King captured — {winner}!",
+          winnerYou: "you win",
+          winnerBot: "bot wins",
+          winnerOpp: "opponent wins",
           stalemate: "Stalemate — draw.",
           drawRepetition: "Draw — threefold repetition.",
           drawMaterial: "Draw — insufficient material.",
@@ -1648,6 +1648,12 @@
         if (cur === setupPalettePiece) {
           delete pos[square];
         } else {
+          // At most one king per color: placing a second replaces the old one
+          if (setupPalettePiece === "wK" || setupPalettePiece === "bK") {
+            Object.keys(pos).forEach(function (sq) {
+              if (sq !== square && pos[sq] === setupPalettePiece) delete pos[sq];
+            });
+          }
           pos[square] = setupPalettePiece;
         }
         applySetupPosition(pos, false);

@@ -366,8 +366,8 @@
       statusOpp: "Ход соперника",
       statusMustCapture: "Нужно взять",
       statusThinking: "Бот думает…",
-      statusWinW: "Белые победили",
-      statusWinB: "Чёрные победили",
+      statusWinW: "Победа белых",
+      statusWinB: "Победа чёрных",
       statusDraw: "Ничья",
       thinking: "Думаю…",
       noMoves: "Пока нет ходов",
@@ -423,7 +423,8 @@
       setTimerHint: "Секунды на ход; 0 — без таймера",
       timerOff: "Выкл.",
       timerStatus: "Таймер: {n} с",
-      timerTimeoutLoss: "Время вышло — {loser} проиграли",
+      timerTimeoutLossYou: "Время вышло — вы проиграли",
+      timerTimeoutLossOther: "Время вышло — проиграл {loser}",
       winnerYou: "вы",
       winnerOpp: "соперник",
       winnerBot: "бот",
@@ -516,7 +517,8 @@
       setTimerHint: "Seconds per move; 0 = off",
       timerOff: "Off",
       timerStatus: "Timer: {n}s",
-      timerTimeoutLoss: "Time out — {loser} lose",
+      timerTimeoutLossYou: "Time out — you lose",
+      timerTimeoutLossOther: "Time out — {loser} loses",
       winnerYou: "you",
       winnerOpp: "opponent",
       winnerBot: "bot",
@@ -1001,10 +1003,11 @@
     var loserLabel;
     if (isMultiplayer()) loserLabel = loser === userColor ? t("winnerYou") : t("winnerOpp");
     else loserLabel = loser === userColor ? t("winnerYou") : t("winnerBot");
-    var dot = document.getElementById("statusDot");
     var text = document.getElementById("statusText");
-    if (dot) { dot.className = "status-dot danger"; }
-    if (text) text.textContent = t("timerTimeoutLoss").replace("{loser}", loserLabel);
+    if (text) {
+      if (loser === userColor) text.textContent = t("timerTimeoutLossYou");
+      else text.textContent = t("timerTimeoutLossOther").replace("{loser}", loserLabel);
+    }
     clearMoveHighlights();
     renderBoard();
     if (isMultiplayer() && canMpAct() && mpSocket) {
