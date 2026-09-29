@@ -13,7 +13,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <a href="index.html">
+        <a href="./">
           <div class="brand-mark">♞</div>
           <div>Board<span class="accent">Hack</span></div>
         </a>
@@ -56,17 +56,17 @@
           <p class="hub-panel-desc" id="panelChessDesc">Классика и кости — локальный Stockfish и мультиплеер.</p>
         </div>
         <div class="mode-cards">
-          <a class="mode-card" href="gamemodes/chess/classic/index.html">
+          <a class="mode-card" href="gamemodes/chess/classic/">
             <h2>♟ <span id="cardClassicTitle">Классика</span></h2>
             <p id="cardClassicDesc">Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.</p>
             <div class="go" id="cardClassicGo">Открыть →</div>
           </a>
-          <a class="mode-card" href="gamemodes/chess/dice/index.html">
+          <a class="mode-card" href="gamemodes/chess/dice/">
             <h2>🎲 <span id="cardDiceTitle">Кости</span></h2>
             <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
             <div class="go" id="cardDiceGo">Открыть →</div>
           </a>
-          <a class="mode-card" href="gamemodes/chess/custom/index.html">
+          <a class="mode-card" href="gamemodes/chess/custom/">
             <h2>⚙ <span id="cardChessCustomTitle">Настраиваемый</span></h2>
             <p id="cardChessCustomDesc">Свободная расстановка фигур перед партией. Stockfish или онлайн-комната.</p>
             <div class="go" id="cardChessCustomGo">Открыть →</div>
@@ -80,12 +80,12 @@
           <p class="hub-panel-desc" id="panelCheckersDesc">Русские шашки и настраиваемый режим — бот или мультиплеер по коду.</p>
         </div>
         <div class="mode-cards">
-          <a class="mode-card" href="gamemodes/checkers/classic/index.html">
+          <a class="mode-card" href="gamemodes/checkers/classic/">
             <h2>⬤ <span id="cardCheckersClassicTitle">Классика</span></h2>
             <p id="cardCheckersClassicDesc">Русские шашки 8×8: дамка, обязательное взятие, бот или онлайн-комната.</p>
             <div class="go" id="cardCheckersClassicGo">Открыть →</div>
           </a>
-          <a class="mode-card" href="gamemodes/checkers/custom/index.html">
+          <a class="mode-card" href="gamemodes/checkers/custom/">
             <h2>⚙ <span id="cardCheckersCustomTitle">Настраиваемый</span></h2>
             <p id="cardCheckersCustomDesc">Шашки с правилами на выбор: взятие назад, обязательное взятие, таймер хода. Бот или онлайн-комната.</p>
             <div class="go" id="cardCheckersCustomGo">Открыть →</div>
@@ -113,6 +113,17 @@
   </main>
 
   <script>
+
+    (function () {
+      try {
+        var u = new URL(window.location.href);
+        if (/\/index\.html$/i.test(u.pathname)) {
+          u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+          history.replaceState(null, "", u.pathname + u.search + u.hash);
+        }
+      } catch (e) {}
+    })();
+
     (function () {
       "use strict";
       var LANG_KEY = "boardhack-lang";
@@ -278,5 +289,6 @@
       setGame(game);
     })();
   </script>
+
 </body>
 </html>

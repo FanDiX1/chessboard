@@ -17,7 +17,7 @@ Dark-themed multi-game hub: chess (classic / dice / customizable), checkers (cla
 
 ## Quick start (static site)
 
-Serve the repo root with any static file server, or open `index.html` / `gamemodes/chess/*/index.html` / `gamemodes/checkers/*/index.html` in a browser.
+Serve the repo root with any static file server (preferred), or open directory URLs such as `/`, `/gamemodes/chess/classic/`, `/gamemodes/checkers/classic/` (GitHub Pages serves `index.html` for directories). Opening `file://…/index.html` still works locally.
 
 Stockfish needs HTTP(S) (not `file://`) for WASM workers.
 

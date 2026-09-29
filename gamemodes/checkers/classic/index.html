@@ -122,7 +122,7 @@
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
-      <a href="../../../index.html">
+      <a href="../../../">
         <div class="brand-mark">♞</div>
         <div>Board<span class="accent">Hack</span></div>
       </a>
@@ -283,6 +283,17 @@
 
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <script>
+
+    (function () {
+      try {
+        var u = new URL(window.location.href);
+        if (/\/index\.html$/i.test(u.pathname)) {
+          u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+          history.replaceState(null, "", u.pathname + u.search + u.hash);
+        }
+      } catch (e) {}
+    })();
+
 (function () {
   "use strict";
 
@@ -894,6 +905,10 @@
 
   function buildShareLink(code) {
     var u = new URL(window.location.href);
+    if (/\/index\.html$/i.test(u.pathname)) {
+      u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+    }
+
     u.searchParams.delete("room");
     u.searchParams.delete("join");
     u.searchParams.delete("spectate");

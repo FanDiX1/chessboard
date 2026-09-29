@@ -14,7 +14,7 @@
 <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <a href="../../../index.html">
+        <a href="../../../">
           <div class="brand-mark">♞</div>
           <div>Board<span class="accent">Hack</span></div>
         </a>
@@ -27,21 +27,21 @@
             <span class="chev">▾</span>
           </button>
           <div class="mode-menu-panel" id="modeMenuPanel" role="menu">
-            <a href="../classic/index.html" data-mode="classic">
+            <a href="../classic/" data-mode="classic">
               <span>♟</span>
               <span>
                 <span id="menuClassic">Classic</span>
                 <span class="mode-desc" id="menuClassicDesc"></span>
               </span>
             </a>
-            <a href="./index.html" class="active" data-mode="dice">
+            <a href="./" class="active" data-mode="dice">
               <span>🎲</span>
               <span>
                 <span id="menuDice">Dice</span>
                 <span class="mode-desc" id="menuDiceDesc"></span>
               </span>
             </a>
-            <a href="../custom/index.html" data-mode="custom">
+            <a href="../custom/" data-mode="custom">
               <span>⚙</span>
               <span>
                 <span id="menuCustom">Custom</span>
@@ -223,6 +223,17 @@
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="../../../js/stockfish-bot.js"></script>
   <script>
+
+    (function () {
+      try {
+        var u = new URL(window.location.href);
+        if (/\/index\.html$/i.test(u.pathname)) {
+          u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+          history.replaceState(null, "", u.pathname + u.search + u.hash);
+        }
+      } catch (e) {}
+    })();
+
     (function () {
       "use strict";
       var GAME_MODE = "dice";
@@ -800,6 +811,10 @@
 
       function buildShareLink(code) {
         var u = new URL(window.location.href);
+        if (/\/index\.html$/i.test(u.pathname)) {
+          u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+        }
+
         u.searchParams.delete("room");
         u.searchParams.delete("join");
         u.searchParams.delete("spectate");
