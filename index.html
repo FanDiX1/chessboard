@@ -63,7 +63,7 @@
       <section class="hub-panel active" id="panelChess" role="tabpanel" aria-labelledby="tabChess" data-game="chess">
         <div class="hub-panel-head">
           <h2 id="panelChessTitle">Шахматы</h2>
-          <p class="hub-panel-desc" id="panelChessDesc">Классика и кости — локальный Stockfish и мультиплеер.</p>
+          <p class="hub-panel-desc" id="panelChessDesc">Классика, кости, настраиваемый, битва коней и атомные — локальный бот и мультиплеер.</p>
         </div>
         <div class="mode-cards">
           <a class="mode-card" href="gamemodes/chess/classic/">
@@ -80,6 +80,16 @@
             <h2>⚙ <span id="cardChessCustomTitle">Настраиваемый</span></h2>
             <p id="cardChessCustomDesc">Свободная расстановка фигур перед партией. Stockfish или онлайн-комната.</p>
             <div class="go" id="cardChessCustomGo">Открыть →</div>
+          </a>
+          <a class="mode-card" href="gamemodes/chess/knights/">
+            <h2>♞ <span id="cardKnightsTitle">Битва коней</span></h2>
+            <p id="cardKnightsDesc">Короли и пешки как в классике — все остальные фигуры заменены конями. Против Stockfish.</p>
+            <div class="go" id="cardKnightsGo">Открыть →</div>
+          </a>
+          <a class="mode-card" href="gamemodes/chess/atomic/">
+            <h2>☢ <span id="cardAtomicTitle">Атомные</span></h2>
+            <p id="cardAtomicDesc">Взятие вызывает взрыв: фигуры рядом исчезают (пешки не взрываются). Локальный бот.</p>
+            <div class="go" id="cardAtomicGo">Открыть →</div>
           </a>
         </div>
       </section>
@@ -148,7 +158,7 @@
           tabCheckers: "Шашки",
           tabMahjong: "Маджонг",
           panelChessTitle: "Шахматы",
-          panelChessDesc: "Классика, кости и настраиваемый — локальный Stockfish и мультиплеер.",
+          panelChessDesc: "Классика, кости, настраиваемый, битва коней и атомные — локальный бот и мультиплеер.",
           panelCheckersTitle: "Шашки",
           panelCheckersDesc: "Русские шашки и настраиваемый режим — бот или мультиплеер по коду.",
           panelMahjongTitle: "Маджонг",
@@ -162,6 +172,12 @@
           cardChessCustomTitle: "Настраиваемый",
           cardChessCustomDesc: "Свободная расстановка фигур перед партией. Stockfish или онлайн-комната.",
           cardChessCustomGo: "Открыть →",
+          cardKnightsTitle: "Битва коней",
+          cardKnightsDesc: "Короли и пешки как в классике — все остальные фигуры заменены конями. Против Stockfish.",
+          cardKnightsGo: "Открыть →",
+          cardAtomicTitle: "Атомные",
+          cardAtomicDesc: "Взятие вызывает взрыв: фигуры рядом исчезают (пешки не взрываются). Локальный бот.",
+          cardAtomicGo: "Открыть →",
           cardCheckersClassicTitle: "Классика",
           cardCheckersClassicDesc: "Русские шашки 8×8: дамка, обязательное взятие, бот или онлайн-комната.",
           cardCheckersClassicGo: "Открыть →",
@@ -181,7 +197,7 @@
           tabCheckers: "Checkers",
           tabMahjong: "Mahjong",
           panelChessTitle: "Chess",
-          panelChessDesc: "Classic, dice, and customizable — local Stockfish and multiplayer.",
+          panelChessDesc: "Classic, dice, customizable, knights battle, and atomic — local bot and multiplayer.",
           panelCheckersTitle: "Checkers",
           panelCheckersDesc: "Russian draughts and customizable — local bot or online multiplayer.",
           panelMahjongTitle: "Mahjong",
@@ -195,6 +211,12 @@
           cardChessCustomTitle: "Customizable",
           cardChessCustomDesc: "Free piece setup before play. Stockfish or online room.",
           cardChessCustomGo: "Open →",
+          cardKnightsTitle: "Knights Battle",
+          cardKnightsDesc: "Kings and pawns as in classic — every other piece becomes a knight. Vs Stockfish.",
+          cardKnightsGo: "Open →",
+          cardAtomicTitle: "Atomic",
+          cardAtomicDesc: "Captures explode nearby pieces (pawns are immune). Local bot.",
+          cardAtomicGo: "Open →",
           cardCheckersClassicTitle: "Classic",
           cardCheckersClassicDesc: "Russian draughts 8×8: flying kings, mandatory captures, bot or online room.",
           cardCheckersClassicGo: "Open →",
@@ -247,6 +269,12 @@
         document.getElementById("cardChessCustomTitle").textContent = t("cardChessCustomTitle");
         document.getElementById("cardChessCustomDesc").textContent = t("cardChessCustomDesc");
         document.getElementById("cardChessCustomGo").textContent = t("cardChessCustomGo");
+        document.getElementById("cardKnightsTitle").textContent = t("cardKnightsTitle");
+        document.getElementById("cardKnightsDesc").textContent = t("cardKnightsDesc");
+        document.getElementById("cardKnightsGo").textContent = t("cardKnightsGo");
+        document.getElementById("cardAtomicTitle").textContent = t("cardAtomicTitle");
+        document.getElementById("cardAtomicDesc").textContent = t("cardAtomicDesc");
+        document.getElementById("cardAtomicGo").textContent = t("cardAtomicGo");
         document.getElementById("cardCheckersClassicTitle").textContent = t("cardCheckersClassicTitle");
         document.getElementById("cardCheckersClassicDesc").textContent = t("cardCheckersClassicDesc");
         document.getElementById("cardCheckersClassicGo").textContent = t("cardCheckersClassicGo");

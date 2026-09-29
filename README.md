@@ -1,6 +1,6 @@
 # BoardHack
 
-Dark-themed multi-game hub: chess (classic / dice / customizable), checkers (classic / customizable), and Mahjong (stub). Local bots and multiplayer rooms (RU/EN).
+Dark-themed multi-game hub: chess (classic / dice / customizable / knights battle / atomic), checkers (classic / customizable), and Mahjong (stub). Local bots and multiplayer rooms (RU/EN).
 
 ## Features
 
@@ -8,6 +8,8 @@ Dark-themed multi-game hub: chess (classic / dice / customizable), checkers (cla
 - **Chess → Classic** — standard FIDE chess vs Stockfish or a friend
 - **Chess → Dice** — move only piece types rolled (1–3 dice)
 - **Chess → Customizable** — free piece setup (palette) before play; then classic rules vs Stockfish or MP
+- **Chess → Knights Battle** — all non-pawn/non-king pieces are knights; vs Stockfish (SP)
+- **Chess → Atomic** — captures explode adjacent non-pawn pieces; local search bot (SP)
 - **Checkers → Classic** — Russian draughts vs local bot or online multiplayer
 - **Checkers → Customizable** — house rules (backward capture for men, mandatory capture, move timer)
 - **Mahjong** — stub panel (modes coming soon)
@@ -44,9 +46,11 @@ css/                       # BoardHack styles
 gamemodes/chess/classic/   # classic chess
 gamemodes/chess/dice/      # dice chess
 gamemodes/chess/custom/    # free-setup customizable chess
+gamemodes/chess/knights/   # knights battle (SP)
+gamemodes/chess/atomic/    # atomic chess (SP)
 gamemodes/checkers/classic/# Russian draughts
 gamemodes/checkers/custom/ # customizable draughts house rules
-js/                        # Stockfish bot helper
+js/                        # Stockfish bot helper + atomic engine
 vendor/stockfish/          # Stockfish 18 lite WASM
 server/                    # Express + Socket.IO rooms (no node_modules in git)
 ```

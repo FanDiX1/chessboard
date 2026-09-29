@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoardHack — Knights Battle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+  <link rel="stylesheet" href="../../../css/boardhack.css" />
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="../../../">
+          <div class="brand-mark">♞</div>
+          <div>Board<span class="accent">Hack</span></div>
+        </a>
+        <span class="mode-badge" id="modeBadge">шахматы · битва коней</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="settings-menu" id="settingsMenu">
+          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+            <span aria-hidden="true">⚙</span>
+          </button>
+          <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
+            <div class="settings-menu-section">
+              <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+              <div class="lang-switch" role="group" aria-label="Language">
+                <button type="button" id="langRu" data-lang="ru">RU</button>
+                <span class="lang-sep">|</span>
+                <button type="button" id="langEn" data-lang="en">EN</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="layout">
+      <section class="card">
+        <div class="card-title" id="playAreaTitle"></div>
+        <div class="status-bar" id="statusBar">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText"></span>
+        </div>
+        <div class="board-wrap">
+          <div id="board"></div>
+          <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
+        </div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="card">
+          <div class="card-title" id="missionTitle"></div>
+          <div class="controls">
+            <div id="sideSelectWrap">
+              <label class="field-label" for="sideSelect" id="sideSelectLabel"></label>
+              <select id="sideSelect">
+                <option value="w" selected></option>
+                <option value="b"></option>
+              </select>
+            </div>
+            <div id="difficultyWrap">
+              <label class="field-label" for="difficulty" id="diffLabel"></label>
+              <select id="difficulty">
+                <option value="easy"></option>
+                <option value="medium" selected></option>
+                <option value="hard"></option>
+                <option value="expert"></option>
+                <option value="master"></option>
+              </select>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="newGameBtn"></button>
+              <button type="button" class="btn btn-ghost" id="undoBtn"></button>
+              <button type="button" class="btn btn-ghost" id="rulesBtn"></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-title" id="sessionTitle"></div>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="k" id="metaSideK"></div>
+              <div class="v" id="sideLabel"></div>
+            </div>
+            <div class="meta-item">
+              <div class="k" id="metaTurnK"></div>
+              <div class="v" id="turnLabel"></div>
+            </div>
+            <div class="meta-item">
+              <div class="k" id="metaMovesK"></div>
+              <div class="v" id="moveCount">0</div>
+            </div>
+            <div class="meta-item">
+              <div class="k" id="metaBotK"></div>
+              <div class="v" id="botLabel"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-title" id="historyTitle"></div>
+          <div class="move-list" id="moveList"></div>
+        </section>
+      </aside>
+    </div>
+    <footer class="footer">BoardHack</footer>
+  </main>
+
+  <dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+    <div class="rules-dialog-head">
+      <h2 class="card-title" id="rulesTitle"></h2>
+      <button type="button" class="rules-dialog-close" id="rulesCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="rules-box" id="rulesBox"></div>
+  </dialog>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
+  <script src="../../../js/stockfish-bot.js"></script>
+  <script src="../../../js/drag-scroll-lock.js"></script>
+  <script src="../../../js/board-context-guard.js"></script>
+  <script>
+    (function () {
+      try {
+        var u = new URL(window.location.href);
+        if (/\/index\.html$/i.test(u.pathname)) {
+          u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+          history.replaceState(null, "", u.pathname + u.search + u.hash);
+        }
+      } catch (e) {}
+    })();
+
+    (function () {
+      "use strict";
+      var GAME_MODE = "knights";
+      var LANG_KEY = "boardhack-lang";
+      var COLOR_KEY = "boardhack-knights-color";
+
+      var I18N = {
+        ru: {
+          docTitle: "BoardHack — Битва коней",
+          playArea: "Игровая зона",
+          mission: "Управление",
+          session: "Сессия",
+          history: "История ходов",
+          rulesButton: "Правила",
+          rulesTitle: "Битва коней — правила",
+          rulesClose: "Закрыть правила",
+          rulesHtml: "<ul><li><strong>Расстановка:</strong> короли и пешки как в классике; все остальные фигуры заменены конями того же цвета.</li><li><strong>Ходы:</strong> кони ходят буквой «Г»; пешки и король — как обычно. Рокировки нет (ладей нет).</li><li><strong>Цель:</strong> мат или взятие короля.</li><li><strong>Бот:</strong> Stockfish по FEN с конями.</li></ul>",
+          sideSelectLabel: "Играть за",
+          diffLabel: "Сложность бота",
+          diffEasy: "Новичок",
+          diffMedium: "Любитель",
+          diffHard: "Продвинутый",
+          diffExpert: "Эксперт",
+          diffMaster: "Мастер",
+          newGame: "Новая игра",
+          undo: "Отмена",
+          metaSide: "Сторона",
+          metaTurn: "Ход",
+          metaMoves: "Ходы",
+          metaBot: "Бот",
+          metaOpp: "Противник",
+          sideWhite: "Белые",
+          sideBlack: "Чёрные",
+          turnYou: "Вы",
+          turnBot: "Бот",
+          turnOver: "Конец игры",
+          turnDraw: "Ничья",
+          easy: "Новичок",
+          medium: "Любитель",
+          hard: "Продвинутый",
+          expert: "Эксперт",
+          master: "Мастер",
+          emptyMoves: "Ходов пока нет. Сделайте первый.",
+          thinking: "бот думает…",
+          yourMove: "Ваш ход",
+          checkYou: "Шах! Ваш ход — защищайтесь или контратакуйте.",
+          botThinking: "Бот думает…",
+          botInCheck: "Бот под шахом — считает…",
+          checkmateWin: "Мат — {winner}!",
+          kingCaptureWin: "Король взят — {winner}!",
+          winnerYou: "вы победили",
+          winnerBot: "победил бот",
+          stalemate: "Пат — ничья.",
+          drawRepetition: "Ничья — троекратное повторение.",
+          drawMaterial: "Ничья — недостаточно материала.",
+          draw: "Ничья.",
+          settingsLangLabel: "Язык",
+          modeBadge: "шахматы · битва коней"
+        },
+        en: {
+          docTitle: "BoardHack — Knights Battle",
+          playArea: "Play area",
+          mission: "Mission control",
+          session: "Session",
+          history: "Move history",
+          rulesButton: "Rules",
+          rulesTitle: "Knights Battle — rules",
+          rulesClose: "Close rules",
+          rulesHtml: "<ul><li><strong>Setup:</strong> kings and pawns as in classic chess; every other piece is replaced by a same-color knight.</li><li><strong>Moves:</strong> knights move in an L; pawns and kings are normal. No castling (no rooks).</li><li><strong>Goal:</strong> checkmate or capture the king.</li><li><strong>Bot:</strong> Stockfish on the knights FEN.</li></ul>",
+          sideSelectLabel: "Play as",
+          diffLabel: "Bot difficulty",
+          diffEasy: "Beginner",
+          diffMedium: "Amateur",
+          diffHard: "Advanced",
+          diffExpert: "Expert",
+          diffMaster: "Master",
+          newGame: "New Game",
+          undo: "Undo",
+          metaSide: "Side",
+          metaTurn: "Turn",
+          metaMoves: "Moves",
+          metaBot: "Bot",
+          metaOpp: "Opponent",
+          sideWhite: "White",
+          sideBlack: "Black",
+          turnYou: "You",
+          turnBot: "Bot",
+          turnOver: "Game over",
+          turnDraw: "Draw",
+          easy: "Beginner",
+          medium: "Amateur",
+          hard: "Advanced",
+          expert: "Expert",
+          master: "Master",
+          emptyMoves: "No moves yet. Make the first strike.",
+          thinking: "bot thinking…",
+          yourMove: "Your move",
+          checkYou: "Check! Your move — defend or counter.",
+          botThinking: "Bot thinking…",
+          botInCheck: "Bot is in check — calculating…",
+          checkmateWin: "Checkmate — {winner}!",
+          kingCaptureWin: "King captured — {winner}!",
+          winnerYou: "you win",
+          winnerBot: "bot wins",
+          stalemate: "Stalemate — draw.",
+          drawRepetition: "Draw — threefold repetition.",
+          drawMaterial: "Draw — insufficient material.",
+          draw: "Draw.",
+          settingsLangLabel: "Language",
+          modeBadge: "chess · knights battle"
+        }
+      };
+
+      var lang = "ru";
+      try {
+        var saved = localStorage.getItem(LANG_KEY);
+        if (saved === "en" || saved === "ru") lang = saved;
+      } catch (e) {}
+
+      function t(key) {
+        var pack = I18N[lang] || I18N.ru;
+        return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+      }
+
+      // Kings + pawns stay; R/N/B/Q → knights. No castling rights.
+      var START_FEN = "nnnknnnn/pppppppp/8/8/8/8/PPPPPPPP/NNNKNNNN w - - 0 1";
+      var START_POSITION = {
+        a8: "bN", b8: "bN", c8: "bN", d8: "bN", e8: "bK", f8: "bN", g8: "bN", h8: "bN",
+        a7: "bP", b7: "bP", c7: "bP", d7: "bP", e7: "bP", f7: "bP", g7: "bP", h7: "bP",
+        a2: "wP", b2: "wP", c2: "wP", d2: "wP", e2: "wP", f2: "wP", g2: "wP", h2: "wP",
+        a1: "wN", b1: "wN", c1: "wN", d1: "wN", e1: "wK", f1: "wN", g1: "wN", h1: "wN"
+      };
+      var PIECE_THEME =
+        "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
+
+      var game = new Chess();
+      game.load(START_FEN);
+      var board = null;
+      var userColor = "w";
+      try {
+        var savedColor = localStorage.getItem(COLOR_KEY);
+        if (savedColor === "w" || savedColor === "b") userColor = savedColor;
+      } catch (e) {}
+      var selectedSquare = null;
+      var gameOver = false;
+      var botThinking = false;
+      var botTimerId = null;
+      var botSchedGen = 0;
+      var undoStack = [];
+      var plySans = [];
+
+      var $statusText = $("#statusText");
+      var $statusDot = $("#statusDot");
+      var $thinking = $("#thinking");
+      var $moveList = $("#moveList");
+      var $moveCount = $("#moveCount");
+      var $turnLabel = $("#turnLabel");
+      var $botLabel = $("#botLabel");
+
+      function applyStaticLang() {
+        document.documentElement.lang = lang;
+        document.title = t("docTitle");
+        $("#playAreaTitle").text(t("playArea"));
+        $("#missionTitle").text(t("mission"));
+        $("#sessionTitle").text(t("session"));
+        $("#historyTitle").text(t("history"));
+        $("#rulesBtn").text(t("rulesButton"));
+        $("#rulesTitle").text(t("rulesTitle"));
+        $("#rulesCloseBtn").attr("aria-label", t("rulesClose"));
+        $("#rulesBox").html(t("rulesHtml"));
+        $("#sideSelectLabel").text(t("sideSelectLabel"));
+        $("#sideSelect option[value='w']").text(t("sideWhite"));
+        $("#sideSelect option[value='b']").text(t("sideBlack"));
+        $("#diffLabel").text(t("diffLabel"));
+        $("#difficulty option[value='easy']").text(t("diffEasy"));
+        $("#difficulty option[value='medium']").text(t("diffMedium"));
+        $("#difficulty option[value='hard']").text(t("diffHard"));
+        $("#difficulty option[value='expert']").text(t("diffExpert"));
+        $("#difficulty option[value='master']").text(t("diffMaster"));
+        $("#newGameBtn").text(t("newGame"));
+        $("#undoBtn").text(t("undo"));
+        $("#metaSideK").text(t("metaSide"));
+        $("#metaTurnK").text(t("metaTurn"));
+        $("#metaMovesK").text(t("metaMoves"));
+        $("#modeBadge").text(t("modeBadge"));
+        if ($("#settingsLangLabel").length) $("#settingsLangLabel").text(t("settingsLangLabel"));
+        updateOpponentLabel();
+        $("#sideLabel").text(userColor === "w" ? t("sideWhite") : t("sideBlack"));
+        $("#thinkingText").text(t("thinking"));
+        $("#langRu").toggleClass("active", lang === "ru");
+        $("#langEn").toggleClass("active", lang === "en");
+      }
+
+      function setLang(next) {
+        if (next !== "ru" && next !== "en") return;
+        lang = next;
+        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+        applyStaticLang();
+        updateMoveList();
+        updateStatus();
+      }
+
+      function wireSettingsMenu() {
+        var $menu = $("#settingsMenu");
+        var $btn = $("#settingsMenuBtn");
+        if (!$menu.length || !$btn.length) return;
+        $btn.on("click", function (e) {
+          e.stopPropagation();
+          var open = !$menu.hasClass("open");
+          $menu.toggleClass("open", open);
+          $btn.attr("aria-expanded", open ? "true" : "false");
+        });
+        $(document).on("click.settingsMenu", function () {
+          $menu.removeClass("open");
+          $btn.attr("aria-expanded", "false");
+        });
+        $menu.on("click", function (e) { e.stopPropagation(); });
+      }
+
+      function getSkillKey() {
+        var v = $("#difficulty").val();
+        if (v && BoardHackStockfish && BoardHackStockfish.SKILLS[v]) return v;
+        return "medium";
+      }
+
+      function skillLabel(key) {
+        var cfg = BoardHackStockfish.getSkill(key);
+        return t(cfg.labelKey);
+      }
+
+      function updateOpponentLabel() {
+        $("#metaBotK").text(t("metaOpp"));
+        $botLabel.text(t("metaBot") + " \u2014 " + skillLabel(getSkillKey()));
+      }
+
+      function botColor() { return userColor === "w" ? "b" : "w"; }
+
+      function cancelScheduledBot() {
+        if (botTimerId != null) {
+          clearTimeout(botTimerId);
+          botTimerId = null;
+        }
+        botSchedGen += 1;
+        if (typeof BoardHackStockfish !== "undefined") BoardHackStockfish.cancelSearch();
+      }
+
+      function scheduleBot(delayMs) {
+        cancelScheduledBot();
+        var gen = botSchedGen;
+        botTimerId = window.setTimeout(function () {
+          botTimerId = null;
+          if (gen !== botSchedGen) return;
+          makeBotMove();
+        }, delayMs == null ? 250 : delayMs);
+      }
+
+      function canBotActNow(alreadyThinking) {
+        if (gameOver) return false;
+        if (!alreadyThinking && botThinking) return false;
+        if (!alreadyThinking && selectedSquare) return false;
+        if (game.turn() !== botColor()) return false;
+        return true;
+      }
+
+      function setStatus(text, kind) {
+        $statusText.text(text);
+        $statusDot.removeClass("warn danger info");
+        if (kind) $statusDot.addClass(kind);
+      }
+
+      function removeLegalHighlights() {
+        $("#board .square-55d63").removeClass("legal-dot legal-capture");
+      }
+
+      var audioCtx = null;
+      function getAudioCtx() {
+        if (!audioCtx) {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          audioCtx = new AC();
+        }
+        if (audioCtx.state === "suspended") {
+          try { audioCtx.resume(); } catch (e) {}
+        }
+        return audioCtx;
+      }
+
+      function playMoveSound() {
+        try {
+          var ctx = getAudioCtx();
+          if (!ctx) return;
+          var t0 = ctx.currentTime;
+          var dur = 0.12;
+          var osc = ctx.createOscillator();
+          var oscGain = ctx.createGain();
+          var oscFilter = ctx.createBiquadFilter();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(95, t0);
+          osc.frequency.exponentialRampToValueAtTime(38, t0 + dur);
+          oscFilter.type = "lowpass";
+          oscFilter.frequency.setValueAtTime(280, t0);
+          oscGain.gain.setValueAtTime(0.0001, t0);
+          oscGain.gain.exponentialRampToValueAtTime(0.38, t0 + 0.006);
+          oscGain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+          osc.connect(oscFilter);
+          oscFilter.connect(oscGain);
+          oscGain.connect(ctx.destination);
+          osc.start(t0);
+          osc.stop(t0 + dur + 0.02);
+        } catch (e) {}
+      }
+
+      function snapshotPush() {
+        undoStack.push({ fen: game.fen(), sans: plySans.slice() });
+      }
+
+      function restoreSnapshot(s) {
+        game.load(s.fen);
+        plySans = s.sans.slice();
+      }
+
+      function tryMakeUserMove(from, to) {
+        snapshotPush();
+        var move = game.move({ from: from, to: to, promotion: "q" });
+        if (move === null) {
+          undoStack.pop();
+          return false;
+        }
+        // Knights-battle: promote to knight (only piece type that fits the theme)
+        if (move.promotion) {
+          game.undo();
+          move = game.move({ from: from, to: to, promotion: "n" });
+          if (move === null) {
+            undoStack.pop();
+            return false;
+          }
+        }
+        plySans.push(move.san);
+        playMoveSound();
+        return true;
+      }
+
+      function showLegalMoves(fromSquare) {
+        removeLegalHighlights();
+        if (!fromSquare) return;
+        var moves = game.moves({ square: fromSquare, verbose: true });
+        for (var i = 0; i < moves.length; i++) {
+          var m = moves[i];
+          var $sq = $("#board .square-" + m.to);
+          if (m.captured) $sq.addClass("legal-capture");
+          else $sq.addClass("legal-dot");
+        }
+      }
+
+      function clearSelection() {
+        $("#board .square-55d63").removeClass("selected");
+        removeLegalHighlights();
+        selectedSquare = null;
+      }
+
+      function highlightSquare(sq) {
+        clearSelection();
+        if (!sq) return;
+        selectedSquare = sq;
+        $("#board .square-" + sq).addClass("selected");
+        showLegalMoves(sq);
+      }
+
+      function countKingsOnBoard() {
+        var boardState = game.board();
+        var w = 0, b = 0;
+        for (var r = 0; r < 8; r++) {
+          for (var c = 0; c < 8; c++) {
+            var p = boardState[r][c];
+            if (!p || p.type !== "k") continue;
+            if (p.color === "w") w++;
+            else b++;
+          }
+        }
+        return { w: w, b: b };
+      }
+
+      function applyGameEndFromPosition() {
+        var kings = countKingsOnBoard();
+        if (kings.w < 1 || kings.b < 1) {
+          gameOver = true;
+          var winnerColor = kings.w < 1 ? "b" : "w";
+          var winner = winnerColor === userColor ? t("winnerYou") : t("winnerBot");
+          setStatus(t("kingCaptureWin").replace("{winner}", winner), "danger");
+          $turnLabel.text(t("turnOver"));
+          return true;
+        }
+        if (game.in_checkmate()) {
+          gameOver = true;
+          var wMate = game.turn() === userColor ? t("winnerBot") : t("winnerYou");
+          setStatus(t("checkmateWin").replace("{winner}", wMate), "danger");
+          $turnLabel.text(t("turnOver"));
+          return true;
+        }
+        if (game.in_stalemate()) {
+          gameOver = true;
+          setStatus(t("stalemate"), "warn");
+          $turnLabel.text(t("turnDraw"));
+          return true;
+        }
+        if (game.in_threefold_repetition()) {
+          gameOver = true;
+          setStatus(t("drawRepetition"), "warn");
+          $turnLabel.text(t("turnDraw"));
+          return true;
+        }
+        if (game.insufficient_material()) {
+          gameOver = true;
+          setStatus(t("drawMaterial"), "warn");
+          $turnLabel.text(t("turnDraw"));
+          return true;
+        }
+        if (game.in_draw() || game.game_over()) {
+          gameOver = true;
+          setStatus(t("draw"), "warn");
+          $turnLabel.text(t("turnDraw"));
+          return true;
+        }
+        return false;
+      }
+
+      function findBestMoveStockfish(done) {
+        var legal = game.moves({ verbose: true });
+        if (!legal.length) { done(null); return; }
+        var fen = game.fen();
+        var genAtStart = botSchedGen;
+        BoardHackStockfish.getBestMove(fen, null, getSkillKey())
+          .then(function (uci) {
+            if (genAtStart !== botSchedGen) { done(null); return; }
+            var parsed = BoardHackStockfish.parseUci(uci);
+            if (!parsed) { done(legal[0] || null); return; }
+            for (var j = 0; j < legal.length; j++) {
+              var m = legal[j];
+              if (m.from === parsed.from && m.to === parsed.to) {
+                if (!parsed.promotion || m.promotion === parsed.promotion || parsed.promotion === "n") {
+                  // Force knight promotion in this mode
+                  if (m.promotion) done({ from: m.from, to: m.to, promotion: "n" });
+                  else done(m);
+                  return;
+                }
+              }
+            }
+            var tryMove = { from: parsed.from, to: parsed.to };
+            if (parsed.promotion) tryMove.promotion = "n";
+            done(tryMove);
+          })
+          .catch(function (err) {
+            if (genAtStart !== botSchedGen) { done(null); return; }
+            if (err && err.message === "cancelled") { done(null); return; }
+            console.warn("Stockfish search failed:", err && err.message ? err.message : err);
+            done(legal[0] || null);
+          });
+      }
+
+      function updateMoveList() {
+        var history = plySans;
+        $moveCount.text(String(history.length));
+        if (!history.length) {
+          $moveList.html('<div class="empty-moves"></div>');
+          $moveList.find(".empty-moves").text(t("emptyMoves"));
+          return;
+        }
+        var html = "";
+        for (var i = 0; i < history.length; i += 2) {
+          var num = Math.floor(i / 2) + 1;
+          var white = history[i] ? history[i] : "";
+          var black = history[i + 1] ? history[i + 1] : "";
+          html +=
+            '<div class="move-row">' +
+            '<span class="move-num">' + num + ".</span>" +
+            '<span class="move-san' + (userColor === "b" ? " bot" : "") + '">' + white + "</span>" +
+            '<span class="move-san' + (userColor === "w" ? " bot" : "") + '">' + black + "</span>" +
+            "</div>";
+        }
+        $moveList.html(html);
+        $moveList.scrollTop($moveList[0].scrollHeight);
+      }
+
+      function updateStatus() {
+        updateOpponentLabel();
+        $("#sideLabel").text(userColor === "w" ? t("sideWhite") : t("sideBlack"));
+        if (applyGameEndFromPosition()) return;
+        var turnIsUser = botThinking ? false : (game.turn() === userColor);
+        if (turnIsUser) {
+          $turnLabel.text(t("turnYou"));
+          if (game.in_check() && game.turn() === userColor) setStatus(t("checkYou"), "warn");
+          else setStatus(t("yourMove"), null);
+        } else {
+          $turnLabel.text(t("turnBot"));
+          if (game.in_check() && game.turn() !== userColor) setStatus(t("botInCheck"), "info");
+          else setStatus(t("botThinking"), "info");
+        }
+      }
+
+      function finishBotThinking() {
+        botThinking = false;
+        $thinking.removeClass("show");
+        $("#undoBtn").prop("disabled", false);
+        clearSelection();
+        updateMoveList();
+        updateStatus();
+      }
+
+      function startUserTurnAfterBot() {
+        finishBotThinking();
+        cancelScheduledBot();
+        if (gameOver || applyGameEndFromPosition()) return;
+        if (game.turn() !== userColor) {
+          if (canBotActNow(false)) scheduleBot(80);
+          return;
+        }
+        updateStatus();
+      }
+
+      function makeBotMove() {
+        if (gameOver || applyGameEndFromPosition()) return;
+        if (botThinking) return;
+        if (selectedSquare) { updateStatus(); return; }
+        if (game.turn() !== botColor()) { updateStatus(); return; }
+        if (!canBotActNow(false)) { updateStatus(); return; }
+
+        botThinking = true;
+        $("#thinkingText").text(t("thinking"));
+        $thinking.addClass("show");
+        $("#undoBtn").prop("disabled", true);
+        updateStatus();
+
+        var genAtStart = botSchedGen;
+        window.setTimeout(function () {
+          if (genAtStart !== botSchedGen) { finishBotThinking(); return; }
+          findBestMoveStockfish(function (best) {
+            if (genAtStart !== botSchedGen) { finishBotThinking(); return; }
+            if (!best) { startUserTurnAfterBot(); return; }
+            snapshotPush();
+            var moved = game.move(best.promotion ? { from: best.from, to: best.to, promotion: "n" } : best);
+            if (!moved && best.from) {
+              moved = game.move({ from: best.from, to: best.to, promotion: "n" });
+            }
+            if (moved) {
+              if (moved.color === userColor) {
+                game.undo();
+                undoStack.pop();
+                finishBotThinking();
+                updateStatus();
+                return;
+              }
+              plySans.push(moved.san);
+              playMoveSound();
+              board.position(game.fen());
+              updateMoveList();
+              if (applyGameEndFromPosition()) { finishBotThinking(); return; }
+              startUserTurnAfterBot();
+            } else {
+              undoStack.pop();
+              startUserTurnAfterBot();
+            }
+          });
+        }, 60);
+      }
+
+      function onDragStart(source, piece) {
+        if (gameOver || botThinking || applyGameEndFromPosition()) return false;
+        cancelScheduledBot();
+        if (game.turn() !== userColor) return false;
+        if (piece.charAt(0) !== userColor) return false;
+        selectedSquare = source;
+        $("#board .square-55d63").removeClass("selected");
+        $("#board .square-" + source).addClass("selected");
+        showLegalMoves(source);
+        if (typeof lockDragScroll === "function") lockDragScroll();
+        return true;
+      }
+
+      function onDrop(source, target) {
+        if (typeof unlockDragScroll === "function") unlockDragScroll();
+        clearSelection();
+        if (!tryMakeUserMove(source, target)) return "snapback";
+        board.position(game.fen());
+        updateMoveList();
+        updateStatus();
+        if (!gameOver && canBotActNow(false)) scheduleBot(250);
+        else cancelScheduledBot();
+      }
+
+      function onSnapEnd() { board.position(game.fen()); }
+
+      function tryClickMove(square) {
+        if (gameOver || botThinking || applyGameEndFromPosition()) return;
+        cancelScheduledBot();
+        if (game.turn() !== userColor) return;
+        var piece = game.get(square);
+        if (!selectedSquare) {
+          if (piece && piece.color === userColor) highlightSquare(square);
+          return;
+        }
+        if (selectedSquare === square) { clearSelection(); return; }
+        if (piece && piece.color === userColor) { highlightSquare(square); return; }
+        var from = selectedSquare;
+        clearSelection();
+        if (!tryMakeUserMove(from, square)) return;
+        board.position(game.fen());
+        updateMoveList();
+        updateStatus();
+        if (!gameOver && canBotActNow(false)) scheduleBot(250);
+        else cancelScheduledBot();
+      }
+
+      function boardOrientation() { return userColor === "w" ? "white" : "black"; }
+      function saveUserColor() { try { localStorage.setItem(COLOR_KEY, userColor); } catch (e) {} }
+      function syncSideSelect() { $("#sideSelect").val(userColor); }
+
+      function newGame() {
+        cancelScheduledBot();
+        undoStack = [];
+        plySans = [];
+        game.load(START_FEN);
+        gameOver = false;
+        botThinking = false;
+        clearSelection();
+        $thinking.removeClass("show");
+        board.orientation(boardOrientation());
+        board.position(START_POSITION);
+        updateMoveList();
+        updateStatus();
+        $("#undoBtn").prop("disabled", false);
+        if (userColor === "b") scheduleBot(250);
+      }
+
+      function undoMove() {
+        if (botThinking || undoStack.length === 0) return;
+        if (game.turn() === userColor && undoStack.length >= 2) {
+          undoStack.pop();
+          restoreSnapshot(undoStack.pop());
+        } else {
+          restoreSnapshot(undoStack.pop());
+        }
+        gameOver = false;
+        clearSelection();
+        board.position(game.fen());
+        updateMoveList();
+        updateStatus();
+        cancelScheduledBot();
+        if (!gameOver && canBotActNow(false)) scheduleBot(250);
+      }
+
+      function onSideChange() {
+        var next = $("#sideSelect").val() === "b" ? "b" : "w";
+        userColor = next;
+        saveUserColor();
+        newGame();
+      }
+
+      $(function () {
+        syncSideSelect();
+        applyStaticLang();
+        wireSettingsMenu();
+
+        board = Chessboard("board", {
+          draggable: true,
+          position: START_POSITION,
+          orientation: boardOrientation(),
+          pieceTheme: PIECE_THEME,
+          onDragStart: onDragStart,
+          onDrop: onDrop,
+          onSnapEnd: onSnapEnd
+        });
+
+        $("#board").on("click", ".square-55d63", function () {
+          var sq = $(this).data("square");
+          if (sq) tryClickMove(sq);
+        });
+
+        $("#newGameBtn").on("click", newGame);
+        $("#undoBtn").on("click", undoMove);
+        var rulesDialog = document.getElementById("rulesDialog");
+        $("#rulesBtn").on("click", function () {
+          if (!rulesDialog.open) rulesDialog.showModal();
+        });
+        $("#rulesCloseBtn").on("click", function () { rulesDialog.close(); });
+        $(rulesDialog).on("click", function (e) {
+          if (e.target === rulesDialog) rulesDialog.close();
+        });
+        $("#sideSelect").on("change", onSideChange);
+        $("#difficulty").on("change", function () { updateOpponentLabel(); });
+
+        if (typeof BoardHackStockfish !== "undefined") {
+          BoardHackStockfish.ensureReady().catch(function (e) {
+            console.warn("Stockfish init:", e && e.message ? e.message : e);
+          });
+        }
+
+        $("#langRu").on("click", function () { setLang("ru"); });
+        $("#langEn").on("click", function () { setLang("en"); });
+        $(window).on("resize", function () { board.resize(); });
+
+        updateMoveList();
+        updateStatus();
+        if (userColor === "b") scheduleBot(250);
+      });
+    })();
+  </script>
+</body>
+</html>
