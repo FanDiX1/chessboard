@@ -93,7 +93,6 @@
             <button type="button" class="btn btn-ghost" id="setupReadyBtn"></button>
             <button type="button" class="btn btn-primary mp-hidden" id="setupHostStartBtn"></button>
           </div>
-          <p class="setup-warn" id="setupWarn" role="status" aria-live="polite"></p>
           <p class="mp-hint mp-hidden" id="setupMpHint"></p>
         </div>
       </section>
@@ -258,7 +257,7 @@
           rulesButton: "Правила",
           rulesTitle: "Правила: настраиваемые шахматы",
           rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Расстановка:</strong> перед партией вы сами ставите фигуры на пустую или стандартную доску.</li><li><strong>Палитра:</strong> выберите фигуру (белую или чёрную), затем клетку — чтобы поставить. Повторный клик по клетке с той же фигурой снимает её; другая фигура заменяет. Второй король того же цвета заменяет предыдущего (на доске не больше одного белого и одного чёрного короля).</li><li><strong>Старт:</strong> нужны ровно один белый и один чёрный король. Если сторона хода уже под матом — предупреждение, но начать можно.</li><li><strong>Игра:</strong> дальше как в классике — Stockfish, выбор стороны, онлайн-комнаты.</li><li><strong>Мультиплеер:</strong> расстановка синхронизируется (FEN); оба подтверждают старт или хост начинает, когда позиция готова. Зрители только смотрят.</li></ul>",
+          rulesHtml: "<ul><li><strong>Расстановка:</strong> перед партией вы сами ставите фигуры на пустую или стандартную доску.</li><li><strong>Палитра:</strong> выберите фигуру (белую или чёрную), затем клетку — чтобы поставить. Повторный клик по клетке с той же фигурой снимает её; другая фигура заменяет. Второй король того же цвета не ставится (на доске не больше одного белого и одного чёрного короля).</li><li><strong>Старт:</strong> нужны ровно один белый и один чёрный король. Если сторона хода уже под матом — предупреждение, но начать можно.</li><li><strong>Игра:</strong> дальше как в классике — Stockfish, выбор стороны, онлайн-комнаты.</li><li><strong>Мультиплеер:</strong> расстановка синхронизируется (FEN); оба подтверждают старт или хост начинает, когда позиция готова. Зрители только смотрят.</li></ul>",
           sideSelectLabel: "Играть за",
           diffLabel: "Сложность бота",
           diffEasy: "Новичок",
@@ -402,7 +401,7 @@
           rulesButton: "Rules",
           rulesTitle: "Rules: customizable chess",
           rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Setup:</strong> before play, place pieces freely on an empty or standard board.</li><li><strong>Palette:</strong> select a piece (white or black), then a square to place it. Clicking the same piece again removes it; another piece replaces it. Placing a second king of the same color replaces the previous one (at most one white and one black king).</li><li><strong>Start:</strong> exactly one white and one black king. If the side to move is already mated — warning, but start is allowed.</li><li><strong>Play:</strong> same as classic — Stockfish, side select, online rooms.</li><li><strong>Multiplayer:</strong> setup FEN is synced; both confirm start or the host starts when ready. Spectators are read-only.</li></ul>",
+          rulesHtml: "<ul><li><strong>Setup:</strong> before play, place pieces freely on an empty or standard board.</li><li><strong>Palette:</strong> select a piece (white or black), then a square to place it. Clicking the same piece again removes it; another piece replaces it. A second king of the same color is refused (at most one white and one black king).</li><li><strong>Start:</strong> exactly one white and one black king. If the side to move is already mated — warning, but start is allowed.</li><li><strong>Play:</strong> same as classic — Stockfish, side select, online rooms.</li><li><strong>Multiplayer:</strong> setup FEN is synced; both confirm start or the host starts when ready. Spectators are read-only.</li></ul>",
           sideSelectLabel: "Play as",
           diffLabel: "Bot difficulty",
           diffEasy: "Beginner",
@@ -1565,27 +1564,32 @@
       }
 
       function updateSetupWarn() {
-        var $w = $("#setupWarn");
-        if (!$w.length) return;
-        if (!isSetupPhase()) {
-          $w.text("");
-          return;
-        }
+        if (!isSetupPhase()) return;
         var v = validateSetup();
-        $w.text(v.msg || "");
-        $w.toggleClass("setup-warn--error", !!(v.needKings || v.invalid));
-        $w.toggleClass("setup-warn--ok", !!(v.ok && !v.msg));
+        // Setup feedback belongs in the single status bar above the board.
+        setStatus(v.msg || t("setupPhaseStatus"), v.msg ? "warn" : "info");
+        return v;
       }
 
       function renderPiecePalette() {
         var $pal = $("#piecePalette");
         if (!$pal.length) return;
+        var kings = countKings(board ? board.position() : EMPTY_POSITION);
+        // Once a king is present, keep its palette button unavailable until
+        // that king is removed with the eraser (or by clicking the piece).
+        if ((kings.wk > 0 && setupPalettePiece === "wK") ||
+            (kings.bk > 0 && setupPalettePiece === "bK")) {
+          setupPalettePiece = null;
+        }
         $pal.empty();
         PALETTE_ORDER.forEach(function (code) {
+          var kingAlreadyPlaced = code === "wK" ? kings.wk > 0 : code === "bK" ? kings.bk > 0 : false;
           var url = PIECE_THEME.replace("{piece}", code);
           var $btn = $('<button type="button" class="palette-piece" role="option"></button>')
             .attr("data-piece", code)
             .attr("aria-label", code)
+            .prop("disabled", kingAlreadyPlaced)
+            .attr("aria-disabled", kingAlreadyPlaced ? "true" : "false")
             .toggleClass("active", setupPalettePiece === code)
             .append($("<img>").attr("src", url).attr("alt", code));
           $pal.append($btn);
@@ -1599,6 +1603,11 @@
       }
 
       function setPalettePiece(code) {
+        var pos = board ? board.position() || {} : {};
+        var kings = countKings(pos);
+        if ((code === "wK" && kings.wk > 0) || (code === "bK" && kings.bk > 0)) {
+          return;
+        }
         if (setupPalettePiece === code) setupPalettePiece = null;
         else setupPalettePiece = code;
         renderPiecePalette();
@@ -1607,6 +1616,7 @@
       function applySetupPosition(pos, animate) {
         if (!board) return;
         board.position(pos || {}, !!animate);
+        renderPiecePalette();
         updateSetupWarn();
       }
 
@@ -1648,11 +1658,11 @@
         if (cur === setupPalettePiece) {
           delete pos[square];
         } else {
-          // At most one king per color: placing a second replaces the old one
-          if (setupPalettePiece === "wK" || setupPalettePiece === "bK") {
-            Object.keys(pos).forEach(function (sq) {
-              if (sq !== square && pos[sq] === setupPalettePiece) delete pos[sq];
-            });
+          // Never place a second king of either color; use the eraser to move it.
+          var kings = countKings(pos);
+          if ((setupPalettePiece === "wK" && kings.wk > 0) ||
+              (setupPalettePiece === "bK" && kings.bk > 0)) {
+            return;
           }
           pos[square] = setupPalettePiece;
         }
@@ -2597,7 +2607,6 @@
 
         if (isSetupPhase()) {
           $turnLabel.text("—");
-          setStatus(t("setupPhaseStatus"), "info");
           updateSetupWarn();
           updateSetupMpUI();
           return;
