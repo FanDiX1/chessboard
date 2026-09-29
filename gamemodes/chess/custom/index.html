@@ -18,7 +18,7 @@
           <div class="brand-mark">♞</div>
           <div>Board<span class="accent">Hack</span></div>
         </a>
-        <span class="mode-badge" id="modeBadge">chess · classic</span>
+        <span class="mode-badge" id="modeBadge">Шахматы · Настраиваемый</span>
       </div>
       <div class="topbar-actions">
         <div class="mode-menu" id="modeMenu">
@@ -27,7 +27,7 @@
             <span class="chev">▾</span>
           </button>
           <div class="mode-menu-panel" id="modeMenuPanel" role="menu">
-            <a href="./index.html" class="active" data-mode="classic">
+            <a href="../classic/index.html" data-mode="classic">
               <span>♟</span>
               <span>
                 <span id="menuClassic">Classic</span>
@@ -41,7 +41,7 @@
                 <span class="mode-desc" id="menuDiceDesc"></span>
               </span>
             </a>
-            <a href="../custom/index.html" data-mode="custom">
+            <a href="./index.html" class="active" data-mode="custom">
               <span>⚙</span>
               <span>
                 <span id="menuCustom">Custom</span>
@@ -70,6 +70,31 @@
         <div class="board-wrap">
           <div id="board"></div>
           <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
+        </div>
+        <div class="setup-panel" id="setupPanel">
+          <div class="setup-head">
+            <div class="card-title" id="setupTitle"></div>
+            <p class="setup-hint" id="setupHint"></p>
+          </div>
+          <div class="piece-palette" id="piecePalette" role="listbox" aria-label="Pieces"></div>
+          <div class="setup-turn-row" id="setupTurnRow">
+            <label class="field-label" for="setupTurnSelect" id="setupTurnLabel"></label>
+            <select id="setupTurnSelect">
+              <option value="w" selected></option>
+              <option value="b"></option>
+            </select>
+          </div>
+          <div class="btn-row setup-actions">
+            <button type="button" class="btn btn-ghost" id="setupClearBtn"></button>
+            <button type="button" class="btn btn-ghost" id="setupStandardBtn"></button>
+            <button type="button" class="btn btn-primary" id="setupStartBtn"></button>
+          </div>
+          <div class="btn-row setup-mp-actions mp-hidden" id="setupMpActions">
+            <button type="button" class="btn btn-ghost" id="setupReadyBtn"></button>
+            <button type="button" class="btn btn-primary mp-hidden" id="setupHostStartBtn"></button>
+          </div>
+          <p class="setup-warn" id="setupWarn" role="status" aria-live="polite"></p>
+          <p class="mp-hint mp-hidden" id="setupMpHint"></p>
         </div>
       </section>
 
@@ -212,7 +237,7 @@
   <script>
     (function () {
       "use strict";
-      var GAME_MODE = "classic";
+      var GAME_MODE = "custom";
 
       "use strict";
 
@@ -231,9 +256,9 @@
           session: "Сессия",
           history: "История ходов",
           rulesButton: "Правила",
-          rulesTitle: "Правила шахмат",
+          rulesTitle: "Правила: настраиваемые шахматы",
           rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Цель:</strong> поставить мат королю соперника.</li><li><strong>Фигуры:</strong> ладья ходит по прямой, слон — по диагонали, ферзь — обоими способами, конь — буквой «Г», король — на одну клетку.</li><li><strong>Ход:</strong> белые начинают. Нельзя оставлять своего короля под шахом.</li><li><strong>Шах и мат:</strong> шах нужно снять; мат завершает партию.</li><li><strong>Особые ходы:</strong> рокировка, взятие на проходе и превращение пешки.</li><li><strong>Ничья:</strong> пат, повторение позиции, недостаток материала или соглашение.</li></ul>",
+          rulesHtml: "<ul><li><strong>Расстановка:</strong> перед партией вы сами ставите фигуры на пустую или стандартную доску.</li><li><strong>Палитра:</strong> выберите фигуру (белую или чёрную), затем клетку — чтобы поставить. Повторный клик по клетке с той же фигурой снимает её; другая фигура заменяет.</li><li><strong>Старт:</strong> нужны ровно один белый и один чёрный король. Если сторона хода уже под матом — предупреждение, но начать можно.</li><li><strong>Игра:</strong> дальше как в классике — Stockfish, выбор стороны, онлайн-комнаты.</li><li><strong>Мультиплеер:</strong> расстановка синхронизируется (FEN); оба подтверждают старт или хост начинает, когда позиция готова. Зрители только смотрят.</li></ul>",
           sideSelectLabel: "Играть за",
           diffLabel: "Сложность бота",
           diffEasy: "Новичок",
@@ -283,6 +308,23 @@
           modeBadgeClassic: "шахматы · классика",
           modeBadgeDice: "шахматы · кости",
           modeBadgeCustom: "Шахматы · Настраиваемый",
+          setupTitle: "Расстановка",
+          setupHint: "Выберите фигуру в палитре и кликните по клетке. Клик по фигуре на доске снимает или заменяет её.",
+          setupClear: "Очистить",
+          setupStandard: "Стандартная позиция",
+          setupStart: "Начать игру",
+          setupReady: "Готов",
+          setupReadyDone: "Готов ✓",
+          setupHostStart: "Начать (хост)",
+          setupTurnLabel: "Ход при старте",
+          setupNeedKings: "Нужны ровно один белый и один чёрный король.",
+          setupWarnMate: "Сторона хода уже под матом — партия всё равно может начаться.",
+          setupWarnCheck: "Сторона хода под шахом.",
+          setupInvalid: "Нельзя загрузить позицию (проверьте королей и шах).",
+          setupMpHint: "Расстановка общая. Оба нажмите «Готов» или хост начнёт игру.",
+          setupWaitingReady: "Ожидание готовности соперника…",
+          setupPhaseStatus: "Расстановка фигур",
+          setupPaletteEraser: "Снять фигуру",
           mpContinueBot: "Соперник вышел — продолжаем против бота",
           modeSelectLabel: "Режим",
           modeClassic: "Классика",
@@ -358,9 +400,9 @@
           session: "Session",
           history: "Move history",
           rulesButton: "Rules",
-          rulesTitle: "Chess rules",
+          rulesTitle: "Rules: customizable chess",
           rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Goal:</strong> checkmate the opponent’s king.</li><li><strong>Pieces:</strong> rooks move straight, bishops diagonally, queens both ways, knights in an L, and kings one square.</li><li><strong>Moves:</strong> White moves first. You may not leave your king in check.</li><li><strong>Check and mate:</strong> answer check; checkmate ends the game.</li><li><strong>Special moves:</strong> castling, en passant, and pawn promotion.</li><li><strong>Draw:</strong> stalemate, repeated position, insufficient material, or agreement.</li></ul>",
+          rulesHtml: "<ul><li><strong>Setup:</strong> before play, place pieces freely on an empty or standard board.</li><li><strong>Palette:</strong> select a piece (white or black), then a square to place it. Clicking the same piece again removes it; another piece replaces it.</li><li><strong>Start:</strong> exactly one white and one black king. If the side to move is already mated — warning, but start is allowed.</li><li><strong>Play:</strong> same as classic — Stockfish, side select, online rooms.</li><li><strong>Multiplayer:</strong> setup FEN is synced; both confirm start or the host starts when ready. Spectators are read-only.</li></ul>",
           sideSelectLabel: "Play as",
           diffLabel: "Bot difficulty",
           diffEasy: "Beginner",
@@ -410,6 +452,23 @@
           modeBadgeClassic: "chess · classic",
           modeBadgeDice: "chess · dice",
           modeBadgeCustom: "Chess · Customizable",
+          setupTitle: "Setup",
+          setupHint: "Pick a piece from the palette, then click a square. Click a piece on the board to remove or replace it.",
+          setupClear: "Clear",
+          setupStandard: "Standard position",
+          setupStart: "Start game",
+          setupReady: "Ready",
+          setupReadyDone: "Ready ✓",
+          setupHostStart: "Start (host)",
+          setupTurnLabel: "Side to move",
+          setupNeedKings: "Exactly one white king and one black king are required.",
+          setupWarnMate: "Side to move is already checkmated — you can still start.",
+          setupWarnCheck: "Side to move is in check.",
+          setupInvalid: "Cannot load this position (check kings / check).",
+          setupMpHint: "Setup is shared. Both press Ready, or the host starts when the position is valid.",
+          setupWaitingReady: "Waiting for opponent to ready…",
+          setupPhaseStatus: "Piece setup",
+          setupPaletteEraser: "Remove piece",
           mpContinueBot: "Opponent left — continuing vs bot",
           modeSelectLabel: "Mode",
           modeClassic: "Classic",
@@ -525,6 +584,19 @@
         }
         $("#newGameBtn").text(t("newGame"));
         $("#undoBtn").text(t("undo"));
+        if ($("#setupTitle").length) {
+          $("#setupTitle").text(t("setupTitle"));
+          $("#setupHint").text(t("setupHint"));
+          $("#setupClearBtn").text(t("setupClear"));
+          $("#setupStandardBtn").text(t("setupStandard"));
+          $("#setupStartBtn").text(t("setupStart"));
+          $("#setupReadyBtn").text(setupReadyLocal ? t("setupReadyDone") : t("setupReady"));
+          $("#setupHostStartBtn").text(t("setupHostStart"));
+          $("#setupTurnLabel").text(t("setupTurnLabel"));
+          $("#setupTurnSelect option[value='w']").text(t("sideWhite"));
+          $("#setupTurnSelect option[value='b']").text(t("sideBlack"));
+          $("#setupMpHint").text(t("setupMpHint"));
+        }
         $("#mpTitle").text(t("mpTitle"));
         $("#missionTitle").closest("section.card").toggleClass("mp-hidden", isMultiplayer());
         $("#mpResetBtn").toggleClass("mp-hidden", !canMpAct() || !mpRoom || mpRoom.hostId !== getOrCreateClientId());
@@ -612,10 +684,19 @@
         "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
 
 
+      var EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1";
+      var EMPTY_POSITION = {};
       var game = new Chess();
       game.load(START_FEN);
       var board = null;
       var userColor = "w";
+      var gamePhase = "setup"; // setup | play
+      var setupPalettePiece = null; // "wK" etc or null (eraser when "")
+      var setupTurn = "w";
+      var setupReadyLocal = false;
+      var setupReadyRemote = { w: false, b: false };
+      var setupSyncTimer = null;
+      var PALETTE_ORDER = ["wK","wQ","wR","wB","wN","wP","bK","bQ","bR","bB","bN","bP"];
       try {
         var savedColor = localStorage.getItem(COLOR_KEY);
         if (savedColor === "w" || savedColor === "b") userColor = savedColor;
@@ -950,8 +1031,16 @@
         });
         mpSocket.on("gameReset", function (msg) {
           if (!mpActive) return;
-          if (msg && msg.room) applyMpRoom({ room: msg.room, seat: mpSeat, code: mpRoomCode });
-          syncBoardFromMpRoom(true);
+          if (msg && msg.room) {
+            mpRoom = msg.room;
+            applyMpRoom({ room: msg.room, seat: mpSeat, code: mpRoomCode, role: mpSpectating ? "spectator" : "player" });
+          }
+          if (msg && msg.room && msg.room.phase === "setup") {
+            enterSetupPhase({ keepPosition: true });
+            applySetupFromRoom(msg.room);
+          } else {
+            syncBoardFromMpRoom(true);
+          }
         });
         mpSocket.on("opponentJoined", function () { updateMpUI(); updateStatus(); });
         mpSocket.on("opponentLeft", function () {
@@ -974,6 +1063,23 @@
           if (msg && Array.isArray(msg.rooms) && (!msg.mode || msg.mode === GAME_MODE)) {
             renderRoomList(msg.rooms);
           }
+        });
+        mpSocket.on("setupUpdated", function (msg) {
+          if (!mpActive || !msg) return;
+          if (msg.room) mpRoom = msg.room;
+          else if (mpRoom) {
+            if (msg.fen) mpRoom.fen = msg.fen;
+            if (msg.phase) mpRoom.phase = msg.phase;
+            if (msg.setupReady) mpRoom.setupReady = msg.setupReady;
+          }
+          applySetupFromRoom(msg.room || mpRoom);
+        });
+        mpSocket.on("customGameStarted", function (msg) {
+          if (!mpActive || !msg) return;
+          if (msg.room) mpRoom = msg.room;
+          var fen = (msg.room && msg.room.fen) || msg.fen;
+          beginPlayFromSetup(fen);
+          updateMpUI();
         });
       }
 
@@ -1022,16 +1128,27 @@
 
       function syncBoardFromMpRoom(forceReset) {
         if (!mpRoom) return;
-        var fen = mpRoom.fen || START_FEN;
-        if (forceReset || game.fen() !== fen) {
-          game.load(fen);
-          if (Array.isArray(mpRoom.plySans)) plySans = mpRoom.plySans.slice();
-          gameOver = false;
-          if (board) board.position(game.fen(), false);
-          clearSelection();
-          updateMoveList();
+        if (mpRoom.phase === "setup" || (mpRoom.phase == null && GAME_MODE === "custom" && gamePhase === "setup" && (!mpRoom.plySans || !mpRoom.plySans.length))) {
+          applySetupFromRoom(Object.assign({}, mpRoom, { phase: "setup" }));
+          return;
         }
-        applyGameEndFromPosition();
+        if (mpRoom.phase === "play" || mpRoom.phase == null) {
+          var fen = mpRoom.fen || START_FEN;
+          if (forceReset || gamePhase !== "play" || game.fen() !== fen) {
+            if (!game.load(fen)) {
+              applySetupFromRoom(Object.assign({}, mpRoom, { phase: "setup" }));
+              return;
+            }
+            gamePhase = "play";
+            $("#setupPanel").hide();
+            if (Array.isArray(mpRoom.plySans)) plySans = mpRoom.plySans.slice();
+            gameOver = false;
+            if (board) board.position(game.fen(), false);
+            clearSelection();
+            updateMoveList();
+          }
+          applyGameEndFromPosition();
+        }
       }
 
       function applyRemotePosition(msg) {
@@ -1135,7 +1252,7 @@
           if (err) return;
           mpSocket.emit(
             "createRoom",
-            { clientId: getOrCreateClientId(), mode: "classic", preferredSeat: (userColor === "b" ? "b" : "w"), nick: getNick() },
+            { clientId: getOrCreateClientId(), mode: GAME_MODE, preferredSeat: (userColor === "b" ? "b" : "w"), nick: getNick(), fen: buildSetupFen(), phase: gamePhase },
             function (res) {
               if (!res || !res.ok) {
                 setMpConn("error", (res && res.error) || t("mpError"));
@@ -1155,7 +1272,7 @@
           if (err) return;
           mpSocket.emit(
             "joinRoom",
-            { clientId: getOrCreateClientId(), code: code, nick: getNick() },
+            { clientId: getOrCreateClientId(), code: code, mode: GAME_MODE, nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 var errKey = res && res.error;
@@ -1180,7 +1297,7 @@
           if (err) return;
           mpSocket.emit(
             "spectateRoom",
-            { clientId: getOrCreateClientId(), code: code, mode: "classic", nick: getNick() },
+            { clientId: getOrCreateClientId(), code: code, mode: GAME_MODE, nick: getNick() },
             function (res) {
               if (!res || !res.ok) {
                 var errKey = res && res.error;
@@ -1216,15 +1333,14 @@
           try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }); } catch (e) {}
         }
         clearMpSession(true);
-        // restore single-player (also refreshes status bar to local turn text)
-        newGame();
+        enterSetupPhase({ standard: false });
       }
 
       /** Opponent left mid-game: keep position and continue vs Stockfish. */
       function promoteMpToLocalBot() {
         if (!mpActive || mpSpectating) return false;
         if (gameOver) return false;
-        var midGame = plySans.length > 0 || (mpRoom && mpRoom.status === "playing");
+        var midGame = (gamePhase === "play") && (plySans.length > 0 || (mpRoom && mpRoom.status === "playing"));
         if (!midGame) return false;
         var keptSeat = mpSeat || userColor || "w";
         var fen = game.fen();
@@ -1350,6 +1466,414 @@
         } else {
           $botLabel.text(nick || t("mpOpponent") || t("metaOpp"));
         }
+      }
+
+
+      function isSetupPhase() {
+        return gamePhase === "setup";
+      }
+
+      function isPlayPhase() {
+        return gamePhase === "play";
+      }
+
+      function boardPosToPlacementFen(pos, turn) {
+        var files = "abcdefgh";
+        var ranks = [];
+        for (var r = 8; r >= 1; r--) {
+          var empty = 0;
+          var row = "";
+          for (var f = 0; f < 8; f++) {
+            var sq = files[f] + r;
+            var p = pos && pos[sq];
+            if (!p) {
+              empty++;
+            } else {
+              if (empty) { row += String(empty); empty = 0; }
+              var color = p.charAt(0);
+              var type = p.charAt(1);
+              var ch = type.toLowerCase();
+              row += color === "w" ? type.toUpperCase() : ch;
+            }
+          }
+          if (empty) row += String(empty);
+          ranks.push(row);
+        }
+        var t = turn === "b" ? "b" : "w";
+        return ranks.join("/") + " " + t + " - - 0 1";
+      }
+
+      function buildSetupFen() {
+        var pos = board ? board.position() : EMPTY_POSITION;
+        return boardPosToPlacementFen(pos, setupTurn);
+      }
+
+      function countKings(pos) {
+        var wk = 0, bk = 0;
+        if (!pos) return { wk: 0, bk: 0 };
+        Object.keys(pos).forEach(function (sq) {
+          var p = pos[sq];
+          if (p === "wK") wk++;
+          if (p === "bK") bk++;
+        });
+        return { wk: wk, bk: bk };
+      }
+
+      function validateSetup(opts) {
+        opts = opts || {};
+        var pos = board ? board.position() : EMPTY_POSITION;
+        var kings = countKings(pos);
+        var fen = boardPosToPlacementFen(pos, setupTurn);
+        var result = {
+          ok: false,
+          fen: fen,
+          needKings: kings.wk !== 1 || kings.bk !== 1,
+          warnMate: false,
+          warnCheck: false,
+          invalid: false,
+          msg: ""
+        };
+        if (result.needKings) {
+          result.msg = t("setupNeedKings");
+          return result;
+        }
+        var probe = new Chess();
+        var loaded = probe.load(fen);
+        if (!loaded) {
+          // try opposite turn (side not to move in check)
+          var altTurn = setupTurn === "w" ? "b" : "w";
+          var altFen = boardPosToPlacementFen(pos, altTurn);
+          if (probe.load(altFen)) {
+            result.invalid = true;
+            result.msg = t("setupInvalid");
+            result.fen = fen;
+            return result;
+          }
+          result.invalid = true;
+          result.msg = t("setupInvalid");
+          return result;
+        }
+        result.ok = true;
+        if (probe.in_checkmate()) {
+          result.warnMate = true;
+          result.msg = t("setupWarnMate");
+        } else if (probe.in_check()) {
+          result.warnCheck = true;
+          result.msg = t("setupWarnCheck");
+        }
+        return result;
+      }
+
+      function updateSetupWarn() {
+        var $w = $("#setupWarn");
+        if (!$w.length) return;
+        if (!isSetupPhase()) {
+          $w.text("");
+          return;
+        }
+        var v = validateSetup();
+        $w.text(v.msg || "");
+        $w.toggleClass("setup-warn--error", !!(v.needKings || v.invalid));
+        $w.toggleClass("setup-warn--ok", !!(v.ok && !v.msg));
+      }
+
+      function renderPiecePalette() {
+        var $pal = $("#piecePalette");
+        if (!$pal.length) return;
+        $pal.empty();
+        PALETTE_ORDER.forEach(function (code) {
+          var url = PIECE_THEME.replace("{piece}", code);
+          var $btn = $('<button type="button" class="palette-piece" role="option"></button>')
+            .attr("data-piece", code)
+            .attr("aria-label", code)
+            .toggleClass("active", setupPalettePiece === code)
+            .append($("<img>").attr("src", url).attr("alt", code));
+          $pal.append($btn);
+        });
+        var $erase = $('<button type="button" class="palette-piece palette-eraser" role="option"></button>')
+          .attr("data-piece", "")
+          .attr("aria-label", t("setupPaletteEraser"))
+          .toggleClass("active", setupPalettePiece === "")
+          .text("✕");
+        $pal.append($erase);
+      }
+
+      function setPalettePiece(code) {
+        if (setupPalettePiece === code) setupPalettePiece = null;
+        else setupPalettePiece = code;
+        renderPiecePalette();
+      }
+
+      function applySetupPosition(pos, animate) {
+        if (!board) return;
+        board.position(pos || {}, !!animate);
+        updateSetupWarn();
+      }
+
+      function clearSetupBoard() {
+        applySetupPosition(EMPTY_POSITION, false);
+        publishSetupSync();
+      }
+
+      function standardSetupBoard() {
+        applySetupPosition(START_POSITION, false);
+        setupTurn = "w";
+        $("#setupTurnSelect").val("w");
+        publishSetupSync();
+      }
+
+      function handleSetupSquareClick(square) {
+        if (!isSetupPhase() || !board) return;
+        if (isMultiplayer() && isSpectating()) return;
+        if (isMultiplayer() && !canMpAct()) return;
+        var pos = board.position() || {};
+        var cur = pos[square];
+        if (setupPalettePiece === null) {
+          // no palette: click piece to remove
+          if (cur) {
+            delete pos[square];
+            applySetupPosition(pos, false);
+            publishSetupSync();
+          }
+          return;
+        }
+        if (setupPalettePiece === "") {
+          if (cur) {
+            delete pos[square];
+            applySetupPosition(pos, false);
+            publishSetupSync();
+          }
+          return;
+        }
+        if (cur === setupPalettePiece) {
+          delete pos[square];
+        } else {
+          pos[square] = setupPalettePiece;
+        }
+        applySetupPosition(pos, false);
+        publishSetupSync();
+      }
+
+      function enterSetupPhase(opts) {
+        opts = opts || {};
+        cancelScheduledBot();
+        gamePhase = "setup";
+        setupReadyLocal = false;
+        setupReadyRemote = { w: false, b: false };
+        setupPalettePiece = null;
+        gameOver = false;
+        botThinking = false;
+        undoStack = [];
+        plySans = [];
+        clearSelection();
+        clearDiceState();
+        $thinking.removeClass("show");
+        $("#setupPanel").removeClass("mp-hidden").show();
+        $("#undoBtn").prop("disabled", true);
+        $("#newGameBtn").text(t("newGame"));
+        renderPiecePalette();
+        if (!opts.keepPosition) {
+          if (opts.standard) applySetupPosition(START_POSITION, false);
+          else applySetupPosition(EMPTY_POSITION, false);
+          setupTurn = "w";
+          $("#setupTurnSelect").val("w");
+        } else {
+          updateSetupWarn();
+        }
+        if (board) board.orientation(boardOrientation());
+        updateSetupMpUI();
+        updateMoveList();
+        updateStatus();
+        applyStaticLang();
+      }
+
+      function beginPlayFromSetup(fenOverride) {
+        var v = fenOverride ? { ok: true, fen: fenOverride, msg: "" } : validateSetup();
+        if (!v.ok && !fenOverride) {
+          updateSetupWarn();
+          setStatus(v.msg || t("setupNeedKings"), "warn");
+          return false;
+        }
+        var fen = v.fen || fenOverride;
+        if (!game.load(fen)) {
+          setStatus(t("setupInvalid"), "warn");
+          return false;
+        }
+        gamePhase = "play";
+        setupReadyLocal = false;
+        setupReadyRemote = { w: false, b: false };
+        undoStack = [];
+        plySans = [];
+        gameOver = false;
+        botThinking = false;
+        clearSelection();
+        clearDiceState();
+        $thinking.removeClass("show");
+        $("#setupPanel").hide();
+        $("#undoBtn").prop("disabled", false);
+        if (board) {
+          board.orientation(boardOrientation());
+          board.position(game.fen(), false);
+        }
+        updateMoveList();
+        updateStatus();
+        applyStaticLang();
+        if (isMultiplayer()) {
+          cancelScheduledBot();
+          return true;
+        }
+        if (userColor === "b" && game.turn() === "w") {
+          scheduleBot(250);
+        } else if (game.turn() !== userColor) {
+          scheduleBot(250);
+        } else {
+          updateStatus();
+        }
+        return true;
+      }
+
+      function tryStartLocalGame() {
+        if (isMultiplayer()) return;
+        var v = validateSetup();
+        if (v.warnMate && v.ok) {
+          // allow with warning already shown
+        }
+        beginPlayFromSetup();
+      }
+
+      function updateSetupMpUI() {
+        var $actions = $("#setupMpActions");
+        var $hint = $("#setupMpHint");
+        var $host = $("#setupHostStartBtn");
+        var $ready = $("#setupReadyBtn");
+        if (!isSetupPhase()) {
+          $actions.addClass("mp-hidden");
+          $hint.addClass("mp-hidden");
+          return;
+        }
+        if (!isMultiplayer() || isSpectating()) {
+          $actions.addClass("mp-hidden");
+          $hint.toggleClass("mp-hidden", !isMultiplayer());
+          $("#setupStartBtn").toggleClass("mp-hidden", isMultiplayer());
+          return;
+        }
+        $("#setupStartBtn").addClass("mp-hidden");
+        $actions.removeClass("mp-hidden");
+        $hint.removeClass("mp-hidden");
+        $ready.text(setupReadyLocal ? t("setupReadyDone") : t("setupReady"));
+        var isHost = mpRoom && mpRoom.hostId === getOrCreateClientId();
+        $host.toggleClass("mp-hidden", !isHost);
+        var other = mpSeat === "w" ? "b" : "w";
+        if (setupReadyLocal && setupReadyRemote[other]) {
+          $hint.text(t("setupWaitingReady"));
+        } else {
+          $hint.text(t("setupMpHint"));
+        }
+      }
+
+      function publishSetupSync() {
+        updateSetupWarn();
+        if (!isMultiplayer() || !canMpAct() || !mpSocket || !isSetupPhase()) return;
+        if (setupSyncTimer) clearTimeout(setupSyncTimer);
+        setupSyncTimer = setTimeout(function () {
+          mpSocket.emit("updateSetup", {
+            clientId: getOrCreateClientId(),
+            code: mpRoomCode,
+            fen: buildSetupFen(),
+            phase: "setup",
+            setupTurn: setupTurn,
+            ready: setupReadyLocal
+          });
+        }, 80);
+      }
+
+      function publishReadyToggle() {
+        if (!isMultiplayer() || !canMpAct() || !mpSocket || !isSetupPhase()) return;
+        setupReadyLocal = !setupReadyLocal;
+        updateSetupMpUI();
+        mpSocket.emit("updateSetup", {
+          clientId: getOrCreateClientId(),
+          code: mpRoomCode,
+          fen: buildSetupFen(),
+          phase: "setup",
+          setupTurn: setupTurn,
+          ready: setupReadyLocal
+        });
+        // if both ready, server will start; also try local optimistic check
+      }
+
+      function publishHostStart() {
+        if (!isMultiplayer() || !canMpAct() || !mpSocket || !isSetupPhase()) return;
+        var v = validateSetup();
+        if (!v.ok) {
+          updateSetupWarn();
+          setStatus(v.msg || t("setupNeedKings"), "warn");
+          return;
+        }
+        mpSocket.emit("startCustomGame", {
+          clientId: getOrCreateClientId(),
+          code: mpRoomCode,
+          fen: v.fen,
+          force: true
+        });
+      }
+
+      function applySetupFromRoom(room) {
+        if (!room) return;
+        if (room.phase === "play") {
+          // Transition into play once; ongoing moves use moveApplied / syncBoardFromMpRoom
+          if (gamePhase !== "play") {
+            beginPlayFromSetup(room.fen);
+          }
+          return;
+        }
+        // setup phase
+        gamePhase = "setup";
+        $("#setupPanel").show();
+        if (room.fen) {
+          var parts = String(room.fen).split(" ");
+          if (parts[1] === "w" || parts[1] === "b") {
+            setupTurn = parts[1];
+            $("#setupTurnSelect").val(setupTurn);
+          }
+          // load position onto board without chess.js if kings missing
+          var probe = new Chess();
+          if (probe.load(room.fen)) {
+            applySetupPosition(probe.fen(), false);
+          } else {
+            // parse placement manually via temporary board load of piece placement only
+            try {
+              var sparse = parts[0];
+              var map = {};
+              var files = "abcdefgh";
+              var rank = 8, file = 0;
+              for (var i = 0; i < sparse.length; i++) {
+                var c = sparse.charAt(i);
+                if (c === "/") { rank--; file = 0; continue; }
+                if (/[1-8]/.test(c)) { file += parseInt(c, 10); continue; }
+                var color = c === c.toUpperCase() ? "w" : "b";
+                var type = c.toUpperCase();
+                map[files[file] + rank] = color + type;
+                file++;
+              }
+              applySetupPosition(map, false);
+            } catch (e) {
+              applySetupPosition(EMPTY_POSITION, false);
+            }
+          }
+        }
+        if (room.setupReady) {
+          setupReadyRemote = {
+            w: !!room.setupReady.w,
+            b: !!room.setupReady.b
+          };
+          if (mpSeat && room.setupReady[mpSeat] != null) {
+            setupReadyLocal = !!room.setupReady[mpSeat];
+          }
+        }
+        updateSetupMpUI();
+        updateSetupWarn();
+        updateStatus();
       }
 
       function isDiceMode() {
@@ -1656,7 +2180,7 @@
 
       /** Sole entry to queue a bot turn; invalidates any prior timer. */
       function scheduleBot(delayMs) {
-        if (isMultiplayer()) {
+        if (isMultiplayer() || isSetupPhase()) {
           cancelScheduledBot();
           return;
         }
@@ -1674,7 +2198,7 @@
        * alreadyThinking: true inside an in-progress botPly chain.
        */
       function canBotActNow(alreadyThinking) {
-        if (isMultiplayer()) return false;
+        if (isMultiplayer() || isSetupPhase()) return false;
         if (gameOver) return false;
         if (!alreadyThinking && botThinking) return false;
         if (!alreadyThinking && selectedSquare) return false;
@@ -2065,6 +2589,14 @@
         updateOpponentLabel();
         $("#sideLabel").text(userColor === "w" ? t("sideWhite") : t("sideBlack"));
 
+        if (isSetupPhase()) {
+          $turnLabel.text("—");
+          setStatus(t("setupPhaseStatus"), "info");
+          updateSetupWarn();
+          updateSetupMpUI();
+          return;
+        }
+
         if (applyGameEndFromPosition()) return;
 
         // During multi-move dice, diceSide + remainingDice own the turn UI
@@ -2289,6 +2821,7 @@
       }
 
       function onDragStart(source, piece) {
+        if (isSetupPhase()) return false;
         if (gameOver || botThinking || applyGameEndFromPosition()) return false;
         if (isMultiplayer()) {
           if (!canMpAct() || !mpBothSeated()) return false;
@@ -2340,6 +2873,10 @@
       }
 
       function tryClickMove(square) {
+        if (isSetupPhase()) {
+          handleSetupSquareClick(square);
+          return;
+        }
         if (gameOver || botThinking || applyGameEndFromPosition()) return;
         if (isMultiplayer()) {
           if (!mpBothSeated()) return;
@@ -2414,48 +2951,15 @@
           if (mpSocket && mpRoom && mpRoom.hostId === getOrCreateClientId()) {
             mpSocket.emit("resetGame", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() });
           }
-          // optimistic local reset; server will broadcast gameReset
-          undoStack = [];
-          plySans = [];
-          game.load(START_FEN);
-          gameOver = false;
-          botThinking = false;
-          clearSelection();
-          clearDiceState();
-          $thinking.removeClass("show");
-          board.orientation(boardOrientation());
-          board.position(START_POSITION);
-          updateMoveList();
-          updateStatus();
+          enterSetupPhase({ standard: false });
+          publishSetupSync();
           return;
         }
-        undoStack = [];
-        plySans = [];
-        game.load(START_FEN);
-        gameOver = false;
-        botThinking = false;
-        clearSelection();
-        clearDiceState();
-        $thinking.removeClass("show");
-        board.orientation(boardOrientation());
-        board.position(START_POSITION);
-        updateMoveList();
-        updateStatus();
-        $("#undoBtn").prop("disabled", false);
-        syncModeSelects();
-        if (userColor === "b") {
-          scheduleBot(250);
-        } else {
-          var canMove = beginDiceTurnFor(userColor);
-          updateStatus();
-          if (!canMove) {
-            scheduleBot(200);
-          }
-        }
+        enterSetupPhase({ standard: false });
       }
 
       function undoMove() {
-        if (isMultiplayer()) return;
+        if (isMultiplayer() || isSetupPhase()) return;
         if (botThinking || undoStack.length === 0) return;
         if (isDiceMode()) {
           // Undo one ply; dice state restored from snapshot
@@ -2491,7 +2995,15 @@
         var next = $("#sideSelect").val() === "b" ? "b" : "w";
         userColor = next;
         saveUserColor();
-        newGame();
+        if (isSetupPhase()) {
+          if (board) board.orientation(boardOrientation());
+          updateStatus();
+          return;
+        }
+        // keep current play position; only flip orientation / bot side
+        if (board) board.orientation(boardOrientation());
+        updateStatus();
+        if (!gameOver && game.turn() !== userColor) scheduleBot(250);
       }
 
       function onModeChange() {
@@ -2519,7 +3031,7 @@
 
         board = Chessboard("board", {
           draggable: true,
-          position: START_POSITION,
+          position: EMPTY_POSITION,
           orientation: boardOrientation(),
           pieceTheme: PIECE_THEME,
           onDragStart: onDragStart,
@@ -2534,6 +3046,49 @@
 
         $("#newGameBtn").on("click", newGame);
         $("#undoBtn").on("click", undoMove);
+        $("#setupClearBtn").on("click", function () {
+          if (!isSetupPhase()) return;
+          if (isMultiplayer() && (isSpectating() || !canMpAct())) return;
+          clearSetupBoard();
+        });
+        $("#setupStandardBtn").on("click", function () {
+          if (!isSetupPhase()) return;
+          if (isMultiplayer() && (isSpectating() || !canMpAct())) return;
+          standardSetupBoard();
+        });
+        $("#setupStartBtn").on("click", function () {
+          if (!isSetupPhase() || isMultiplayer()) return;
+          tryStartLocalGame();
+        });
+        $("#setupReadyBtn").on("click", function () {
+          if (!isSetupPhase() || !isMultiplayer() || isSpectating()) return;
+          var v = validateSetup();
+          if (!setupReadyLocal && !v.ok) {
+            updateSetupWarn();
+            setStatus(v.msg || t("setupNeedKings"), "warn");
+            return;
+          }
+          publishReadyToggle();
+        });
+        $("#setupHostStartBtn").on("click", function () { publishHostStart(); });
+        $("#setupTurnSelect").on("change", function () {
+          if (!isSetupPhase()) return;
+          if (isMultiplayer() && (isSpectating() || !canMpAct())) {
+            $("#setupTurnSelect").val(setupTurn);
+            return;
+          }
+          setupTurn = $("#setupTurnSelect").val() === "b" ? "b" : "w";
+          setupReadyLocal = false;
+          updateSetupWarn();
+          publishSetupSync();
+        });
+        $("#piecePalette").on("click", ".palette-piece", function () {
+          if (!isSetupPhase()) return;
+          if (isMultiplayer() && (isSpectating() || !canMpAct())) return;
+          var code = $(this).attr("data-piece");
+          if (code === "") setPalettePiece("");
+          else setPalettePiece(code);
+        });
         var rulesDialog = document.getElementById("rulesDialog");
         $("#rulesBtn").on("click", function () {
           if (!rulesDialog.open) rulesDialog.showModal();
@@ -2629,19 +3184,10 @@
         var _maybeMp = !!(_paramsEarly.get("room") || _paramsEarly.get("spectate") || (function () {
           try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
         })());
+        enterSetupPhase({ standard: false });
         tryAutoRejoin();
-
-        // If restored color is black, bot (White) makes the opening move — skip when joining MP
         if (!isMultiplayer() && !_maybeMp) {
-          if (userColor === "b") {
-            scheduleBot(250);
-          } else {
-            var canMoveInit = beginDiceTurnFor(userColor);
-            updateStatus();
-            if (!canMoveInit) {
-              scheduleBot(200);
-            }
-          }
+          updateStatus();
         }
       });
     

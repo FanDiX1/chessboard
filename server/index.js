@@ -38,7 +38,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode  // classic | dice | checkers | checkers-custom | backgammon | backgammon-long
+ * @property {string} mode  // classic | dice | custom | checkers | checkers-custom | backgammon | backgammon-long
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -52,6 +52,8 @@ const rooms = new Map();
  * @property {number} diceCount  // 1|2|3 authoritative MP dice count (host-controlled)
  * @property {object|null} customSettings  // checkers-custom: backwardCapture, mandatoryCapture, moveTimer
  * @property {object|null} bg  // backgammon full state (points, bar?, off, turn, dice, phase, history)
+ * @property {'setup'|'play'|null} phase  // chess custom free-setup
+ * @property {{w:boolean,b:boolean}|null} setupReady
  */
 
 function genCode() {
@@ -162,6 +164,13 @@ function publicRoom(room, forClientId) {
       : null,
     chain: room.checkersChain || null,
     bg: room.bg || null,
+    phase: isChessCustomMode(room.mode) ? (room.phase === "play" ? "play" : "setup") : null,
+    setupReady: isChessCustomMode(room.mode)
+      ? {
+          w: !!(room.setupReady && room.setupReady.w),
+          b: !!(room.setupReady && room.setupReady.b),
+        }
+      : null,
   };
 }
 
@@ -201,10 +210,38 @@ function isBgMode(mode) {
 function normalizeMode(mode) {
   if (mode === "dice") return "dice";
   if (mode === "checkers-custom") return "checkers-custom";
+  if (mode === "custom" || mode === "chess-custom") return "custom";
   if (mode === "checkers" || mode === "checkers-classic") return "checkers";
   if (mode === "backgammon" || mode === "bg-classic" || mode === "bg") return "backgammon";
   if (mode === "backgammon-long" || mode === "bg-long" || mode === "long-nardy") return "backgammon-long";
   return "classic";
+}
+
+function isChessCustomMode(mode) {
+  return mode === "custom";
+}
+
+const CUSTOM_EMPTY_FEN = "8/8/8/8/8/8/8/8 w - - 0 1";
+
+function sanitizeSetupFen(raw) {
+  const s = String(raw == null ? "" : raw).trim();
+  if (!s || s.length > 120) return CUSTOM_EMPTY_FEN;
+  const parts = s.split(/\s+/);
+  if (parts.length < 1) return CUSTOM_EMPTY_FEN;
+  // basic placement sanity: only piece letters, digits, slashes
+  if (!/^[pnbrqkPNBRQK1-8\/]+$/.test(parts[0])) return CUSTOM_EMPTY_FEN;
+  const turn = parts[1] === "b" ? "b" : "w";
+  return parts[0] + " " + turn + " - - 0 1";
+}
+
+function countKingsInFen(fen) {
+  const placement = String(fen || "").split(" ")[0] || "";
+  let wk = 0, bk = 0;
+  for (const ch of placement) {
+    if (ch === "K") wk++;
+    if (ch === "k") bk++;
+  }
+  return { wk, bk };
 }
 
 function isCheckersMode(mode) {
@@ -326,6 +363,7 @@ function sanitizeBgState(raw, mode) {
 function startFenForMode(mode) {
   if (isCheckersMode(mode)) return CHECKERS_START_FEN;
   if (isBgMode(mode)) return BG_START_FEN;
+  if (isChessCustomMode(mode)) return CUSTOM_EMPTY_FEN;
   return START_FEN;
 }
 
@@ -351,6 +389,8 @@ function createRoom(clientId, mode) {
     customSettings: norm === "checkers-custom" ? defaultCustomSettings() : null,
     checkersChain: null,
     bg: isBgMode(norm) ? initialBgState(norm) : null,
+    phase: isChessCustomMode(norm) ? "setup" : null,
+    setupReady: isChessCustomMode(norm) ? { w: false, b: false } : null,
   };
   rooms.set(code, room);
   return room;
@@ -437,7 +477,7 @@ function lobbyChannel(mode) {
   return "lobby:" + normalizeMode(mode);
 }
 
-const LOBBY_MODES = ["classic", "dice", "checkers", "checkers-custom", "backgammon", "backgammon-long"];
+const LOBBY_MODES = ["classic", "dice", "custom", "checkers", "checkers-custom", "backgammon", "backgammon-long"];
 
 function broadcastRoomList(modeOrRoom) {
   let modes;
@@ -493,6 +533,11 @@ io.on("connection", (socket) => {
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       if (room.mode === "checkers-custom" && payload && payload.customSettings) {
         room.customSettings = sanitizeCustomSettings(payload.customSettings);
+      }
+      if (isChessCustomMode(room.mode) && payload && payload.fen) {
+        room.fen = sanitizeSetupFen(payload.fen);
+        room.phase = "setup";
+        room.setupReady = { w: false, b: false };
       }
       const nick = sanitizeNick(payload && payload.nick);
       seatPlayer(room, preferred, clientId, socket.id, nick);
@@ -733,6 +778,9 @@ io.on("connection", (socket) => {
 
       const seat = findSeatByClient(room, clientId);
       if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
+      if (isChessCustomMode(room.mode) && room.phase !== "play") {
+        return ack && ack({ ok: false, error: "setup_phase" });
+      }
       if (room.status === "waiting") return ack && ack({ ok: false, error: "waiting_for_opponent" });
 
       const isStateSync = !!(payload && (payload.stateSync || payload.pass));
@@ -879,6 +927,10 @@ io.on("connection", (socket) => {
       room.dice = null;
       room.checkersChain = null;
       room.bg = isBgMode(room.mode) ? initialBgState(room.mode) : null;
+      if (isChessCustomMode(room.mode)) {
+        room.phase = "setup";
+        room.setupReady = { w: false, b: false };
+      }
       room.status = room.seats.w && room.seats.b ? "playing" : "waiting";
       touch(room);
       io.to(code).emit("gameReset", { room: publicRoom(room, null) });
@@ -886,6 +938,115 @@ io.on("connection", (socket) => {
       if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
     } catch (e) {
       if (typeof ack === "function") ack({ ok: false, error: e.message || "reset failed" });
+    }
+  });
+
+  socket.on("updateSetup", (payload, ack) => {
+    try {
+      const clientId = String((payload && payload.clientId) || socket.data.clientId || "");
+      const code = String((payload && payload.code) || socket.data.roomCode || "")
+        .toUpperCase()
+        .trim();
+      const room = rooms.get(code);
+      if (!room) return ack && ack({ ok: false, error: "room_not_found" });
+      if (!isChessCustomMode(room.mode)) return ack && ack({ ok: false, error: "wrong_mode" });
+      const seat = findSeatByClient(room, clientId);
+      if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
+      if (room.phase === "play") return ack && ack({ ok: false, error: "already_playing" });
+
+      room.phase = "setup";
+      if (payload && payload.fen) {
+        room.fen = sanitizeSetupFen(payload.fen);
+      }
+      if (!room.setupReady) room.setupReady = { w: false, b: false };
+      if (payload && typeof payload.ready === "boolean") {
+        room.setupReady[seat] = payload.ready;
+      }
+      // editing board clears both ready flags unless this was a ready-only toggle with same fen
+      if (payload && payload.fen && payload.ready == null) {
+        room.setupReady = { w: false, b: false };
+      }
+      touch(room);
+
+      const bothReady = !!(room.setupReady.w && room.setupReady.b && room.seats.w && room.seats.b);
+      const kings = countKingsInFen(room.fen);
+      if (bothReady && kings.wk === 1 && kings.bk === 1) {
+        room.phase = "play";
+        room.setupReady = { w: false, b: false };
+        room.status = "playing";
+        room.plySans = [];
+        room.lastMove = null;
+        touch(room);
+        io.to(code).emit("customGameStarted", { fen: room.fen, room: publicRoom(room, null) });
+        emitRoom(room);
+        if (typeof ack === "function") ack({ ok: true, started: true, room: publicRoom(room, clientId) });
+        return;
+      }
+
+      io.to(code).emit("setupUpdated", {
+        fen: room.fen,
+        phase: room.phase,
+        setupReady: room.setupReady,
+        by: seat,
+        room: publicRoom(room, null),
+      });
+      emitRoom(room);
+      if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
+    } catch (e) {
+      if (typeof ack === "function") ack({ ok: false, error: e.message || "setup failed" });
+    }
+  });
+
+  socket.on("startCustomGame", (payload, ack) => {
+    try {
+      const clientId = String((payload && payload.clientId) || socket.data.clientId || "");
+      const code = String((payload && payload.code) || socket.data.roomCode || "")
+        .toUpperCase()
+        .trim();
+      const room = rooms.get(code);
+      if (!room) return ack && ack({ ok: false, error: "room_not_found" });
+      if (!isChessCustomMode(room.mode)) return ack && ack({ ok: false, error: "wrong_mode" });
+      const seat = findSeatByClient(room, clientId);
+      if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
+      const force = !!(payload && payload.force);
+      if (force && room.hostId !== clientId) {
+        return ack && ack({ ok: false, error: "host_only" });
+      }
+      if (payload && payload.fen) {
+        room.fen = sanitizeSetupFen(payload.fen);
+      }
+      const kings = countKingsInFen(room.fen);
+      if (kings.wk !== 1 || kings.bk !== 1) {
+        return ack && ack({ ok: false, error: "need_kings" });
+      }
+      if (!force) {
+        if (!room.setupReady) room.setupReady = { w: false, b: false };
+        room.setupReady[seat] = true;
+        const bothReady = !!(room.setupReady.w && room.setupReady.b && room.seats.w && room.seats.b);
+        if (!bothReady) {
+          touch(room);
+          io.to(code).emit("setupUpdated", {
+            fen: room.fen,
+            phase: "setup",
+            setupReady: room.setupReady,
+            by: seat,
+            room: publicRoom(room, null),
+          });
+          emitRoom(room);
+          return ack && ack({ ok: true, started: false, room: publicRoom(room, clientId) });
+        }
+      }
+      room.phase = "play";
+      room.setupReady = { w: false, b: false };
+      room.status = room.seats.w && room.seats.b ? "playing" : "waiting";
+      room.plySans = [];
+      room.lastMove = null;
+      touch(room);
+      io.to(code).emit("customGameStarted", { fen: room.fen, room: publicRoom(room, null) });
+      emitRoom(room);
+      if (typeof ack === "function") ack({ ok: true, started: true, room: publicRoom(room, clientId) });
+    } catch (e) {
+      if (typeof ack === "function") ack({ ok: false, error: e.message || "start failed" });
     }
   });
 

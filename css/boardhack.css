@@ -1383,3 +1383,81 @@ button.btn:disabled {
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+
+
+/* Chess customizable — free piece setup */
+.setup-panel {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.setup-head .card-title {
+  margin-bottom: 0.15rem;
+}
+.setup-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.piece-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.palette-piece {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+.palette-piece img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.palette-piece:hover {
+  border-color: rgba(159, 239, 0, 0.45);
+}
+.palette-piece.active {
+  border-color: rgba(159, 239, 0, 0.85);
+  background: rgba(159, 239, 0, 0.12);
+  box-shadow: 0 0 0 1px rgba(159, 239, 0, 0.35);
+}
+.palette-eraser {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.setup-turn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 14rem;
+}
+.setup-warn {
+  margin: 0;
+  min-height: 1.1em;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.setup-warn--error {
+  color: #ff8e8e;
+}
+.setup-warn--ok {
+  color: var(--text-muted);
+}
+.setup-actions,
+.setup-mp-actions {
+  flex-wrap: wrap;
+}
