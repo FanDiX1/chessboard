@@ -9,14 +9,16 @@
   var DEFAULT_WORKER =
     "../../../vendor/stockfish/stockfish-18-lite-single.js";
 
-  /** @type {Record<string, {skill:number, limitStrength:boolean, elo:number, movetime:number, labelKey:string}>} */
+  /** @type {Record<string, {skill:number, limitStrength:boolean, elo:number, depth:number, labelKey:string}>} */
   var SKILLS = {
-    // UCI_Elo for this build is clamped ~1320–3190
-    easy: { skill: 0, limitStrength: true, elo: 1320, movetime: 300, labelKey: "easy" },
-    medium: { skill: 5, limitStrength: true, elo: 1600, movetime: 500, labelKey: "medium" },
-    hard: { skill: 10, limitStrength: true, elo: 1900, movetime: 800, labelKey: "hard" },
-    expert: { skill: 15, limitStrength: true, elo: 2300, movetime: 1200, labelKey: "expert" },
-    master: { skill: 20, limitStrength: false, elo: 2850, movetime: 1800, labelKey: "master" }
+    // Single-player table (Skill / LimitStrength / UCI_Elo / depth / ~Elo)
+    // Новичок / Любитель / Продвинутый / Эксперт / Мастер
+    // Note: some Stockfish builds clamp UCI_Elo (e.g. ~1320+); engine still applies Skill+depth.
+    easy: { skill: 0, limitStrength: true, elo: 1000, depth: 2, labelKey: "easy" },
+    medium: { skill: 3, limitStrength: true, elo: 1200, depth: 4, labelKey: "medium" },
+    hard: { skill: 7, limitStrength: true, elo: 1500, depth: 8, labelKey: "hard" },
+    expert: { skill: 12, limitStrength: true, elo: 1800, depth: 12, labelKey: "expert" },
+    master: { skill: 16, limitStrength: true, elo: 2100, depth: 14, labelKey: "master" }
   };
 
   var workerUrl = DEFAULT_WORKER;
@@ -182,7 +184,7 @@
 
         post("ucinewgame");
         post("position fen " + fen);
-        var go = "go movetime " + cfg.movetime;
+        var go = "go depth " + cfg.depth;
         if (searchMovesUci && searchMovesUci.length) {
           go += " searchmoves " + searchMovesUci.join(" ");
         }
@@ -194,7 +196,7 @@
             post("stop");
             failPending(new Error("Stockfish search timeout"));
           }
-        }, cfg.movetime + 8000);
+        }, cfg.depth * 2500 + 8000);
       }).then(function (move) {
         if (gen !== searchGen) return null;
         return move;
