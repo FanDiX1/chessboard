@@ -70,6 +70,12 @@
         <div class="board-wrap">
           <div id="board"></div>
           <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
+          <div class="pos-eval" id="posEvalBar" hidden aria-hidden="true">
+            <div class="pos-eval-track" aria-hidden="true">
+              <div class="pos-eval-fill" id="posEvalFill"></div>
+            </div>
+            <div class="pos-eval-score" id="posEvalScore">—</div>
+          </div>
         </div>
         <div class="setup-panel" id="setupPanel">
           <div class="setup-head">
@@ -200,6 +206,14 @@
                 <span class="custom-toggle-knob" aria-hidden="true"></span>
               </button>
             </div>
+            <div class="custom-setting-row" id="posEvalWrap">
+              <div class="custom-setting-text">
+                <span class="custom-setting-label" id="posEvalLabel"></span>
+              </div>
+              <button type="button" class="custom-toggle" id="posEvalToggle" role="switch" aria-checked="false" aria-labelledby="posEvalLabel">
+                <span class="custom-toggle-knob" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -273,6 +287,7 @@
       var MODE_KEY = "boardhack-mode";
       var DICE_COUNT_KEY = "boardhack-dice-count";
       var MOVE_ANALYSIS_KEY = "boardhack-custom-move-analysis";
+      var POS_EVAL_KEY = "boardhack-custom-pos-eval";
 
       var I18N = {
         ru: {
@@ -422,6 +437,7 @@
           metaOpp: "Противник",
           customSettingsTitle: "Настройки",
           moveAnalysis: "Оценка ходов",
+          posEval: "Оценка позиции",
           mqBest: "Лучший",
           mqExcellent: "Отлично",
           mqGood: "Хорошо",
@@ -577,6 +593,7 @@
           metaOpp: "Opponent",
           customSettingsTitle: "Settings",
           moveAnalysis: "Move analysis",
+          posEval: "Position eval",
           mqBest: "Best",
           mqExcellent: "Excellent",
           mqGood: "Good",
@@ -623,6 +640,9 @@
         }
         if ($("#moveAnalysisLabel").length) {
           $("#moveAnalysisLabel").text(t("moveAnalysis"));
+        }
+        if ($("#posEvalLabel").length) {
+          $("#posEvalLabel").text(t("posEval"));
         }
         if ($("#modeSelect").length) {
           $("#modeSelectLabel").text(t("modeSelectLabel"));
@@ -1229,6 +1249,7 @@
             clearSelection();
             updateMoveList();
             reattachMoveQualityBadge();
+            if (typeof schedulePositionEval === "function") schedulePositionEval();
           }
           applyGameEndFromPosition();
         }
@@ -1247,6 +1268,7 @@
           clearSelection();
           updateMoveList();
           reattachMoveQualityBadge();
+          if (typeof schedulePositionEval === "function") schedulePositionEval();
           if (msg.status === "finished" || applyGameEndFromPosition()) {
             /* status updated inside */
           } else {
@@ -1579,6 +1601,9 @@
           clearMoveQualityBadge();
           mqLast = null;
           updateMoveList();
+          if (typeof isPosEvalOn === "function" && isPosEvalOn()) {
+            schedulePositionEval();
+          }
         }
       }
 
@@ -1752,12 +1777,21 @@
 
       /** After local user ply: analyze then continue (bot / status). */
       function afterLocalMoveForAnalysis(movedObj, continueFn) {
-        if (!movedObj || !isMoveAnalysisOn()) {
+        function finishAnalysisChain() {
           if (continueFn) continueFn();
+          // Defer: skip if bot is about to / already using Stockfish; bot path re-triggers after its ply
+          window.setTimeout(function () {
+            if (typeof botThinking !== "undefined" && botThinking) return;
+            if (!isMultiplayer() && typeof canBotActNow === "function" && canBotActNow(false)) return;
+            if (typeof schedulePositionEval === "function") schedulePositionEval();
+          }, 40);
+        }
+        if (!movedObj || !isMoveAnalysisOn()) {
+          finishAnalysisChain();
           return;
         }
         if (typeof BoardHackStockfish === "undefined" || !BoardHackStockfish.analyzePosition) {
-          if (continueFn) continueFn();
+          finishAnalysisChain();
           return;
         }
         // fen before = from undo stack snapshot if available
@@ -1776,8 +1810,159 @@
         }
         var uci = BoardHackStockfish.moveToUci(movedObj);
         analyzePlayedMove(fenBefore, uci, movedObj.to, function () {
-          if (continueFn) continueFn();
+          finishAnalysisChain();
         });
+      }
+
+
+      /* ===== Position evaluation bar (custom only; toggle default OFF) ===== */
+      var posEvalEnabled = false;
+      try {
+        posEvalEnabled = localStorage.getItem(POS_EVAL_KEY) === "1";
+      } catch (e) {}
+      var peGen = 0;
+      var peLastScore = null; // { type, value } from white's perspective
+
+      function isPosEvalOn() {
+        return !!posEvalEnabled;
+      }
+
+      function syncPosEvalToggle() {
+        var el = document.getElementById("posEvalToggle");
+        if (el) el.setAttribute("aria-checked", posEvalEnabled ? "true" : "false");
+      }
+
+      function setPosEvalVisible(show) {
+        var bar = document.getElementById("posEvalBar");
+        if (!bar) return;
+        if (show) {
+          bar.hidden = false;
+          bar.setAttribute("aria-hidden", "false");
+        } else {
+          bar.hidden = true;
+          bar.setAttribute("aria-hidden", "true");
+        }
+      }
+
+      function resetPosEvalDisplay() {
+        peLastScore = null;
+        var fill = document.getElementById("posEvalFill");
+        var scoreEl = document.getElementById("posEvalScore");
+        if (fill) {
+          fill.style.width = "50%";
+          fill.classList.remove("pos-eval-black-adv");
+        }
+        if (scoreEl) scoreEl.textContent = "—";
+      }
+
+      function hidePosEval() {
+        peGen += 1;
+        setPosEvalVisible(false);
+        resetPosEvalDisplay();
+      }
+
+      function setPosEvalEnabled(on) {
+        posEvalEnabled = !!on;
+        try {
+          localStorage.setItem(POS_EVAL_KEY, posEvalEnabled ? "1" : "0");
+        } catch (e) {}
+        if (!posEvalEnabled) {
+          hidePosEval();
+          return;
+        }
+        setPosEvalVisible(true);
+        if (typeof isPlayPhase === "function" && isPlayPhase()) {
+          schedulePositionEval();
+        } else {
+          resetPosEvalDisplay();
+        }
+      }
+
+      /** Format Stockfish score for white's perspective. */
+      function formatPosEvalScore(score) {
+        if (!score || score.type == null) return "—";
+        if (score.type === "mate") {
+          var m = score.value | 0;
+          if (m === 0) return "M0";
+          return (m > 0 ? "M" : "-M") + Math.abs(m);
+        }
+        var cp = score.value | 0;
+        var pawns = cp / 100;
+        var abs = Math.abs(pawns);
+        var rounded = abs >= 10 ? abs.toFixed(0) : abs.toFixed(1);
+        if (pawns > 0.04) return "+" + rounded;
+        if (pawns < -0.04) return "-" + rounded;
+        return "0.0";
+      }
+
+      /**
+       * Map white-pov score to fill % (0 = black winning, 100 = white winning).
+       * Soft-clamp around ±5 pawns; mates pin to ends.
+       */
+      function scoreToBarPercent(score) {
+        if (!score || score.type == null) return 50;
+        if (score.type === "mate") {
+          var mv = score.value | 0;
+          if (mv > 0) return 100;
+          if (mv < 0) return 0;
+          return 50;
+        }
+        var pawns = (score.value | 0) / 100;
+        // logistic-ish clamp: ±5 ≈ near extremes
+        var t = Math.max(-5, Math.min(5, pawns));
+        return 50 + (t / 5) * 45;
+      }
+
+      function applyPosEvalScore(score) {
+        peLastScore = score || null;
+        var fill = document.getElementById("posEvalFill");
+        var scoreEl = document.getElementById("posEvalScore");
+        var pct = scoreToBarPercent(peLastScore);
+        if (fill) {
+          fill.style.width = pct.toFixed(1) + "%";
+          fill.classList.toggle("pos-eval-black-adv", pct < 50);
+        }
+        if (scoreEl) scoreEl.textContent = formatPosEvalScore(peLastScore);
+      }
+
+      /**
+       * Convert engine score (side-to-move POV) to white POV.
+       */
+      function scoreToWhitePov(score, fen) {
+        if (!score) return null;
+        var turn = "w";
+        if (fen) {
+          var parts = String(fen).split(/\s+/);
+          if (parts[1] === "b" || parts[1] === "w") turn = parts[1];
+        }
+        if (turn === "w") return { type: score.type, value: score.value };
+        return { type: score.type, value: -(score.value | 0) };
+      }
+
+      function schedulePositionEval() {
+        if (!isPosEvalOn()) return;
+        if (typeof isSetupPhase === "function" && isSetupPhase()) {
+          resetPosEvalDisplay();
+          return;
+        }
+        setPosEvalVisible(true);
+        if (typeof BoardHackStockfish === "undefined" || !BoardHackStockfish.analyzePosition) {
+          return;
+        }
+        var fen = game && game.fen ? game.fen() : null;
+        if (!fen) return;
+        var myGen = ++peGen;
+        BoardHackStockfish.analyzePosition(fen, 12)
+          .then(function (info) {
+            if (myGen !== peGen || !isPosEvalOn()) return;
+            var whiteScore = scoreToWhitePov(info && info.score, fen);
+            applyPosEvalScore(whiteScore);
+          })
+          .catch(function (err) {
+            if (err && err.message === "cancelled") return;
+            if (myGen !== peGen) return;
+            console.warn("Position eval failed:", err && err.message ? err.message : err);
+          });
       }
 
       function isSetupPhase() {
@@ -1992,6 +2177,13 @@
         mqGen += 1;
         mqLast = null;
         clearMoveQualityBadge();
+        if (typeof peGen !== "undefined") peGen += 1;
+        if (typeof isPosEvalOn === "function" && isPosEvalOn()) {
+          setPosEvalVisible(true);
+          resetPosEvalDisplay();
+        } else if (typeof hidePosEval === "function") {
+          hidePosEval();
+        }
         gameOver = false;
         botThinking = false;
         undoStack = [];
@@ -2049,6 +2241,10 @@
         updateMoveList();
         updateStatus();
         applyStaticLang();
+        if (typeof isPosEvalOn === "function" && isPosEvalOn()) {
+          setPosEvalVisible(true);
+          schedulePositionEval();
+        }
         if (isMultiplayer()) {
           cancelScheduledBot();
           return true;
@@ -3322,6 +3518,7 @@
         mqGen += 1;
         mqLast = null;
         clearMoveQualityBadge();
+        if (typeof peGen !== "undefined") peGen += 1;
         if (isDiceMode()) {
           // Undo one ply; dice state restored from snapshot
           restoreSnapshot(undoStack.pop());
@@ -3337,6 +3534,7 @@
         updateMoveList();
         updateDiceUI();
         updateStatus();
+        if (typeof schedulePositionEval === "function") schedulePositionEval();
         cancelScheduledBot();
         if (!gameOver && canBotActNow(false)) {
           scheduleBot(250);
@@ -3469,6 +3667,24 @@
           var next = $(this).attr("aria-checked") !== "true";
           setMoveAnalysisEnabled(next);
           syncMoveAnalysisToggle();
+          if (!next && typeof isPosEvalOn === "function" && isPosEvalOn()) {
+            schedulePositionEval();
+          }
+        });
+        syncPosEvalToggle();
+        if (isPosEvalOn() && isPlayPhase()) {
+          setPosEvalVisible(true);
+          schedulePositionEval();
+        } else if (isPosEvalOn()) {
+          setPosEvalVisible(true);
+          resetPosEvalDisplay();
+        } else {
+          hidePosEval();
+        }
+        $("#posEvalToggle").on("click", function () {
+          var next = $(this).attr("aria-checked") !== "true";
+          setPosEvalEnabled(next);
+          syncPosEvalToggle();
         });
 
         if (typeof BoardHackStockfish !== "undefined") {
