@@ -233,6 +233,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="../../../js/stockfish-bot.js"></script>
+  <script src="../../../js/drag-scroll-lock.js"></script>
   <script>
 
     (function () {
@@ -2897,10 +2898,12 @@
         $("#board .square-55d63").removeClass("selected");
         $("#board .square-" + source).addClass("selected");
         showLegalMoves(source);
+        lockDragScroll();
         return true;
       }
 
       function onDrop(source, target) {
+        unlockDragScroll();
         clearSelection();
         if (!tryMakeUserMove(source, target)) return "snapback";
         board.position(game.fen());

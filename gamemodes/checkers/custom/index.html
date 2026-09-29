@@ -322,6 +322,7 @@
 </dialog>
 
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="../../../js/drag-scroll-lock.js"></script>
 <script>
 
     (function () {
@@ -2086,6 +2087,7 @@
     moveGhost(ev.clientX, ev.clientY, rect.width, rect.height);
 
     dragState = { r: r, c: c, pieceEl: fresh, moved: false, w: rect.width, h: rect.height };
+    lockDragScroll();
     try { fresh.setPointerCapture(ev.pointerId); } catch (e) {}
     fresh.addEventListener("pointermove", onPiecePointerMove);
     fresh.addEventListener("pointerup", onPiecePointerUp);
@@ -2118,6 +2120,7 @@
 
   function onPiecePointerUp(ev) {
     if (!dragState) return;
+    unlockDragScroll();
     var st = dragState;
     var pieceEl = st.pieceEl;
     pieceEl.removeEventListener("pointermove", onPiecePointerMove);
