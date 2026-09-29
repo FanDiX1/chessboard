@@ -19,10 +19,20 @@
         </a>
       </div>
       <div class="topbar-actions">
-        <div class="lang-switch" role="group" aria-label="Language">
-          <button type="button" id="langRu" data-lang="ru">RU</button>
-          <span class="lang-sep">|</span>
-          <button type="button" id="langEn" data-lang="en">EN</button>
+        <div class="settings-menu" id="settingsMenu">
+          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+            <span aria-hidden="true">⚙</span>
+          </button>
+          <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
+            <div class="settings-menu-section">
+              <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+              <div class="lang-switch" role="group" aria-label="Language">
+                <button type="button" id="langRu" data-lang="ru">RU</button>
+                <span class="lang-sep">|</span>
+                <button type="button" id="langEn" data-lang="en">EN</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -132,6 +142,7 @@
         ru: {
           docTitle: "BoardHack — Взломай доску",
           heroTitleHtml: "Рады видеть вас за столом.",
+          settingsLangLabel: "Язык",
           heroDesc: "Выберите стол и сделайте первый ход.",
           tabChess: "Шахматы",
           tabCheckers: "Шашки",
@@ -164,6 +175,7 @@
         en: {
           docTitle: "BoardHack — Hack the Board",
           heroTitleHtml: "Glad to have you at the table.",
+          settingsLangLabel: "Language",
           heroDesc: "Choose a table and make the first move.",
           tabChess: "Chess",
           tabCheckers: "Checkers",
@@ -244,6 +256,8 @@
         document.getElementById("cardMahjongSoonTitle").textContent = t("cardMahjongSoonTitle");
         document.getElementById("cardMahjongSoonDesc").textContent = t("cardMahjongSoonDesc");
         document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");
+        var _sll = document.getElementById("settingsLangLabel");
+        if (_sll) _sll.textContent = t("settingsLangLabel");
         document.getElementById("langRu").classList.toggle("active", lang === "ru");
         document.getElementById("langEn").classList.toggle("active", lang === "en");
       }
@@ -274,6 +288,24 @@
         }
       }
 
+      function wireSettingsMenu() {
+    var menu = document.getElementById("settingsMenu");
+    var btn = document.getElementById("settingsMenuBtn");
+    if (!menu || !btn) return;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = !menu.classList.contains("open");
+      menu.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.addEventListener("click", function () {
+      menu.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    });
+    menu.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
+
+      wireSettingsMenu();
       document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
       document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
 

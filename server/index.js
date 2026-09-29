@@ -260,7 +260,7 @@ function sanitizeCustomSettings(raw) {
   };
 }
 
-/** Checkers-custom rules are editable by host/white only until the first ply. */
+/** Checkers-custom rules are editable by room host only until the first ply. */
 function isCheckersCustomSettingsLocked(room) {
   if (!room || room.mode !== "checkers-custom") return true;
   if (room.status === "finished") return true;
@@ -270,9 +270,7 @@ function isCheckersCustomSettingsLocked(room) {
 function canEditCheckersCustomSettings(room, clientId) {
   if (!room || room.mode !== "checkers-custom" || !clientId) return false;
   if (isCheckersCustomSettingsLocked(room)) return false;
-  if (room.hostId === clientId) return true;
-  if (room.seats.w && room.seats.w.clientId === clientId) return true;
-  return false;
+  return room.hostId === clientId;
 }
 
 /** Chess custom free-setup is locked once phase is play (match started). */
@@ -889,7 +887,7 @@ io.on("connection", (socket) => {
       }
 
       if (payload && payload.customSettings && room.mode === "checkers-custom") {
-        // Ignore client attempts once locked; only host/white may edit before first ply.
+        // Ignore client attempts once locked; only host may edit before first ply.
         if (canEditCheckersCustomSettings(room, clientId)) {
           room.customSettings = sanitizeCustomSettings(payload.customSettings);
         }
@@ -983,15 +981,25 @@ io.on("connection", (socket) => {
       if (room.phase === "play") return ack && ack({ ok: false, error: "already_playing" });
 
       room.phase = "setup";
-      if (payload && payload.fen) {
-        room.fen = sanitizeSetupFen(payload.fen);
-      }
       if (!room.setupReady) room.setupReady = { w: false, b: false };
+
+      let fenChanged = false;
+      if (payload && payload.fen) {
+        const nextFen = sanitizeSetupFen(payload.fen);
+        if (nextFen !== room.fen) {
+          // Shared setup board is host-only
+          if (room.hostId !== clientId) {
+            return ack && ack({ ok: false, error: "host_only" });
+          }
+          room.fen = nextFen;
+          fenChanged = true;
+        }
+      }
       if (payload && typeof payload.ready === "boolean") {
         room.setupReady[seat] = payload.ready;
       }
-      // editing board clears both ready flags unless this was a ready-only toggle with same fen
-      if (payload && payload.fen && payload.ready == null) {
+      // Host board edits clear both ready flags (ready-only toggles keep flags)
+      if (fenChanged && payload && payload.ready == null) {
         room.setupReady = { w: false, b: false };
       }
       touch(room);
@@ -1098,10 +1106,7 @@ io.on("connection", (socket) => {
           room: publicRoom(room, clientId),
         });
       }
-      const isHostOrWhite =
-        room.hostId === clientId ||
-        (room.seats.w && room.seats.w.clientId === clientId);
-      if (!isHostOrWhite) return ack && ack({ ok: false, error: "host_only" });
+      if (room.hostId !== clientId) return ack && ack({ ok: false, error: "host_only" });
       room.customSettings = sanitizeCustomSettings(payload && payload.customSettings);
       touch(room);
       emitCustomSettingsUpdated(room);

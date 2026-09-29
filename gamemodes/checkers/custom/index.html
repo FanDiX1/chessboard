@@ -129,10 +129,20 @@
       <span class="mode-badge" id="modeBadge">checkers · custom</span>
     </div>
     <div class="topbar-actions">
-      <div class="lang-switch" role="group" aria-label="Language">
-        <button type="button" id="langRu" data-lang="ru">RU</button>
-        <span class="lang-sep">|</span>
-        <button type="button" id="langEn" data-lang="en">EN</button>
+      <div class="settings-menu" id="settingsMenu">
+        <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+          <span aria-hidden="true">⚙</span>
+        </button>
+        <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
+          <div class="settings-menu-section">
+            <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+            <div class="lang-switch" role="group" aria-label="Language">
+              <button type="button" id="langRu" data-lang="ru">RU</button>
+              <span class="lang-sep">|</span>
+              <button type="button" id="langEn" data-lang="en">EN</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -352,6 +362,7 @@
     ru: {
       docTitle: "BoardHack — Настраиваемые шашки",
       modeBadge: "шашки · настраиваемый",
+      settingsLangLabel: "Язык",
       playArea: "Игровая зона",
       mission: "Управление",
       session: "Сессия",
@@ -359,7 +370,7 @@
       rulesButton: "Правила",
       rulesTitle: "Настраиваемые шашки",
       rulesClose: "Закрыть правила",
-      rulesHtml: "<ul><li><strong>База:</strong> русские шашки 8×8, дамка летает.</li><li><strong>Взятие назад:</strong> если включено — простые шашки бьют вперёд и назад (как в русских); если выкл. — только вперёд (как в международных).</li><li><strong>Обязательное взятие:</strong> если включено — нельзя ходить тихо, когда есть бой; если выкл. — тихий ход разрешён.</li><li><strong>Таймер хода:</strong> выкл. / 10 / 30 / 60 / 120 сек. Просрочка — поражение стороны, чей ход.</li><li><strong>Мультиплеер:</strong> создатель / белые правят настройками до первого хода; если соперник вышел — партия продолжается против бота.</li></ul>",
+      rulesHtml: "<ul><li><strong>База:</strong> русские шашки 8×8, дамка летает.</li><li><strong>Взятие назад:</strong> если включено — простые шашки бьют вперёд и назад (как в русских); если выкл. — только вперёд (как в международных).</li><li><strong>Обязательное взятие:</strong> если включено — нельзя ходить тихо, когда есть бой; если выкл. — тихий ход разрешён.</li><li><strong>Таймер хода:</strong> выкл. / 10 / 30 / 60 / 120 сек. Просрочка — поражение стороны, чей ход.</li><li><strong>Мультиплеер:</strong> только создатель комнаты правит настройками до первого хода; если соперник вышел — партия продолжается против бота.</li></ul>",
       sideSelectLabel: "Играть за",
       sideWhite: "Белые",
       sideBlack: "Чёрные",
@@ -392,7 +403,7 @@
       mpNickPlaceholder: "Ваш ник",
       mpSpectate: "Наблюдать",
       mpSpectateOk: "OK",
-      mpSpectating: "вы наблюдаете",
+      mpSpectating: "Вы наблюдаете",
       mpSpectatingMeta: "Наблюдение",
       mpSpectators: "зрители",
       mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
@@ -402,19 +413,19 @@
           mpCopySpectate: "Копировать ссылку наблюдения",
       mpCopied: "Скопировано",
       mpLeave: "Выйти",
-      mpOffline: "офлайн",
-      mpConnecting: "подключение…",
-      mpConnected: "на сервере",
-      mpWaiting: "ожидание соперника…",
-      mpPlaying: "игра идёт",
+      mpOffline: "Офлайн",
+      mpConnecting: "Подключение…",
+      mpConnected: "На сервере",
+      mpWaiting: "Ожидание соперника…",
+      mpPlaying: "Игра идёт",
       mpOpponent: "Соперник",
-      mpOpponentGone: "соперник отключился",
-      mpError: "ошибка связи",
-      mpSeatEmpty: "свободно",
+      mpOpponentGone: "Соперник отключился",
+      mpError: "Ошибка связи",
+      mpSeatEmpty: "Свободно",
       mpPlayerStub: "Игрок",
-      mpSeatYou: "вы",
-      mpSeatOpp: "соперник",
-      mpSeatOffline: "офлайн",
+      mpSeatYou: "Вы",
+      mpSeatOpp: "Соперник",
+      mpSeatOffline: "Офлайн",
       mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
       mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
       mpBotOff: "Бот отключён в мультиплеере",
@@ -444,11 +455,12 @@
       winnerOpp: "соперник",
       winnerBot: "бот",
       customSettingsLocked: "Настройки зафиксированы до конца партии",
-      customSettingsHostOnly: "Только создатель комнаты / белые меняют настройки до старта"
+      customSettingsHostOnly: "Только создатель комнаты меняет настройки до старта"
     },
     en: {
       docTitle: "BoardHack — Customizable draughts",
       modeBadge: "checkers · custom",
+      settingsLangLabel: "Language",
       playArea: "Play area",
       mission: "Controls",
       session: "Session",
@@ -456,7 +468,7 @@
       rulesButton: "Rules",
       rulesTitle: "Customizable draughts",
       rulesClose: "Close rules",
-      rulesHtml: "<ul><li><strong>Base:</strong> Russian draughts 8×8 with flying kings.</li><li><strong>Backward capture:</strong> ON — men capture both ways (Russian); OFF — men capture forward only (international-like).</li><li><strong>Mandatory capture:</strong> ON — quiet moves illegal when a capture exists; OFF — quiet moves allowed.</li><li><strong>Move timer:</strong> off / 10 / 30 / 60 / 120 s. Timeout loses for the side to move.</li><li><strong>Multiplayer:</strong> creator / White owns settings until the first move; if the opponent leaves, continue vs bot.</li></ul>",
+      rulesHtml: "<ul><li><strong>Base:</strong> Russian draughts 8×8 with flying kings.</li><li><strong>Backward capture:</strong> ON — men capture both ways (Russian); OFF — men capture forward only (international-like).</li><li><strong>Mandatory capture:</strong> ON — quiet moves illegal when a capture exists; OFF — quiet moves allowed.</li><li><strong>Move timer:</strong> off / 10 / 30 / 60 / 120 s. Timeout loses for the side to move.</li><li><strong>Multiplayer:</strong> only the room creator owns settings until the first move; if the opponent leaves, continue vs bot.</li></ul>",
       sideSelectLabel: "Play as",
       sideWhite: "White",
       sideBlack: "Black",
@@ -489,7 +501,7 @@
       mpNickPlaceholder: "Your nickname",
       mpSpectate: "Spectate",
       mpSpectateOk: "OK",
-      mpSpectating: "spectating",
+      mpSpectating: "Spectating",
       mpSpectatingMeta: "Spectating",
       mpSpectators: "spectators",
       mpHint: "Invite a friend with a room code. No account needed.",
@@ -499,18 +511,18 @@
           mpCopySpectate: "Copy spectate link",
       mpCopied: "Copied",
       mpLeave: "Leave",
-      mpOffline: "offline",
-      mpConnecting: "connecting…",
-      mpConnected: "on server",
-      mpWaiting: "waiting for opponent…",
-      mpPlaying: "match live",
-      mpOpponentGone: "opponent disconnected",
-      mpError: "connection error",
-      mpSeatEmpty: "open",
+      mpOffline: "Offline",
+      mpConnecting: "Connecting…",
+      mpConnected: "On server",
+      mpWaiting: "Waiting for opponent…",
+      mpPlaying: "Match live",
+      mpOpponentGone: "Opponent disconnected",
+      mpError: "Connection error",
+      mpSeatEmpty: "Open",
       mpPlayerStub: "Player",
-      mpSeatYou: "you",
-      mpSeatOpp: "opponent",
-      mpSeatOffline: "offline",
+      mpSeatYou: "You",
+      mpSeatOpp: "Opponent",
+      mpSeatOffline: "Offline",
       mpWaitingHint: "Share the code or link. Bot is disabled.",
       mpSeatPickHint: "While alone — click a color to switch side",
       mpBotOff: "Bot disabled in multiplayer",
@@ -540,7 +552,7 @@
       winnerOpp: "opponent",
       winnerBot: "bot",
       customSettingsLocked: "Settings locked for this game",
-      customSettingsHostOnly: "Only the room creator / White can change settings before the first move"
+      customSettingsHostOnly: "Only the room creator can change settings before the first move"
     }
   };
 
@@ -925,9 +937,7 @@
     if (!mpRoom || mpSpectating) return false;
     if (isCustomSettingsLocked()) return false;
     var cid = getOrCreateClientId();
-    if (mpRoom.hostId && mpRoom.hostId === cid) return true;
-    if (mpSeat === "w") return true;
-    return false;
+    return !!(mpRoom.hostId && mpRoom.hostId === cid);
   }
   function applyCustomSettingsObject(obj, fromRemote) {
     if (!obj || typeof obj !== "object") return;
@@ -950,13 +960,9 @@
     if (mtog) { mtog.setAttribute("aria-checked", customSettings.mandatoryCapture ? "true" : "false"); mtog.disabled = !editable; }
     if (sel) { sel.value = String(customSettings.moveTimer || 0); sel.disabled = !editable; }
     var lockedEl = document.getElementById("customSettingsLocked");
-    var locked = isMultiplayer()
-      ? (!editable && isCustomSettingsLocked())
-      : settingsLockedLocal;
     if (lockedEl) {
-      if (locked) { lockedEl.classList.remove("mp-hidden"); lockedEl.textContent = t("customSettingsLocked"); }
-      else if (isMultiplayer() && !editable) { lockedEl.classList.remove("mp-hidden"); lockedEl.textContent = t("customSettingsHostOnly"); }
-      else { lockedEl.classList.add("mp-hidden"); lockedEl.textContent = ""; }
+      lockedEl.classList.add("mp-hidden");
+      lockedEl.textContent = "";
     }
     var hintB = document.getElementById("setBackwardHint");
     var hintM = document.getElementById("setMandatoryHint");
@@ -1940,6 +1946,8 @@
     var stl = document.getElementById("setTimerLabel");
     if (stl) stl.textContent = t("setTimerLabel");
     updateCustomSettingsUI();
+    var _sll = document.getElementById("settingsLangLabel");
+    if (_sll) _sll.textContent = t("settingsLangLabel");
     document.getElementById("langRu").classList.toggle("active", lang === "ru");
     document.getElementById("langEn").classList.toggle("active", lang === "en");
     updateMpUI();
@@ -2383,6 +2391,24 @@
     if (e.target === rulesDialog) rulesDialog.close();
   });
 
+  function wireSettingsMenu() {
+    var menu = document.getElementById("settingsMenu");
+    var btn = document.getElementById("settingsMenuBtn");
+    if (!menu || !btn) return;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = !menu.classList.contains("open");
+      menu.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.addEventListener("click", function () {
+      menu.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    });
+    menu.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
+
+  wireSettingsMenu();
   document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
   document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
   document.getElementById("newGameBtn").addEventListener("click", newGame);

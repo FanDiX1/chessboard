@@ -21,39 +21,20 @@
         <span class="mode-badge" id="modeBadge">Шахматы · Настраиваемый</span>
       </div>
       <div class="topbar-actions">
-        <div class="mode-menu" id="modeMenu">
-          <button type="button" class="mode-menu-btn" id="modeMenuBtn" aria-haspopup="true" aria-expanded="false">
-            <span id="modeMenuLabel">Mode</span>
-            <span class="chev">▾</span>
+        <div class="settings-menu" id="settingsMenu">
+          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+            <span aria-hidden="true">⚙</span>
           </button>
-          <div class="mode-menu-panel" id="modeMenuPanel" role="menu">
-            <a href="../classic/" data-mode="classic">
-              <span>♟</span>
-              <span>
-                <span id="menuClassic">Classic</span>
-                <span class="mode-desc" id="menuClassicDesc"></span>
-              </span>
-            </a>
-            <a href="../dice/" data-mode="dice">
-              <span>🎲</span>
-              <span>
-                <span id="menuDice">Dice</span>
-                <span class="mode-desc" id="menuDiceDesc"></span>
-              </span>
-            </a>
-            <a href="./" class="active" data-mode="custom">
-              <span>⚙</span>
-              <span>
-                <span id="menuCustom">Custom</span>
-                <span class="mode-desc" id="menuCustomDesc"></span>
-              </span>
-            </a>
+          <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
+            <div class="settings-menu-section">
+              <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+              <div class="lang-switch" role="group" aria-label="Language">
+                <button type="button" id="langRu" data-lang="ru">RU</button>
+                <span class="lang-sep">|</span>
+                <button type="button" id="langEn" data-lang="en">EN</button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="lang-switch" role="group" aria-label="Language">
-          <button type="button" id="langRu" data-lang="ru">RU</button>
-          <span class="lang-sep">|</span>
-          <button type="button" id="langEn" data-lang="en">EN</button>
         </div>
       </div>
     </div>
@@ -215,7 +196,6 @@
                 <span class="custom-toggle-knob" aria-hidden="true"></span>
               </button>
             </div>
-            <p class="custom-settings-locked mp-hidden" id="setupSettingsLocked"></p>
           </div>
         </section>
 
@@ -344,6 +324,7 @@
           drawMaterial: "Ничья — недостаточно материала.",
           draw: "Ничья.",
           menuLabel: "Режим",
+          settingsLangLabel: "Язык",
           menuClassic: "Классика",
           menuClassicDesc: "Стандартные шахматы",
           menuDice: "Кости",
@@ -399,7 +380,7 @@
           mpNickPlaceholder: "Ваш ник",
           mpSpectate: "Наблюдать",
           mpSpectateOk: "OK",
-          mpSpectating: "вы наблюдаете",
+          mpSpectating: "Вы наблюдаете",
           mpSpectatingMeta: "Наблюдение",
           mpSpectators: "зрители",
           mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
@@ -409,19 +390,19 @@
           mpCopySpectate: "Копировать ссылку наблюдения",
           mpCopied: "Скопировано",
           mpLeave: "Выйти",
-          mpOffline: "офлайн",
-          mpConnecting: "подключение…",
-          mpConnected: "на сервере",
-          mpWaiting: "ожидание соперника…",
-          mpPlaying: "игра идёт",
+          mpOffline: "Офлайн",
+          mpConnecting: "Подключение…",
+          mpConnected: "На сервере",
+          mpWaiting: "Ожидание соперника…",
+          mpPlaying: "Игра идёт",
           mpOpponent: "Соперник",
-          mpOpponentGone: "соперник отключился",
-          mpError: "ошибка связи",
-          mpSeatEmpty: "свободно",
+          mpOpponentGone: "Соперник отключился",
+          mpError: "Ошибка связи",
+          mpSeatEmpty: "Свободно",
           mpPlayerStub: "Игрок",
-          mpSeatYou: "вы",
-          mpSeatOpp: "соперник",
-          mpSeatOffline: "офлайн",
+          mpSeatYou: "Вы",
+          mpSeatOpp: "Соперник",
+          mpSeatOffline: "Офлайн",
           mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
           mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
           mpBotOff: "Бот отключён в мультиплеере",
@@ -504,6 +485,7 @@
           drawMaterial: "Draw — insufficient material.",
           draw: "Draw.",
           menuLabel: "Mode",
+          settingsLangLabel: "Language",
           menuClassic: "Classic",
           menuClassicDesc: "Standard chess",
           menuDice: "Dice Chess",
@@ -559,7 +541,7 @@
           mpNickPlaceholder: "Your nickname",
           mpSpectate: "Spectate",
           mpSpectateOk: "OK",
-          mpSpectating: "spectating",
+          mpSpectating: "Spectating",
           mpSpectatingMeta: "Spectating",
           mpSpectators: "spectators",
           mpHint: "Invite a friend with a room code. No account needed.",
@@ -569,19 +551,19 @@
           mpCopySpectate: "Copy spectate link",
           mpCopied: "Copied",
           mpLeave: "Leave",
-          mpOffline: "offline",
-          mpConnecting: "connecting…",
-          mpConnected: "on server",
-          mpWaiting: "waiting for opponent…",
-          mpPlaying: "match live",
+          mpOffline: "Offline",
+          mpConnecting: "Connecting…",
+          mpConnected: "On server",
+          mpWaiting: "Waiting for opponent…",
+          mpPlaying: "Match live",
           mpOpponent: "Opponent",
-          mpOpponentGone: "opponent disconnected",
-          mpError: "connection error",
-          mpSeatEmpty: "open",
+          mpOpponentGone: "Opponent disconnected",
+          mpError: "Connection error",
+          mpSeatEmpty: "Open",
           mpPlayerStub: "Player",
-          mpSeatYou: "you",
-          mpSeatOpp: "opponent",
-          mpSeatOffline: "offline",
+          mpSeatYou: "You",
+          mpSeatOpp: "Opponent",
+          mpSeatOffline: "Offline",
           mpWaitingHint: "Share the code or link. Bot is disabled.",
           mpSeatPickHint: "While alone — click a color to switch side",
           mpBotOff: "Bot disabled in multiplayer",
@@ -710,6 +692,7 @@
         $("#mpResetBtn").text(t("newGame"));
         if (typeof updateMpUI === "function") updateMpUI();
         applyMenuLang();
+        if ($("#settingsLangLabel").length) $("#settingsLangLabel").text(t("settingsLangLabel"));
         updateDiceUI();
         $("#metaSideK").text(t("metaSide"));
         $("#metaTurnK").text(t("metaTurn"));
@@ -732,16 +715,17 @@
       }
 
       
-      function wireModeMenu() {
-        var $menu = $("#modeMenu");
-        var $btn = $("#modeMenuBtn");
+      function wireSettingsMenu() {
+        var $menu = $("#settingsMenu");
+        var $btn = $("#settingsMenuBtn");
+        if (!$menu.length || !$btn.length) return;
         $btn.on("click", function (e) {
           e.stopPropagation();
           var open = !$menu.hasClass("open");
           $menu.toggleClass("open", open);
           $btn.attr("aria-expanded", open ? "true" : "false");
         });
-        $(document).on("click", function () {
+        $(document).on("click.settingsMenu", function () {
           $menu.removeClass("open");
           $btn.attr("aria-expanded", "false");
         });
@@ -2282,29 +2266,40 @@
         beginPlayFromSetup();
       }
 
+      function isMpHost() {
+        return !!(mpRoom && mpRoom.hostId && mpRoom.hostId === getOrCreateClientId());
+      }
+
+      /** Shared setup (palette / clear / standard / turn): host only in MP; locked after match start. */
       function canEditSetup() {
         if (!isSetupPhase()) return false;
         if (!isMultiplayer()) return true;
         if (isSpectating() || !canMpAct()) return false;
         if (mpRoom && mpRoom.settingsLocked === true) return false;
         if (mpRoom && mpRoom.phase === "play") return false;
+        return isMpHost();
+      }
+
+      function canToggleSetupReady() {
+        if (!isSetupPhase()) return false;
+        if (!isMultiplayer()) return false;
+        if (isSpectating() || !canMpAct()) return false;
         return true;
       }
 
       function updateSetupLockUI() {
         var editable = canEditSetup();
-        $("#setupClearBtn, #setupStandardBtn, #setupStartBtn, #setupReadyBtn, #setupHostStartBtn").prop("disabled", isSetupPhase() ? !editable : false);
-        $("#setupTurnSelect").prop("disabled", isSetupPhase() ? !editable : false);
+        var canReady = canToggleSetupReady();
+        var isHost = isMultiplayer() && isMpHost();
+        $("#setupClearBtn, #setupStandardBtn, #setupStartBtn").prop("disabled", !editable);
+        $("#setupTurnSelect").prop("disabled", !editable);
+        $("#setupReadyBtn").prop("disabled", !canReady);
+        $("#setupHostStartBtn").prop("disabled", !(isSetupPhase() && isHost && canMpAct() && !isSpectating()));
         var $locked = $("#setupSettingsLocked");
-        if (!$locked.length) return;
-        if (isMultiplayer() && isSpectating() && isSetupPhase()) {
-          $locked.removeClass("mp-hidden").text(t("setupSpectatorReadonly"));
-        } else if (!isSetupPhase() && isMultiplayer()) {
-          $locked.removeClass("mp-hidden").text(t("setupSettingsLocked"));
-        } else {
+        if ($locked.length) {
           $locked.addClass("mp-hidden").text("");
         }
-        // Local UX toggles stay editable always
+        // Local UX toggles stay editable always (personal, not shared)
         $("#moveAnalysisToggle, #posEvalToggle").prop("disabled", false);
       }
 
@@ -2344,6 +2339,7 @@
       function publishSetupSync() {
         updateSetupWarn();
         if (!isMultiplayer() || !canMpAct() || !mpSocket || !isSetupPhase()) return;
+        if (!canEditSetup()) return;
         if (setupSyncTimer) clearTimeout(setupSyncTimer);
         setupSyncTimer = setTimeout(function () {
           mpSocket.emit("updateSetup", {
@@ -2358,17 +2354,21 @@
       }
 
       function publishReadyToggle() {
-        if (!isMultiplayer() || !canMpAct() || !mpSocket || !isSetupPhase()) return;
+        if (!isMultiplayer() || !canToggleSetupReady() || !mpSocket) return;
         setupReadyLocal = !setupReadyLocal;
         updateSetupMpUI();
-        mpSocket.emit("updateSetup", {
+        var payload = {
           clientId: getOrCreateClientId(),
           code: mpRoomCode,
-          fen: buildSetupFen(),
           phase: "setup",
-          setupTurn: setupTurn,
           ready: setupReadyLocal
-        });
+        };
+        // Only host may push FEN; non-host ready is ready-flag only.
+        if (isMpHost()) {
+          payload.fen = buildSetupFen();
+          payload.setupTurn = setupTurn;
+        }
+        mpSocket.emit("updateSetup", payload);
         // if both ready, server will start; also try local optimistic check
       }
 
@@ -3633,7 +3633,7 @@
         syncSideSelect();
         syncModeSelects();
         applyStaticLang();
-        wireModeMenu();
+        wireSettingsMenu();
 
         board = Chessboard("board", {
           draggable: true,

@@ -44,7 +44,7 @@ Flow:
 | `reconnectRoom` | C→S | `{ clientId, code, nick? }` reclaim seat after refresh |
 | `makeMove` | C→S | `{ clientId, code, from, to, fen, san, plySans?, gameOver?, stateSync? }` |
 | `resetGame` | C→S | host only — back to start FEN |
-| `updateCustomSettings` | C→S | checkers-custom shared rules: `{ clientId, code, customSettings }` (host/white only; rejected with `settings_locked` after first ply) |
+| `updateCustomSettings` | C→S | checkers-custom shared rules: `{ clientId, code, customSettings }` (host only; rejected with `settings_locked` after first ply) |
 | `updateSetup` | C→S | chess custom shared setup: `{ clientId, code, fen, ready? }` — rejected once `phase === "play"` |
 | `startCustomGame` | C→S | chess custom: host force-start or confirm; requires one king each; locks setup |
 | `leaveRoom` | C→S | leave seat |

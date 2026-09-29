@@ -21,39 +21,20 @@
         <span class="mode-badge" id="modeBadge">chess · dice</span>
       </div>
       <div class="topbar-actions">
-        <div class="mode-menu" id="modeMenu">
-          <button type="button" class="mode-menu-btn" id="modeMenuBtn" aria-haspopup="true" aria-expanded="false">
-            <span id="modeMenuLabel">Mode</span>
-            <span class="chev">▾</span>
+        <div class="settings-menu" id="settingsMenu">
+          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+            <span aria-hidden="true">⚙</span>
           </button>
-          <div class="mode-menu-panel" id="modeMenuPanel" role="menu">
-            <a href="../classic/" data-mode="classic">
-              <span>♟</span>
-              <span>
-                <span id="menuClassic">Classic</span>
-                <span class="mode-desc" id="menuClassicDesc"></span>
-              </span>
-            </a>
-            <a href="./" class="active" data-mode="dice">
-              <span>🎲</span>
-              <span>
-                <span id="menuDice">Dice</span>
-                <span class="mode-desc" id="menuDiceDesc"></span>
-              </span>
-            </a>
-            <a href="../custom/" data-mode="custom">
-              <span>⚙</span>
-              <span>
-                <span id="menuCustom">Custom</span>
-                <span class="mode-desc" id="menuCustomDesc"></span>
-              </span>
-            </a>
+          <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
+            <div class="settings-menu-section">
+              <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+              <div class="lang-switch" role="group" aria-label="Language">
+                <button type="button" id="langRu" data-lang="ru">RU</button>
+                <span class="lang-sep">|</span>
+                <button type="button" id="langEn" data-lang="en">EN</button>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="lang-switch" role="group" aria-label="Language">
-          <button type="button" id="langRu" data-lang="ru">RU</button>
-          <span class="lang-sep">|</span>
-          <button type="button" id="langEn" data-lang="en">EN</button>
         </div>
       </div>
     </div>
@@ -299,6 +280,7 @@
           drawMaterial: "Ничья — недостаточно материала.",
           draw: "Ничья.",
           menuLabel: "Режим",
+          settingsLangLabel: "Язык",
           menuClassic: "Классика",
           menuClassicDesc: "Стандартные шахматы",
           menuDice: "Кости",
@@ -338,7 +320,7 @@
           mpNickPlaceholder: "Ваш ник",
           mpSpectate: "Наблюдать",
           mpSpectateOk: "OK",
-          mpSpectating: "вы наблюдаете",
+          mpSpectating: "Вы наблюдаете",
           mpSpectatingMeta: "Наблюдение",
           mpSpectators: "зрители",
           mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
@@ -348,19 +330,19 @@
           mpCopySpectate: "Копировать ссылку наблюдения",
           mpCopied: "Скопировано",
           mpLeave: "Выйти",
-          mpOffline: "офлайн",
-          mpConnecting: "подключение…",
-          mpConnected: "на сервере",
-          mpWaiting: "ожидание соперника…",
-          mpPlaying: "игра идёт",
+          mpOffline: "Офлайн",
+          mpConnecting: "Подключение…",
+          mpConnected: "На сервере",
+          mpWaiting: "Ожидание соперника…",
+          mpPlaying: "Игра идёт",
           mpOpponent: "Соперник",
-          mpOpponentGone: "соперник отключился",
-          mpError: "ошибка связи",
-          mpSeatEmpty: "свободно",
+          mpOpponentGone: "Соперник отключился",
+          mpError: "Ошибка связи",
+          mpSeatEmpty: "Свободно",
           mpPlayerStub: "Игрок",
-          mpSeatYou: "вы",
-          mpSeatOpp: "соперник",
-          mpSeatOffline: "офлайн",
+          mpSeatYou: "Вы",
+          mpSeatOpp: "Соперник",
+          mpSeatOffline: "Офлайн",
           mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
           mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
           mpPlayingHint: "Ходите своей фигурой. Бот отключён.",
@@ -435,6 +417,7 @@
           drawMaterial: "Draw — insufficient material.",
           draw: "Draw.",
           menuLabel: "Mode",
+          settingsLangLabel: "Language",
           menuClassic: "Classic",
           menuClassicDesc: "Standard chess",
           menuDice: "Dice Chess",
@@ -474,7 +457,7 @@
           mpNickPlaceholder: "Your nickname",
           mpSpectate: "Spectate",
           mpSpectateOk: "OK",
-          mpSpectating: "spectating",
+          mpSpectating: "Spectating",
           mpSpectatingMeta: "Spectating",
           mpSpectators: "spectators",
           mpHint: "Invite a friend with a room code. No account needed.",
@@ -484,19 +467,19 @@
           mpCopySpectate: "Copy spectate link",
           mpCopied: "Copied",
           mpLeave: "Leave",
-          mpOffline: "offline",
-          mpConnecting: "connecting…",
-          mpConnected: "on server",
-          mpWaiting: "waiting for opponent…",
-          mpPlaying: "match live",
+          mpOffline: "Offline",
+          mpConnecting: "Connecting…",
+          mpConnected: "On server",
+          mpWaiting: "Waiting for opponent…",
+          mpPlaying: "Match live",
           mpOpponent: "Opponent",
-          mpOpponentGone: "opponent disconnected",
-          mpError: "connection error",
+          mpOpponentGone: "Opponent disconnected",
+          mpError: "Connection error",
           mpSeatEmpty: "empty",
           mpPlayerStub: "Player",
-          mpSeatYou: "you",
-          mpSeatOpp: "opponent",
-          mpSeatOffline: "offline",
+          mpSeatYou: "You",
+          mpSeatOpp: "Opponent",
+          mpSeatOffline: "Offline",
           mpWaitingHint: "Share the code or link. Bot is disabled.",
           mpSeatPickHint: "While alone — click a color to switch side",
           mpPlayingHint: "Move your pieces. Bot is disabled.",
@@ -593,6 +576,7 @@
         $("#mpResetBtn").text(t("newGame"));
         if (typeof updateMpUI === "function") updateMpUI();
         applyMenuLang();
+        if ($("#settingsLangLabel").length) $("#settingsLangLabel").text(t("settingsLangLabel"));
         updateDiceUI();
         $("#metaSideK").text(t("metaSide"));
         $("#metaTurnK").text(t("metaTurn"));
@@ -614,16 +598,17 @@
       }
 
       
-      function wireModeMenu() {
-        var $menu = $("#modeMenu");
-        var $btn = $("#modeMenuBtn");
+      function wireSettingsMenu() {
+        var $menu = $("#settingsMenu");
+        var $btn = $("#settingsMenuBtn");
+        if (!$menu.length || !$btn.length) return;
         $btn.on("click", function (e) {
           e.stopPropagation();
           var open = !$menu.hasClass("open");
           $menu.toggleClass("open", open);
           $btn.attr("aria-expanded", open ? "true" : "false");
         });
-        $(document).on("click", function () {
+        $(document).on("click.settingsMenu", function () {
           $menu.removeClass("open");
           $btn.attr("aria-expanded", "false");
         });
@@ -3283,7 +3268,7 @@
         syncSideSelect();
         syncModeSelects();
         applyStaticLang();
-        wireModeMenu();
+        wireSettingsMenu();
 
         board = Chessboard("board", {
           draggable: true,

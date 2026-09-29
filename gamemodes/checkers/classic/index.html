@@ -129,10 +129,20 @@
       <span class="mode-badge" id="modeBadge">checkers</span>
     </div>
     <div class="topbar-actions">
-      <div class="lang-switch" role="group" aria-label="Language">
-        <button type="button" id="langRu" data-lang="ru">RU</button>
-        <span class="lang-sep">|</span>
-        <button type="button" id="langEn" data-lang="en">EN</button>
+      <div class="settings-menu" id="settingsMenu">
+        <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+          <span aria-hidden="true">⚙</span>
+        </button>
+        <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
+          <div class="settings-menu-section">
+            <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+            <div class="lang-switch" role="group" aria-label="Language">
+              <button type="button" id="langRu" data-lang="ru">RU</button>
+              <span class="lang-sep">|</span>
+              <button type="button" id="langEn" data-lang="en">EN</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -312,6 +322,7 @@
     ru: {
       docTitle: "BoardHack — Русские шашки",
       modeBadge: "шашки · классика",
+      settingsLangLabel: "Язык",
       playArea: "Игровая зона",
       mission: "Управление",
       session: "Сессия",
@@ -352,7 +363,7 @@
       mpNickPlaceholder: "Ваш ник",
       mpSpectate: "Наблюдать",
       mpSpectateOk: "OK",
-      mpSpectating: "вы наблюдаете",
+      mpSpectating: "Вы наблюдаете",
       mpSpectatingMeta: "Наблюдение",
       mpSpectators: "зрители",
       mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
@@ -362,19 +373,19 @@
           mpCopySpectate: "Копировать ссылку наблюдения",
       mpCopied: "Скопировано",
       mpLeave: "Выйти",
-      mpOffline: "офлайн",
-      mpConnecting: "подключение…",
-      mpConnected: "на сервере",
-      mpWaiting: "ожидание соперника…",
-      mpPlaying: "игра идёт",
+      mpOffline: "Офлайн",
+      mpConnecting: "Подключение…",
+      mpConnected: "На сервере",
+      mpWaiting: "Ожидание соперника…",
+      mpPlaying: "Игра идёт",
       mpOpponent: "Соперник",
-      mpOpponentGone: "соперник отключился",
-      mpError: "ошибка связи",
-      mpSeatEmpty: "свободно",
+      mpOpponentGone: "Соперник отключился",
+      mpError: "Ошибка связи",
+      mpSeatEmpty: "Свободно",
       mpPlayerStub: "Игрок",
-      mpSeatYou: "вы",
-      mpSeatOpp: "соперник",
-      mpSeatOffline: "офлайн",
+      mpSeatYou: "Вы",
+      mpSeatOpp: "Соперник",
+      mpSeatOffline: "Офлайн",
       mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
       mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
       mpBotOff: "Бот отключён в мультиплеере",
@@ -393,6 +404,7 @@
     en: {
       docTitle: "BoardHack — Russian draughts",
       modeBadge: "checkers · classic",
+      settingsLangLabel: "Language",
       playArea: "Play area",
       mission: "Controls",
       session: "Session",
@@ -433,7 +445,7 @@
       mpNickPlaceholder: "Your nickname",
       mpSpectate: "Spectate",
       mpSpectateOk: "OK",
-      mpSpectating: "spectating",
+      mpSpectating: "Spectating",
       mpSpectatingMeta: "Spectating",
       mpSpectators: "spectators",
       mpHint: "Invite a friend with a room code. No account needed.",
@@ -443,18 +455,18 @@
           mpCopySpectate: "Copy spectate link",
       mpCopied: "Copied",
       mpLeave: "Leave",
-      mpOffline: "offline",
-      mpConnecting: "connecting…",
-      mpConnected: "on server",
-      mpWaiting: "waiting for opponent…",
-      mpPlaying: "match live",
-      mpOpponentGone: "opponent disconnected",
-      mpError: "connection error",
-      mpSeatEmpty: "open",
+      mpOffline: "Offline",
+      mpConnecting: "Connecting…",
+      mpConnected: "On server",
+      mpWaiting: "Waiting for opponent…",
+      mpPlaying: "Match live",
+      mpOpponentGone: "Opponent disconnected",
+      mpError: "Connection error",
+      mpSeatEmpty: "Open",
       mpPlayerStub: "Player",
-      mpSeatYou: "you",
-      mpSeatOpp: "opponent",
-      mpSeatOffline: "offline",
+      mpSeatYou: "You",
+      mpSeatOpp: "Opponent",
+      mpSeatOffline: "Offline",
       mpWaitingHint: "Share the code or link. Bot is disabled.",
       mpSeatPickHint: "While alone — click a color to switch side",
       mpBotOff: "Bot disabled in multiplayer",
@@ -1627,6 +1639,8 @@
     document.getElementById("mpCopyBtn").textContent = mpRoomCode ? copyBtnLabel() : t("mpCopyInvite");
     document.getElementById("mpLeaveBtn").textContent = t("mpLeave");
     document.getElementById("mpResetBtn").textContent = t("newGame");
+    var _sll = document.getElementById("settingsLangLabel");
+    if (_sll) _sll.textContent = t("settingsLangLabel");
     document.getElementById("langRu").classList.toggle("active", lang === "ru");
     document.getElementById("langEn").classList.toggle("active", lang === "en");
     updateMpUI();
@@ -2058,6 +2072,24 @@
     if (e.target === rulesDialog) rulesDialog.close();
   });
 
+  function wireSettingsMenu() {
+    var menu = document.getElementById("settingsMenu");
+    var btn = document.getElementById("settingsMenuBtn");
+    if (!menu || !btn) return;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var open = !menu.classList.contains("open");
+      menu.classList.toggle("open", open);
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.addEventListener("click", function () {
+      menu.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    });
+    menu.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
+
+  wireSettingsMenu();
   document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
   document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
   document.getElementById("newGameBtn").addEventListener("click", newGame);
