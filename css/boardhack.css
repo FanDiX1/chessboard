@@ -1480,22 +1480,13 @@ button.btn:disabled {
 .mq-toggle-row {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin: -0.35rem 0 0.85rem;
   padding: 0 0.15rem;
 }
-.mq-toggle-row input[type="checkbox"] {
-  width: 1.05rem;
-  height: 1.05rem;
-  accent-color: var(--accent);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.mq-toggle-row label {
-  font-size: 0.85rem;
-  color: var(--text);
-  cursor: pointer;
-  margin: 0;
+.mq-toggle-row .custom-setting-label {
+  cursor: default;
   user-select: none;
 }
 
@@ -1505,18 +1496,20 @@ button.btn:disabled {
   right: 2px;
   z-index: 12;
   pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
   font-family: var(--mono);
-  font-size: clamp(0.55rem, 1.8vw, 0.68rem);
-  font-weight: 700;
+  font-size: clamp(0.62rem, 2vw, 0.78rem);
+  font-weight: 800;
   line-height: 1;
-  padding: 0.18rem 0.28rem;
+  padding: 0.12rem 0.22rem;
   border-radius: 4px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
-  max-width: 92%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .mq-badge.mq-best,

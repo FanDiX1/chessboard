@@ -67,9 +67,13 @@
           <span class="status-dot" id="statusDot"></span>
           <span id="statusText"></span>
         </div>
-        <div class="mq-toggle-row" id="moveAnalysisWrap">
-          <input type="checkbox" id="moveAnalysisToggle" />
-          <label for="moveAnalysisToggle" id="moveAnalysisLabel"></label>
+        <div class="custom-setting-row mq-toggle-row" id="moveAnalysisWrap">
+          <div class="custom-setting-text">
+            <span class="custom-setting-label" id="moveAnalysisLabel"></span>
+          </div>
+          <button type="button" class="custom-toggle" id="moveAnalysisToggle" role="switch" aria-checked="false" aria-labelledby="moveAnalysisLabel">
+            <span class="custom-toggle-knob" aria-hidden="true"></span>
+          </button>
         </div>
         <div class="board-wrap">
           <div id="board"></div>
@@ -1567,8 +1571,8 @@
       }
 
       function syncMoveAnalysisToggle() {
-        var $el = $("#moveAnalysisToggle");
-        if ($el.length) $el.prop("checked", moveAnalysisEnabled);
+        var el = document.getElementById("moveAnalysisToggle");
+        if (el) el.setAttribute("aria-checked", moveAnalysisEnabled ? "true" : "false");
       }
 
       /** Convert Stockfish score to centipawns from side-to-move perspective. */
@@ -1603,6 +1607,17 @@
         return "";
       }
 
+      /** Board overlay icon only (tooltip keeps localized name). */
+      function mqKindIcon(kind) {
+        if (kind === "best") return "!!";
+        if (kind === "excellent") return "!";
+        if (kind === "good") return "✓";
+        if (kind === "inaccuracy") return "?!";
+        if (kind === "mistake") return "?";
+        if (kind === "blunder") return "??";
+        return "";
+      }
+
       function clearMoveQualityBadge() {
         $("#board .mq-badge").remove();
       }
@@ -1612,11 +1627,13 @@
         if (!square || !kind || !isMoveAnalysisOn()) return;
         var $sq = $("#board .square-" + square);
         if (!$sq.length) return;
+        var label = mqKindLabel(kind);
         var $b = $('<span class="mq-badge"></span>');
         $b.addClass("mq-" + kind);
         $b.attr("data-mq-kind", kind);
-        $b.text(mqKindLabel(kind));
-        $b.attr("title", mqKindLabel(kind));
+        $b.text(mqKindIcon(kind));
+        $b.attr("title", label);
+        $b.attr("aria-label", label);
         $sq.append($b);
       }
 
@@ -3436,8 +3453,10 @@
           updateOpponentLabel();
         });
         syncMoveAnalysisToggle();
-        $("#moveAnalysisToggle").on("change", function () {
-          setMoveAnalysisEnabled($(this).is(":checked"));
+        $("#moveAnalysisToggle").on("click", function () {
+          var next = $(this).attr("aria-checked") !== "true";
+          setMoveAnalysisEnabled(next);
+          syncMoveAnalysisToggle();
         });
 
         if (typeof BoardHackStockfish !== "undefined") {
