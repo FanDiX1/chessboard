@@ -179,6 +179,18 @@ a:hover { text-decoration: underline; }
 
 #board { width: 100%; }
 
+/* Suppress iOS/Android long-press image callout on board pieces (CDN imgs). */
+.board-wrap,
+.board-wrap #board,
+#board,
+.board-wrap img,
+#board img,
+#board .piece-417db {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .board-b72b1 {
   border: 2px solid var(--border) !important;
   border-radius: 8px;
