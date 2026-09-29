@@ -124,7 +124,7 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="../../../js/atomic-chess.js"></script>
+  <script src="../../../js/atomic-chess.js?v=20260929-atomic2"></script>
   <script src="../../../js/drag-scroll-lock.js"></script>
   <script src="../../../js/board-context-guard.js"></script>
   <script>
@@ -438,8 +438,16 @@
       }
 
       function tryMakeUserMove(from, to) {
+        if (!from || !to || to === "offboard" || from === to) return false;
         snapshotPush();
-        var moved = game.move({ from: from, to: to, promotion: "q" });
+        // Only send promotion for pawn arrivals on the back rank (matches chess.js).
+        var piece = game.get(from);
+        var opts = { from: from, to: to };
+        if (piece && piece.type === "p") {
+          var rank = to.charAt(1);
+          if (rank === "8" || rank === "1") opts.promotion = "q";
+        }
+        var moved = game.move(opts);
         if (!moved) {
           undoStack.pop();
           return false;
@@ -447,6 +455,12 @@
         plySans.push(moved.san);
         playMoveSound();
         return true;
+      }
+
+      function syncBoard(useAnimation) {
+        if (!board) return;
+        // Prefer FEN like classic mode; false = instant (avoids fighting drag snap).
+        board.position(game.fen(), useAnimation === true);
       }
 
       function showLegalMoves(fromSquare) {
@@ -602,19 +616,26 @@
         var genAtStart = botSchedGen;
         window.setTimeout(function () {
           if (genAtStart !== botSchedGen) { finishBotThinking(); return; }
-          var best = pickBotMove();
-          if (!best) { startUserTurnAfterBot(); return; }
-          snapshotPush();
-          var moved = game.move({ from: best.from, to: best.to, promotion: best.promotion || "q" });
-          if (moved) {
-            plySans.push(moved.san);
-            playMoveSound();
-            board.position(game.position());
-            updateMoveList();
-            if (applyGameEndFromPosition()) { finishBotThinking(); return; }
-            startUserTurnAfterBot();
-          } else {
-            undoStack.pop();
+          try {
+            var best = pickBotMove();
+            if (!best) { startUserTurnAfterBot(); return; }
+            snapshotPush();
+            var botOpts = { from: best.from, to: best.to };
+            if (best.promotion) botOpts.promotion = best.promotion;
+            var moved = game.move(botOpts);
+            if (moved) {
+              plySans.push(moved.san);
+              playMoveSound();
+              syncBoard(false);
+              updateMoveList();
+              if (applyGameEndFromPosition()) { finishBotThinking(); return; }
+              startUserTurnAfterBot();
+            } else {
+              undoStack.pop();
+              startUserTurnAfterBot();
+            }
+          } catch (err) {
+            console.error("atomic bot move failed", err);
             startUserTurnAfterBot();
           }
         }, 80);
@@ -635,16 +656,20 @@
 
       function onDrop(source, target) {
         if (typeof unlockDragScroll === "function") unlockDragScroll();
+        // Click-without-move: keep selection / legal dots (chessboard fires drop on same square).
+        if (!target || target === "offboard" || source === target) {
+          return "snapback";
+        }
         clearSelection();
         if (!tryMakeUserMove(source, target)) return "snapback";
-        board.position(game.position());
+        syncBoard(false);
         updateMoveList();
         updateStatus();
         if (!gameOver && canBotActNow(false)) scheduleBot(250);
         else cancelScheduledBot();
       }
 
-      function onSnapEnd() { board.position(game.position()); }
+      function onSnapEnd() { syncBoard(false); }
 
       function tryClickMove(square) {
         if (gameOver || botThinking || applyGameEndFromPosition()) return;
@@ -660,7 +685,7 @@
         var from = selectedSquare;
         clearSelection();
         if (!tryMakeUserMove(from, square)) return;
-        board.position(game.position());
+        syncBoard(false);
         updateMoveList();
         updateStatus();
         if (!gameOver && canBotActNow(false)) scheduleBot(250);
@@ -681,7 +706,7 @@
         clearSelection();
         $thinking.removeClass("show");
         board.orientation(boardOrientation());
-        board.position(game.position());
+        syncBoard(false);
         updateMoveList();
         updateStatus();
         $("#undoBtn").prop("disabled", false);
@@ -699,7 +724,7 @@
         plySans = game.history_san();
         gameOver = false;
         clearSelection();
-        board.position(game.position());
+        syncBoard(false);
         updateMoveList();
         updateStatus();
         cancelScheduledBot();
@@ -718,15 +743,24 @@
         applyStaticLang();
         wireSettingsMenu();
 
+        if (typeof Chessboard !== "function") {
+          setStatus("Chessboard failed to load", "danger");
+          return;
+        }
+        if (!window.BoardHackAtomic) {
+          setStatus("Atomic engine failed to load", "danger");
+          return;
+        }
         board = Chessboard("board", {
           draggable: true,
-          position: game.position(),
+          position: "start",
           orientation: boardOrientation(),
           pieceTheme: PIECE_THEME,
           onDragStart: onDragStart,
           onDrop: onDrop,
           onSnapEnd: onSnapEnd
         });
+        syncBoard(false);
 
         $("#board").on("click", ".square-55d63", function () {
           var sq = $(this).data("square");
