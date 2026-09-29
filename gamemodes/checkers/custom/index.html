@@ -228,7 +228,7 @@
           </div>
           <p class="mp-seat-pick-hint mp-hidden" id="mpSeatPickHint"></p>
           <div class="btn-row">
-            <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать ссылку</button>
+            <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать приглашение</button>
             <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
             <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn"></button>
           </div>
@@ -384,7 +384,9 @@
       mpSpectators: "зрители",
       mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
       mpCodeLabel: "Код комнаты",
-      mpCopy: "Копировать ссылку",
+      mpCopy: "Копировать приглашение",
+          mpCopyInvite: "Копировать приглашение",
+          mpCopySpectate: "Копировать ссылку наблюдения",
       mpCopied: "Скопировано",
       mpLeave: "Выйти",
       mpOffline: "офлайн",
@@ -479,7 +481,9 @@
       mpSpectators: "spectators",
       mpHint: "Invite a friend with a room code. No account needed.",
       mpCodeLabel: "Room code",
-      mpCopy: "Copy spectate link",
+      mpCopy: "Copy invite link",
+          mpCopyInvite: "Copy invite link",
+          mpCopySpectate: "Copy spectate link",
       mpCopied: "Copied",
       mpLeave: "Leave",
       mpOffline: "offline",
@@ -1133,11 +1137,21 @@
   function buildShareLink(code) {
     var u = new URL(window.location.href);
     u.searchParams.delete("room");
-    u.searchParams.set("spectate", code);
+    u.searchParams.delete("join");
+    u.searchParams.delete("spectate");
+    if (mpBothSeated()) {
+      u.searchParams.set("spectate", code);
+    } else {
+      u.searchParams.set("join", code);
+    }
     if (mpServerUrl && mpServerUrl !== DEFAULT_SERVER) u.searchParams.set("server", mpServerUrl);
     else u.searchParams.delete("server");
     return u.toString();
   }
+  function copyBtnLabel() {
+    return mpBothSeated() ? t("mpCopySpectate") : t("mpCopyInvite");
+  }
+
 
   function setMpConn(state, detail) {
     mpConnState = state;
@@ -1225,6 +1239,8 @@
     toggleClass(document.getElementById("difficultyWrap"), "mp-hidden", true);
     document.getElementById("mpCodeValue").textContent = mpRoomCode || "------";
     document.getElementById("mpShareLink").textContent = mpRoomCode ? buildShareLink(mpRoomCode) : "";
+    var copyBtn = document.getElementById("mpCopyBtn");
+    if (copyBtn) copyBtn.textContent = mpRoomCode ? copyBtnLabel() : t("mpCopyInvite");
     var canPick = mpAloneCanSwitch();
     var seatW = document.getElementById("mpSeatW");
     var seatB = document.getElementById("mpSeatB");
@@ -1704,7 +1720,7 @@
 
   function tryAutoRejoin() {
     var params = new URLSearchParams(window.location.search);
-    var roomParam = params.get("room");
+    var roomParam = params.get("join") || params.get("room");
     var spectateParam = params.get("spectate");
     if (spectateParam) {
       enterMpFromSpectate(spectateParam);
@@ -1833,7 +1849,7 @@
     if (roomsRefresh) roomsRefresh.textContent = t("mpRoomsRefresh");
     if (typeof renderRoomList === "function") renderRoomList(mpLastRoomList);
     document.getElementById("mpCodeLabel").textContent = t("mpCodeLabel");
-    document.getElementById("mpCopyBtn").textContent = t("mpCopy");
+    document.getElementById("mpCopyBtn").textContent = mpRoomCode ? copyBtnLabel() : t("mpCopyInvite");
     document.getElementById("mpLeaveBtn").textContent = t("mpLeave");
     document.getElementById("mpResetBtn").textContent = t("newGame");
     var cst = document.getElementById("customSettingsTitle");
@@ -2254,7 +2270,7 @@
           toast._hideTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 1200);
         }
         btn.textContent = t("mpCopied");
-        setTimeout(function () { btn.textContent = t("mpCopy"); }, 1200);
+        setTimeout(function () { btn.textContent = copyBtnLabel(); }, 1200);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).then(done).catch(function () {
@@ -2333,7 +2349,7 @@
   setMpConn("offline");
 
   var paramsEarly = new URLSearchParams(window.location.search);
-  var maybeMp = !!(paramsEarly.get("room") || paramsEarly.get("spectate") || (function () {
+  var maybeMp = !!(paramsEarly.get("join") || paramsEarly.get("room") || paramsEarly.get("spectate") || (function () {
     try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
   })());
   tryAutoRejoin();

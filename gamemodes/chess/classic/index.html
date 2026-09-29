@@ -153,7 +153,7 @@
             </div>
             <p class="mp-seat-pick-hint mp-hidden" id="mpSeatPickHint"></p>
             <div class="btn-row">
-              <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать ссылку</button>
+              <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать приглашение</button>
               <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
               <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn"></button>
             </div>
@@ -317,7 +317,9 @@
           mpSpectators: "зрители",
           mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
           mpCodeLabel: "Код комнаты",
-          mpCopy: "Копировать ссылку",
+          mpCopy: "Копировать приглашение",
+          mpCopyInvite: "Копировать приглашение",
+          mpCopySpectate: "Копировать ссылку наблюдения",
           mpCopied: "Скопировано",
           mpLeave: "Выйти",
           mpOffline: "офлайн",
@@ -444,7 +446,9 @@
           mpSpectators: "spectators",
           mpHint: "Invite a friend with a room code. No account needed.",
           mpCodeLabel: "Room code",
-          mpCopy: "Copy spectate link",
+          mpCopy: "Copy invite link",
+          mpCopyInvite: "Copy invite link",
+          mpCopySpectate: "Copy spectate link",
           mpCopied: "Copied",
           mpLeave: "Leave",
           mpOffline: "offline",
@@ -540,7 +544,7 @@
         $("#mpRoomsRefreshBtn").text(t("mpRoomsRefresh"));
         if (typeof renderRoomList === "function") renderRoomList(mpLastRoomList);
         $("#mpCodeLabel").text(t("mpCodeLabel"));
-        $("#mpCopyBtn").text(t("mpCopy"));
+        $("#mpCopyBtn").text(mpRoomCode ? copyBtnLabel() : t("mpCopyInvite"));
         $("#mpLeaveBtn").text(t("mpLeave"));
         $("#mpResetBtn").text(t("newGame"));
         if (typeof updateMpUI === "function") updateMpUI();
@@ -760,7 +764,13 @@
       function buildShareLink(code) {
         var u = new URL(window.location.href);
         u.searchParams.delete("room");
-        u.searchParams.set("spectate", code);
+        u.searchParams.delete("join");
+        u.searchParams.delete("spectate");
+        if (mpBothSeated()) {
+          u.searchParams.set("spectate", code);
+        } else {
+          u.searchParams.set("join", code);
+        }
         if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") {
           u.searchParams.set("server", mpServerUrl);
         } else {
@@ -768,6 +778,10 @@
         }
         return u.toString();
       }
+      function copyBtnLabel() {
+        return mpBothSeated() ? t("mpCopySpectate") : t("mpCopyInvite");
+      }
+
 
       function setMpConn(state, detail) {
         mpConnState = state;
@@ -856,6 +870,7 @@
         $("#difficultyWrap").addClass("mp-hidden");
         $("#mpCodeValue").text(mpRoomCode || "------");
         $("#mpShareLink").text(mpRoomCode ? buildShareLink(mpRoomCode) : "");
+        $("#mpCopyBtn").text(mpRoomCode ? copyBtnLabel() : t("mpCopyInvite"));
         var canPick = mpAloneCanSwitch();
         $("#mpSeatW")
           .text(t("sideWhite") + " — " + seatLabel("w"))
@@ -1288,7 +1303,7 @@
 
       function tryAutoRejoin() {
         var params = new URLSearchParams(window.location.search);
-        var roomParam = params.get("room");
+        var roomParam = params.get("join") || params.get("room");
         var spectateParam = params.get("spectate");
         if (spectateParam) {
           enterMpFromSpectate(spectateParam);
@@ -2601,7 +2616,7 @@
               toast._hideTimer = window.setTimeout(function () { toast.classList.remove("show"); }, 1200);
             }
             $("#mpCopyBtn").text(t("mpCopied"));
-            window.setTimeout(function () { $("#mpCopyBtn").text(t("mpCopy")); }, 1200);
+            window.setTimeout(function () { $("#mpCopyBtn").text(mpRoomCode ? copyBtnLabel() : t("mpCopyInvite")); }, 1200);
           };
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(link).then(done).catch(function () {
@@ -2626,7 +2641,7 @@
 
         // Auto-join from ?room= or saved room (reconnect)
         var _paramsEarly = new URLSearchParams(window.location.search);
-        var _maybeMp = !!(_paramsEarly.get("room") || _paramsEarly.get("spectate") || (function () {
+        var _maybeMp = !!(_paramsEarly.get("join") || _paramsEarly.get("room") || _paramsEarly.get("spectate") || (function () {
           try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
         })());
         tryAutoRejoin();

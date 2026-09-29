@@ -21,7 +21,8 @@ Open a game mode in a browser:
 - Static site: open `gamemodes/chess/classic/index.html` or `gamemodes/checkers/*/index.html` (or serve the repo root).
 - Default production server: `https://chessboard-ulhg.onrender.com`
 - Local: `http://localhost:3001` — override via `?server=http://HOST:3001`
-- Join link: `...?room=ABC123` (optional `&server=...`)
+- Join/invite link (open seat): `...?join=ABC123` or `...?room=ABC123` (optional `&server=...`)
+- Spectate link (both seats filled): `...?spectate=ABC123`
 - `createRoom` / `joinRoom` `mode`: `classic` | `dice` | `custom` (alias `chess-custom`) | `checkers` (alias `checkers-classic`) | `checkers-custom`
 
 Flow:
