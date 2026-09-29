@@ -1477,19 +1477,6 @@ button.btn:disabled {
 }
 
 /* --- Move quality indicators (custom chess mode) --- */
-.mq-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin: -0.35rem 0 0.85rem;
-  padding: 0 0.15rem;
-}
-.mq-toggle-row .custom-setting-label {
-  cursor: default;
-  user-select: none;
-}
-
 .mq-badge {
   position: absolute;
   top: 2px;

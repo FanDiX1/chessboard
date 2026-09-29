@@ -67,14 +67,6 @@
           <span class="status-dot" id="statusDot"></span>
           <span id="statusText"></span>
         </div>
-        <div class="custom-setting-row mq-toggle-row" id="moveAnalysisWrap">
-          <div class="custom-setting-text">
-            <span class="custom-setting-label" id="moveAnalysisLabel"></span>
-          </div>
-          <button type="button" class="custom-toggle" id="moveAnalysisToggle" role="switch" aria-checked="false" aria-labelledby="moveAnalysisLabel">
-            <span class="custom-toggle-knob" aria-hidden="true"></span>
-          </button>
-        </div>
         <div class="board-wrap">
           <div id="board"></div>
           <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
@@ -193,6 +185,21 @@
             <p class="mp-copy-toast" id="mpCopyToast" role="status" aria-live="polite"></p>
             <p class="mp-hint" id="mpSpectatorCount"></p>
             <p class="mp-hint" id="mpActiveHint"></p>
+          </div>
+        </section>
+
+
+        <section class="card" id="customSettingsCard">
+          <div class="card-title" id="customSettingsTitle">Настройки</div>
+          <div class="custom-settings" id="customSettingsPanel">
+            <div class="custom-setting-row" id="moveAnalysisWrap">
+              <div class="custom-setting-text">
+                <span class="custom-setting-label" id="moveAnalysisLabel"></span>
+              </div>
+              <button type="button" class="custom-toggle" id="moveAnalysisToggle" role="switch" aria-checked="false" aria-labelledby="moveAnalysisLabel">
+                <span class="custom-toggle-knob" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -413,6 +420,7 @@
           mpOppTurn: "Ход соперника…",
           turnOpponent: "Соперник",
           metaOpp: "Противник",
+          customSettingsTitle: "Настройки",
           moveAnalysis: "Оценка ходов",
           mqBest: "Лучший",
           mqExcellent: "Отлично",
@@ -567,6 +575,7 @@
           mpOppTurn: "Opponent's turn…",
           turnOpponent: "Opponent",
           metaOpp: "Opponent",
+          customSettingsTitle: "Settings",
           moveAnalysis: "Move analysis",
           mqBest: "Best",
           mqExcellent: "Excellent",
@@ -609,6 +618,9 @@
         $("#difficulty option[value='hard']").text(t("diffHard"));
         $("#difficulty option[value='expert']").text(t("diffExpert"));
         $("#difficulty option[value='master']").text(t("diffMaster"));
+        if ($("#customSettingsTitle").length) {
+          $("#customSettingsTitle").text(t("customSettingsTitle"));
+        }
         if ($("#moveAnalysisLabel").length) {
           $("#moveAnalysisLabel").text(t("moveAnalysis"));
         }
