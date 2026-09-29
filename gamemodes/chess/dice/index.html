@@ -1088,6 +1088,16 @@
           updateStatus();
           ensureMpDiceTurnIfNeeded();
         });
+        mpSocket.on("roomEnded", function () {
+          if (typeof clearMpSession === "function") clearMpSession(false);
+          else {
+            mpActive = false; mpSpectating = false; mpRoomCode = null; mpSeat = null; mpRoom = null;
+            try { localStorage.removeItem(MP_ROOM_KEY); } catch (e) {}
+            setMpConn("offline");
+            if (typeof updateMpUI === "function") updateMpUI();
+          }
+          if (typeof updateStatus === "function") updateStatus();
+        });
         mpSocket.on("opponentLeft", function () {
           if (promoteMpToLocalBot()) return;
           setMpConn("waiting");

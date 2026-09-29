@@ -969,6 +969,16 @@
           syncBoardFromMpRoom(true);
         });
         mpSocket.on("opponentJoined", function () { updateMpUI(); updateStatus(); });
+        mpSocket.on("roomEnded", function () {
+          if (typeof clearMpSession === "function") clearMpSession(false);
+          else {
+            mpActive = false; mpSpectating = false; mpRoomCode = null; mpSeat = null; mpRoom = null;
+            try { localStorage.removeItem(MP_ROOM_KEY); } catch (e) {}
+            setMpConn("offline");
+            if (typeof updateMpUI === "function") updateMpUI();
+          }
+          if (typeof updateStatus === "function") updateStatus();
+        });
         mpSocket.on("opponentLeft", function () {
           if (typeof promoteMpToLocalBot === "function" && promoteMpToLocalBot()) return;
           setMpConn("waiting");

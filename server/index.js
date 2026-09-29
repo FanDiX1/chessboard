@@ -12,6 +12,7 @@ const CHECKERS_START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
 const CODE_LEN = 6;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000; // 6h idle cleanup
+const SEAT_OFFLINE_GRACE_MS = 30 * 1000; // kick seated player after offline grace
 
 const app = express();
 app.use(cors({ origin: true }));
@@ -291,15 +292,26 @@ function createRoom(clientId, mode) {
   return room;
 }
 
+function clearSeatOfflineTimer(seat) {
+  if (!seat) return;
+  if (seat.offlineTimer) {
+    clearTimeout(seat.offlineTimer);
+    seat.offlineTimer = null;
+  }
+  seat.offlineSince = null;
+}
+
 function seatPlayer(room, color, clientId, socketId, nick) {
-  const prevNick = room.seats[color] && room.seats[color].clientId === clientId
-    ? room.seats[color].nick
-    : "";
+  const prev = room.seats[color];
+  const prevNick = prev && prev.clientId === clientId ? prev.nick : "";
+  if (prev) clearSeatOfflineTimer(prev);
   room.seats[color] = {
     clientId,
     socketId,
     connected: true,
     nick: sanitizeNick(nick) || sanitizeNick(prevNick),
+    offlineTimer: null,
+    offlineSince: null,
   };
   // Seated players leave spectator list
   removeSpectator(room, clientId);
@@ -309,32 +321,146 @@ function seatPlayer(room, color, clientId, socketId, nick) {
   }
 }
 
+function hasSeatedPlayers(room) {
+  return !!(room.seats && (room.seats.w || room.seats.b));
+}
+
+function transferHostIfNeeded(room, leavingClientId) {
+  if (!room || room.hostId !== leavingClientId) return;
+  let next = null;
+  for (const color of ["w", "b"]) {
+    const s = room.seats[color];
+    if (s && s.clientId && s.clientId !== leavingClientId) {
+      next = s.clientId;
+      break;
+    }
+  }
+  room.hostId = next || "";
+}
+
+function clearSocketRoomBinding(socketId, code) {
+  if (!socketId) return;
+  const sock = io.sockets.sockets.get(socketId);
+  if (!sock) return;
+  try { sock.leave(code); } catch (_e) { /* ignore */ }
+  if (sock.data && sock.data.roomCode === code) {
+    sock.data.roomCode = null;
+    sock.data.role = null;
+  }
+}
+
+/**
+ * Delete room when no seated players remain. Kicks spectators and removes from lobby list.
+ * @returns {boolean} true if room was destroyed
+ */
+function destroyRoom(room, reason) {
+  if (!room || !rooms.has(room.code)) return false;
+  const code = room.code;
+  const mode = room.mode;
+  for (const color of ["w", "b"]) {
+    if (room.seats[color]) clearSeatOfflineTimer(room.seats[color]);
+  }
+  io.to(code).emit("roomEnded", { code, reason: reason || "empty" });
+  for (const color of ["w", "b"]) {
+    const s = room.seats[color];
+    if (s) clearSocketRoomBinding(s.socketId, code);
+    room.seats[color] = null;
+  }
+  if (room.spectators) {
+    for (const spec of [...room.spectators.values()]) {
+      if (spec) clearSocketRoomBinding(spec.socketId, code);
+    }
+    room.spectators.clear();
+  }
+  rooms.delete(code);
+  broadcastRoomList(mode);
+  return true;
+}
+
+/**
+ * Vacate a seat: host transfer, emit presence, delete room if empty.
+ * @returns {"destroyed"|"vacated"|false}
+ */
+function vacateSeat(room, color, opts) {
+  if (!room || !room.seats) return false;
+  const seat = room.seats[color];
+  if (!seat) return false;
+  const clientId = seat.clientId;
+  const reason = (opts && opts.reason) || "left";
+  clearSeatOfflineTimer(seat);
+  clearSocketRoomBinding(seat.socketId, room.code);
+  room.seats[color] = null;
+  if (room.status === "playing") room.status = "waiting";
+  transferHostIfNeeded(room, clientId);
+  touch(room);
+
+  if (!hasSeatedPlayers(room)) {
+    destroyRoom(room, reason === "offline_timeout" ? "empty" : reason);
+    return "destroyed";
+  }
+
+  io.to(room.code).emit("opponentLeft", { seat: color, reason });
+  emitRoom(room);
+  broadcastRoomList(room);
+  return "vacated";
+}
+
+function scheduleSeatOfflineKick(room, color) {
+  const seat = room && room.seats && room.seats[color];
+  if (!seat || seat.connected) return;
+  clearSeatOfflineTimer(seat);
+  const clientId = seat.clientId;
+  const code = room.code;
+  seat.offlineSince = Date.now();
+  seat.offlineTimer = setTimeout(() => {
+    const r = rooms.get(code);
+    if (!r) return;
+    const s = r.seats[color];
+    if (!s || s.clientId !== clientId || s.connected) return;
+    vacateSeat(r, color, { reason: "offline_timeout" });
+  }, SEAT_OFFLINE_GRACE_MS);
+}
+
+function markSeatConnected(room, color, socketId, nick) {
+  const seat = room.seats[color];
+  if (!seat) return;
+  clearSeatOfflineTimer(seat);
+  seat.socketId = socketId;
+  seat.connected = true;
+  if (nick) seat.nick = sanitizeNick(nick);
+  touch(room);
+}
+
 function freeSocketFromOtherRooms(socketId, keepCode) {
-  for (const room of rooms.values()) {
+  for (const room of [...rooms.values()]) {
     if (room.code === keepCode) continue;
+    let touchedSpec = false;
     for (const color of ["w", "b"]) {
       const s = room.seats[color];
       if (s && s.socketId === socketId) {
-        s.socketId = null;
-        s.connected = false;
+        vacateSeat(room, color, { reason: "joined_elsewhere" });
       }
     }
+    if (!rooms.has(room.code)) continue;
     if (room.spectators) {
       for (const [cid, spec] of [...room.spectators.entries()]) {
         if (spec && spec.socketId === socketId) {
           room.spectators.delete(cid);
+          touchedSpec = true;
         }
       }
+    }
+    if (touchedSpec) {
+      touch(room);
+      emitRoom(room);
+      broadcastRoomList(room);
     }
   }
 }
 
-
 function roomIsNonEmpty(room) {
-  if (room.seats && (room.seats.w || room.seats.b)) return true;
-  if (spectatorCount(room) > 0) return true;
-  // Keep rooms that still have disconnected seated players (reconnect window)
-  return false;
+  // Public list only shows rooms that still have at least one seated player
+  return hasSeatedPlayers(room);
 }
 
 function roomListEntry(room) {
@@ -518,12 +644,9 @@ io.on("connection", (socket) => {
       if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
 
       freeSocketFromOtherRooms(socket.id, code);
-      room.seats[seat].socketId = socket.id;
-      room.seats[seat].connected = true;
       const nick = sanitizeNick(payload && payload.nick);
-      if (nick) room.seats[seat].nick = nick;
+      markSeatConnected(room, seat, socket.id, nick || null);
       removeSpectator(room, clientId);
-      touch(room);
       socket.data.clientId = clientId;
       socket.data.roomCode = code;
       socket.data.role = "player";
@@ -640,8 +763,10 @@ io.on("connection", (socket) => {
       room.seats[want] = seatObj;
       room.seats[current] = null;
       if (seatObj) {
+        clearSeatOfflineTimer(seatObj);
         seatObj.socketId = socket.id;
         seatObj.connected = true;
+        seatObj.offlineSince = null;
         const nick = sanitizeNick(payload && payload.nick);
         if (nick) seatObj.nick = nick;
       }
@@ -952,17 +1077,15 @@ io.on("connection", (socket) => {
     if (room && clientId) {
       const seat = findSeatByClient(room, clientId);
       if (seat) {
-        room.seats[seat] = null;
-        touch(room);
-        if (room.status === "playing") room.status = "waiting";
-        socket.leave(code);
-        socket.to(code).emit("opponentLeft", { seat });
-        emitRoom(room);
-        broadcastRoomList(room);
+        // vacateSeat leaves the socket room, transfers host, deletes if empty
+        vacateSeat(room, seat, { reason: "left" });
       } else if (removeSpectator(room, clientId)) {
-        socket.leave(code);
-        emitRoom(room);
-        broadcastRoomList(room);
+        try { socket.leave(code); } catch (_e) { /* ignore */ }
+        // Room may still exist with seated players
+        if (rooms.has(code)) {
+          emitRoom(room);
+          broadcastRoomList(room);
+        }
       }
     }
     socket.data.roomCode = null;
@@ -985,7 +1108,8 @@ io.on("connection", (socket) => {
         touch(room);
         socket.to(code).emit("opponentDisconnected", { seat });
         emitRoom(room);
-        // seat still occupied (reconnect window) — list nicks unchanged
+        // Grace period: reconnect within SEAT_OFFLINE_GRACE_MS keeps the seat
+        scheduleSeatOfflineKick(room, seat);
       }
       return;
     }
@@ -998,20 +1122,17 @@ io.on("connection", (socket) => {
   });
 });
 
-// Idle room cleanup
+// Idle room cleanup (safety net; seats normally vacate after 30s offline)
 setInterval(() => {
   const now = Date.now();
-  const removedModes = new Set();
-  for (const [code, room] of rooms) {
+  for (const room of [...rooms.values()]) {
     const bothGone =
       (!room.seats.w || !room.seats.w.connected) &&
       (!room.seats.b || !room.seats.b.connected);
     if (bothGone && now - room.updatedAt > ROOM_TTL_MS) {
-      removedModes.add(room.mode);
-      rooms.delete(code);
+      destroyRoom(room, "idle_ttl");
     }
   }
-  for (const m of removedModes) broadcastRoomList(m);
 }, 60 * 1000);
 
 // Periodic lobby refresh for subscribed clients

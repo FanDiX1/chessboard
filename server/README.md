@@ -50,6 +50,14 @@ Flow:
 | `leaveRoom` | C→S | leave seat |
 | `roomState` / `moveApplied` / `gameReset` | S→C | sync |
 | `opponentJoined` / `opponentLeft` / `opponentDisconnected` / `opponentReconnected` | S→C | presence |
+| `roomEnded` | S→C | room deleted (no seated players left) |
+
+### Room lifecycle
+
+- Seated player socket disconnect starts a **30s reconnect grace**. If still offline after grace, the seat is vacated (`opponentLeft` / kick).
+- Vacating the **host** transfers `hostId` to the other seated player (if any).
+- When **zero seats** remain occupied, the room is **deleted**: spectators are cleared, `roomEnded` is emitted, and the room is removed from the public `roomList`.
+- Explicit `leaveRoom` vacates immediately (no grace). Joining another room also vacates seats held elsewhere.
 
 Room codes are 6 characters (`A–Z` / `2–9`, no ambiguous `0/O/1/I`).
 
@@ -61,4 +69,4 @@ Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black
 
 ## Deploy note
 
-After pulling server changes (removed backgammon modes; chess `custom` / `chess-custom` with `updateSetup` / `startCustomGame`), **redeploy the Render service** so production picks up the update.
+After pulling server changes (room lifecycle: 30s offline kick, host transfer, empty-room delete), **redeploy the Render service** so production picks up the update.
