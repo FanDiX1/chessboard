@@ -130,19 +130,9 @@
     </div>
     <div class="topbar-actions">
       <div class="settings-menu" id="settingsMenu">
-        <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+        <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsDialog" aria-label="Settings" title="Settings">
           <span aria-hidden="true">⚙</span>
         </button>
-        <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
-          <div class="settings-menu-section">
-            <div class="settings-menu-label" id="settingsLangLabel">Language</div>
-            <div class="lang-switch" role="group" aria-label="Language">
-              <button type="button" id="langRu" data-lang="ru">RU</button>
-              <span class="lang-sep">|</span>
-              <button type="button" id="langEn" data-lang="en">EN</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -283,7 +273,24 @@
 
 <div id="ckGhost" class="ck-ghost" aria-hidden="true"></div>
 
-<dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="settings-dialog-head">
+      <h2 class="card-title" id="settingsTitle">Settings</h2>
+      <button type="button" class="settings-dialog-close" id="settingsCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="settings-dialog-body">
+      <div class="settings-menu-section">
+        <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" id="langRu" data-lang="ru">RU</button>
+          <span class="lang-sep">|</span>
+          <button type="button" id="langEn" data-lang="en">EN</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
   <div class="rules-dialog-head">
     <h2 class="card-title" id="rulesTitle"></h2>
     <button type="button" class="rules-dialog-close" id="rulesCloseBtn" aria-label="Close">×</button>
@@ -322,6 +329,7 @@
     ru: {
       docTitle: "BoardHack — Русские шашки",
       modeBadge: "шашки · классика",
+      settingsTitle: "Настройки",
       settingsLangLabel: "Язык",
       playArea: "Игровая зона",
       mission: "Управление",
@@ -404,6 +412,7 @@
     en: {
       docTitle: "BoardHack — Russian draughts",
       modeBadge: "checkers · classic",
+      settingsTitle: "Settings",
       settingsLangLabel: "Language",
       playArea: "Play area",
       mission: "Controls",
@@ -1641,6 +1650,15 @@
     document.getElementById("mpResetBtn").textContent = t("newGame");
     var _sll = document.getElementById("settingsLangLabel");
     if (_sll) _sll.textContent = t("settingsLangLabel");
+    var _st = document.getElementById("settingsTitle");
+    if (_st) _st.textContent = t("settingsTitle");
+    var _sc = document.getElementById("settingsCloseBtn");
+    if (_sc) _sc.setAttribute("aria-label", t("settingsTitle"));
+    var _smb = document.getElementById("settingsMenuBtn");
+    if (_smb) {
+      _smb.setAttribute("aria-label", t("settingsTitle"));
+      _smb.setAttribute("title", t("settingsTitle"));
+    }
     document.getElementById("langRu").classList.toggle("active", lang === "ru");
     document.getElementById("langEn").classList.toggle("active", lang === "en");
     updateMpUI();
@@ -2073,20 +2091,21 @@
   });
 
   function wireSettingsMenu() {
-    var menu = document.getElementById("settingsMenu");
+    var dialog = document.getElementById("settingsDialog");
     var btn = document.getElementById("settingsMenuBtn");
-    if (!menu || !btn) return;
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var open = !menu.classList.contains("open");
-      menu.classList.toggle("open", open);
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    var closeBtn = document.getElementById("settingsCloseBtn");
+    if (!dialog || !btn) return;
+    btn.addEventListener("click", function () {
+      if (!dialog.open) dialog.showModal();
+      btn.setAttribute("aria-expanded", "true");
     });
-    document.addEventListener("click", function () {
-      menu.classList.remove("open");
+    if (closeBtn) closeBtn.addEventListener("click", function () { dialog.close(); });
+    dialog.addEventListener("click", function (e) {
+      if (e.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", function () {
       btn.setAttribute("aria-expanded", "false");
     });
-    menu.addEventListener("click", function (e) { e.stopPropagation(); });
   }
 
   wireSettingsMenu();

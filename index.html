@@ -20,19 +20,9 @@
       </div>
       <div class="topbar-actions">
         <div class="settings-menu" id="settingsMenu">
-          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsDialog" aria-label="Settings" title="Settings">
             <span aria-hidden="true">⚙</span>
           </button>
-          <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
-            <div class="settings-menu-section">
-              <div class="settings-menu-label" id="settingsLangLabel">Language</div>
-              <div class="lang-switch" role="group" aria-label="Language">
-                <button type="button" id="langRu" data-lang="ru">RU</button>
-                <span class="lang-sep">|</span>
-                <button type="button" id="langEn" data-lang="en">EN</button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -63,7 +53,6 @@
       <section class="hub-panel active" id="panelChess" role="tabpanel" aria-labelledby="tabChess" data-game="chess">
         <div class="hub-panel-head">
           <h2 id="panelChessTitle">Шахматы</h2>
-          <p class="hub-panel-desc" id="panelChessDesc">Классика, кости, настраиваемый, битва коней и атомные — локальный бот и мультиплеер.</p>
         </div>
         <div class="mode-cards">
           <a class="mode-card" href="gamemodes/chess/classic/">
@@ -71,15 +60,15 @@
             <p id="cardClassicDesc">Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.</p>
             <div class="go" id="cardClassicGo">Открыть →</div>
           </a>
-          <a class="mode-card" href="gamemodes/chess/dice/">
-            <h2>🎲 <span id="cardDiceTitle">Кости</span></h2>
-            <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
-            <div class="go" id="cardDiceGo">Открыть →</div>
-          </a>
           <a class="mode-card" href="gamemodes/chess/custom/">
             <h2>⚙ <span id="cardChessCustomTitle">Настраиваемый</span></h2>
             <p id="cardChessCustomDesc">Свободная расстановка фигур перед партией. Stockfish или онлайн-комната.</p>
             <div class="go" id="cardChessCustomGo">Открыть →</div>
+          </a>
+          <a class="mode-card" href="gamemodes/chess/dice/">
+            <h2>🎲 <span id="cardDiceTitle">Кости</span></h2>
+            <p id="cardDiceDesc">Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.</p>
+            <div class="go" id="cardDiceGo">Открыть →</div>
           </a>
           <a class="mode-card" href="gamemodes/chess/knights/">
             <h2>♞ <span id="cardKnightsTitle">Битва коней</span></h2>
@@ -132,7 +121,24 @@
     <footer class="footer">BoardHack</footer>
   </main>
 
-  <script>
+  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="settings-dialog-head">
+      <h2 class="card-title" id="settingsTitle">Settings</h2>
+      <button type="button" class="settings-dialog-close" id="settingsCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="settings-dialog-body">
+      <div class="settings-menu-section">
+        <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" id="langRu" data-lang="ru">RU</button>
+          <span class="lang-sep">|</span>
+          <button type="button" id="langEn" data-lang="en">EN</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+<script>
 
     (function () {
       try {
@@ -152,13 +158,13 @@
         ru: {
           docTitle: "BoardHack — Взломай доску",
           heroTitleHtml: "Рады видеть вас за столом.",
+          settingsTitle: "Настройки",
           settingsLangLabel: "Язык",
           heroDesc: "Выберите стол и сделайте первый ход.",
           tabChess: "Шахматы",
           tabCheckers: "Шашки",
           tabMahjong: "Маджонг",
           panelChessTitle: "Шахматы",
-          panelChessDesc: "Классика, кости, настраиваемый, битва коней и атомные — локальный бот и мультиплеер.",
           panelCheckersTitle: "Шашки",
           panelCheckersDesc: "Русские шашки и настраиваемый режим — бот или мультиплеер по коду.",
           panelMahjongTitle: "Маджонг",
@@ -191,13 +197,13 @@
         en: {
           docTitle: "BoardHack — Hack the Board",
           heroTitleHtml: "Glad to have you at the table.",
+          settingsTitle: "Settings",
           settingsLangLabel: "Language",
           heroDesc: "Choose a table and make the first move.",
           tabChess: "Chess",
           tabCheckers: "Checkers",
           tabMahjong: "Mahjong",
           panelChessTitle: "Chess",
-          panelChessDesc: "Classic, dice, customizable, knights battle, and atomic — local bot and multiplayer.",
           panelCheckersTitle: "Checkers",
           panelCheckersDesc: "Russian draughts and customizable — local bot or online multiplayer.",
           panelMahjongTitle: "Mahjong",
@@ -255,7 +261,6 @@
         document.getElementById("tabCheckersLabel").textContent = t("tabCheckers");
         document.getElementById("tabMahjongLabel").textContent = t("tabMahjong");
         document.getElementById("panelChessTitle").textContent = t("panelChessTitle");
-        document.getElementById("panelChessDesc").textContent = t("panelChessDesc");
         document.getElementById("panelCheckersTitle").textContent = t("panelCheckersTitle");
         document.getElementById("panelCheckersDesc").textContent = t("panelCheckersDesc");
         document.getElementById("panelMahjongTitle").textContent = t("panelMahjongTitle");
@@ -286,6 +291,15 @@
         document.getElementById("cardMahjongSoonGo").textContent = t("cardMahjongSoonGo");
         var _sll = document.getElementById("settingsLangLabel");
         if (_sll) _sll.textContent = t("settingsLangLabel");
+        var _st = document.getElementById("settingsTitle");
+        if (_st) _st.textContent = t("settingsTitle");
+        var _sc = document.getElementById("settingsCloseBtn");
+        if (_sc) _sc.setAttribute("aria-label", t("settingsTitle"));
+        var _smb = document.getElementById("settingsMenuBtn");
+        if (_smb) {
+          _smb.setAttribute("aria-label", t("settingsTitle"));
+          _smb.setAttribute("title", t("settingsTitle"));
+        }
         document.getElementById("langRu").classList.toggle("active", lang === "ru");
         document.getElementById("langEn").classList.toggle("active", lang === "en");
       }
@@ -317,21 +331,22 @@
       }
 
       function wireSettingsMenu() {
-    var menu = document.getElementById("settingsMenu");
-    var btn = document.getElementById("settingsMenuBtn");
-    if (!menu || !btn) return;
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var open = !menu.classList.contains("open");
-      menu.classList.toggle("open", open);
-      btn.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-    document.addEventListener("click", function () {
-      menu.classList.remove("open");
-      btn.setAttribute("aria-expanded", "false");
-    });
-    menu.addEventListener("click", function (e) { e.stopPropagation(); });
-  }
+        var dialog = document.getElementById("settingsDialog");
+        var btn = document.getElementById("settingsMenuBtn");
+        var closeBtn = document.getElementById("settingsCloseBtn");
+        if (!dialog || !btn) return;
+        btn.addEventListener("click", function () {
+          if (!dialog.open) dialog.showModal();
+          btn.setAttribute("aria-expanded", "true");
+        });
+        if (closeBtn) closeBtn.addEventListener("click", function () { dialog.close(); });
+        dialog.addEventListener("click", function (e) {
+          if (e.target === dialog) dialog.close();
+        });
+        dialog.addEventListener("close", function () {
+          btn.setAttribute("aria-expanded", "false");
+        });
+      }
 
       wireSettingsMenu();
       document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });

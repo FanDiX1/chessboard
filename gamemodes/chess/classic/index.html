@@ -22,19 +22,9 @@
       </div>
       <div class="topbar-actions">
         <div class="settings-menu" id="settingsMenu">
-          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+          <button type="button" class="settings-menu-btn" id="settingsMenuBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsDialog" aria-label="Settings" title="Settings">
             <span aria-hidden="true">⚙</span>
           </button>
-          <div class="settings-menu-panel" id="settingsMenuPanel" role="menu">
-            <div class="settings-menu-section">
-              <div class="settings-menu-label" id="settingsLangLabel">Language</div>
-              <div class="lang-switch" role="group" aria-label="Language">
-                <button type="button" id="langRu" data-lang="ru">RU</button>
-                <span class="lang-sep">|</span>
-                <button type="button" id="langEn" data-lang="en">EN</button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -177,6 +167,23 @@
     <footer class="footer">BoardHack</footer>
   </main>
 
+  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="settings-dialog-head">
+      <h2 class="card-title" id="settingsTitle">Settings</h2>
+      <button type="button" class="settings-dialog-close" id="settingsCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="settings-dialog-body">
+      <div class="settings-menu-section">
+        <div class="settings-menu-label" id="settingsLangLabel">Language</div>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" id="langRu" data-lang="ru">RU</button>
+          <span class="lang-sep">|</span>
+          <button type="button" id="langEn" data-lang="en">EN</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
     <div class="rules-dialog-head">
       <h2 class="card-title" id="rulesTitle"></h2>
@@ -268,6 +275,7 @@
           drawMaterial: "Ничья — недостаточно материала.",
           draw: "Ничья.",
           menuLabel: "Режим",
+          settingsTitle: "Настройки",
           settingsLangLabel: "Язык",
           menuClassic: "Классика",
           menuClassicDesc: "Стандартные шахматы",
@@ -398,6 +406,7 @@
           drawMaterial: "Draw — insufficient material.",
           draw: "Draw.",
           menuLabel: "Mode",
+          settingsTitle: "Settings",
           settingsLangLabel: "Language",
           menuClassic: "Classic",
           menuClassicDesc: "Standard chess",
@@ -546,6 +555,11 @@
         if (typeof updateMpUI === "function") updateMpUI();
         applyMenuLang();
         if ($("#settingsLangLabel").length) $("#settingsLangLabel").text(t("settingsLangLabel"));
+        if ($("#settingsTitle").length) $("#settingsTitle").text(t("settingsTitle"));
+        if ($("#settingsCloseBtn").length) $("#settingsCloseBtn").attr("aria-label", t("settingsTitle"));
+        if ($("#settingsMenuBtn").length) {
+          $("#settingsMenuBtn").attr("aria-label", t("settingsTitle")).attr("title", t("settingsTitle"));
+        }
         updateDiceUI();
         $("#metaSideK").text(t("metaSide"));
         $("#metaTurnK").text(t("metaTurn"));
@@ -568,20 +582,20 @@
 
       
       function wireSettingsMenu() {
-        var $menu = $("#settingsMenu");
+        var dialog = document.getElementById("settingsDialog");
         var $btn = $("#settingsMenuBtn");
-        if (!$menu.length || !$btn.length) return;
-        $btn.on("click", function (e) {
-          e.stopPropagation();
-          var open = !$menu.hasClass("open");
-          $menu.toggleClass("open", open);
-          $btn.attr("aria-expanded", open ? "true" : "false");
+        if (!dialog || !$btn.length) return;
+        $btn.on("click", function () {
+          if (!dialog.open) dialog.showModal();
+          $btn.attr("aria-expanded", "true");
         });
-        $(document).on("click.settingsMenu", function () {
-          $menu.removeClass("open");
+        $("#settingsCloseBtn").on("click", function () { dialog.close(); });
+        $(dialog).on("click", function (e) {
+          if (e.target === dialog) dialog.close();
+        });
+        $(dialog).on("close", function () {
           $btn.attr("aria-expanded", "false");
         });
-        $menu.on("click", function (e) { e.stopPropagation(); });
       }
 
       function applyMenuLang() {
