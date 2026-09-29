@@ -74,7 +74,6 @@
             <div class="pos-eval-track" aria-hidden="true">
               <div class="pos-eval-fill" id="posEvalFill"></div>
             </div>
-            <div class="pos-eval-score" id="posEvalScore">—</div>
           </div>
         </div>
         <div class="setup-panel" id="setupPanel">
@@ -1847,12 +1846,11 @@
       function resetPosEvalDisplay() {
         peLastScore = null;
         var fill = document.getElementById("posEvalFill");
-        var scoreEl = document.getElementById("posEvalScore");
         if (fill) {
-          fill.style.width = "50%";
-          fill.classList.remove("pos-eval-black-adv");
+          fill.style.left = "50%";
+          fill.style.width = "0%";
+          fill.classList.remove("pos-eval-opp-adv", "pos-eval-black-adv");
         }
-        if (scoreEl) scoreEl.textContent = "—";
       }
 
       function hidePosEval() {
@@ -1878,51 +1876,47 @@
         }
       }
 
-      /** Format Stockfish score for white's perspective. */
-      function formatPosEvalScore(score) {
-        if (!score || score.type == null) return "—";
-        if (score.type === "mate") {
-          var m = score.value | 0;
-          if (m === 0) return "M0";
-          return (m > 0 ? "M" : "-M") + Math.abs(m);
-        }
-        var cp = score.value | 0;
-        var pawns = cp / 100;
-        var abs = Math.abs(pawns);
-        var rounded = abs >= 10 ? abs.toFixed(0) : abs.toFixed(1);
-        if (pawns > 0.04) return "+" + rounded;
-        if (pawns < -0.04) return "-" + rounded;
-        return "0.0";
-      }
-
       /**
-       * Map white-pov score to fill % (0 = black winning, 100 = white winning).
-       * Soft-clamp around ±5 pawns; mates pin to ends.
+       * Map white-pov score to a signed fill in [-1, +1] relative to the human
+       * (userColor): +1 = near-full RIGHT (human better), -1 = near-full LEFT
+       * (opponent better). Mate → near full; cp uses a smooth tanh curve.
        */
-      function scoreToBarPercent(score) {
-        if (!score || score.type == null) return 50;
+      function scoreToSignedFill(score) {
+        if (!score || score.type == null) return 0;
+        var whiteSigned = 0;
         if (score.type === "mate") {
           var mv = score.value | 0;
-          if (mv > 0) return 100;
-          if (mv < 0) return 0;
-          return 50;
+          if (mv !== 0) {
+            var absM = Math.abs(mv);
+            // M1 ≈ 0.98, longer mates slightly less full, floor ~0.92
+            var mag = 0.92 + 0.06 * Math.max(0, 1 - (absM - 1) / 10);
+            whiteSigned = (mv > 0 ? 1 : -1) * mag;
+          }
+        } else {
+          var pawns = (score.value | 0) / 100;
+          // tanh: ±1 pawn ≈ 0.36, ±3 ≈ 0.76, ±5 ≈ 0.91 of the 0.95 cap
+          whiteSigned = Math.tanh(pawns / 2.5) * 0.95;
         }
-        var pawns = (score.value | 0) / 100;
-        // logistic-ish clamp: ±5 ≈ near extremes
-        var t = Math.max(-5, Math.min(5, pawns));
-        return 50 + (t / 5) * 45;
+        var humanIsBlack = (typeof userColor !== "undefined" && userColor === "b");
+        return humanIsBlack ? -whiteSigned : whiteSigned;
       }
 
       function applyPosEvalScore(score) {
         peLastScore = score || null;
         var fill = document.getElementById("posEvalFill");
-        var scoreEl = document.getElementById("posEvalScore");
-        var pct = scoreToBarPercent(peLastScore);
-        if (fill) {
-          fill.style.width = pct.toFixed(1) + "%";
-          fill.classList.toggle("pos-eval-black-adv", pct < 50);
+        if (!fill) return;
+        var signed = scoreToSignedFill(peLastScore);
+        var halfPct = Math.abs(signed) * 50; // 0..50% of track from center
+        if (signed >= 0) {
+          fill.style.left = "50%";
+          fill.style.width = halfPct.toFixed(2) + "%";
+          fill.classList.remove("pos-eval-opp-adv", "pos-eval-black-adv");
+        } else {
+          fill.style.left = (50 - halfPct).toFixed(2) + "%";
+          fill.style.width = halfPct.toFixed(2) + "%";
+          fill.classList.add("pos-eval-opp-adv");
+          fill.classList.remove("pos-eval-black-adv");
         }
-        if (scoreEl) scoreEl.textContent = formatPosEvalScore(peLastScore);
       }
 
       /**
@@ -3562,6 +3556,10 @@
         // keep current play position; only flip orientation / bot side
         if (board) board.orientation(boardOrientation());
         updateStatus();
+        // Eval bar is relative to who the human plays as — flip fill direction
+        if (typeof applyPosEvalScore === "function" && peLastScore) {
+          applyPosEvalScore(peLastScore);
+        }
         if (!gameOver && game.turn() !== userColor) scheduleBot(250);
       }
 
