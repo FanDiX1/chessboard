@@ -910,11 +910,20 @@
   function persistCustomSettings() {
     try { localStorage.setItem(CUSTOM_SETTINGS_KEY, JSON.stringify(cloneCustomSettings())); } catch (e) {}
   }
+  function isCustomSettingsLocked() {
+    if (!isMultiplayer()) return !!settingsLockedLocal;
+    if (!mpRoom) return true;
+    if (mpRoom.settingsLocked === true) return true;
+    if (mpRoom.settingsLocked === false) return false;
+    if (moveHistory.length > 0) return true;
+    if (mpRoom.plySans && mpRoom.plySans.length > 0) return true;
+    if (mpRoom.status === "finished") return true;
+    return false;
+  }
   function canEditCustomSettings() {
     if (!isMultiplayer()) return !settingsLockedLocal;
-    if (!mpRoom) return false;
-    if (moveHistory.length > 0) return false;
-    if (mpRoom.plySans && mpRoom.plySans.length > 0) return false;
+    if (!mpRoom || mpSpectating) return false;
+    if (isCustomSettingsLocked()) return false;
     var cid = getOrCreateClientId();
     if (mpRoom.hostId && mpRoom.hostId === cid) return true;
     if (mpSeat === "w") return true;
@@ -942,7 +951,7 @@
     if (sel) { sel.value = String(customSettings.moveTimer || 0); sel.disabled = !editable; }
     var lockedEl = document.getElementById("customSettingsLocked");
     var locked = isMultiplayer()
-      ? (!editable && (moveHistory.length > 0 || (mpRoom && mpRoom.plySans && mpRoom.plySans.length > 0)))
+      ? (!editable && isCustomSettingsLocked())
       : settingsLockedLocal;
     if (lockedEl) {
       if (locked) { lockedEl.classList.remove("mp-hidden"); lockedEl.textContent = t("customSettingsLocked"); }
@@ -964,9 +973,24 @@
       code: mpRoomCode,
       customSettings: cloneCustomSettings()
     }, function (res) {
-      if (res && res.ok && res.room && res.room.customSettings) {
-        applyCustomSettingsObject(res.room.customSettings, true);
-        if (mpRoom) mpRoom.customSettings = cloneCustomSettings(res.room.customSettings);
+      if (res && res.ok) {
+        var cs = (res.customSettings) || (res.room && res.room.customSettings);
+        if (cs) {
+          applyCustomSettingsObject(cs, true);
+          if (mpRoom) {
+            mpRoom.customSettings = cloneCustomSettings(cs);
+            if (typeof res.settingsLocked === "boolean") mpRoom.settingsLocked = res.settingsLocked;
+            else if (res.room && typeof res.room.settingsLocked === "boolean") mpRoom.settingsLocked = res.room.settingsLocked;
+          }
+        }
+      } else if (res && res.error === "settings_locked") {
+        var lockedCs = (res.customSettings) || (res.room && res.room.customSettings);
+        if (lockedCs) applyCustomSettingsObject(lockedCs, true);
+        if (mpRoom) {
+          mpRoom.settingsLocked = true;
+          if (lockedCs) mpRoom.customSettings = cloneCustomSettings(lockedCs);
+        }
+        updateCustomSettingsUI();
       }
     });
   }
@@ -1321,13 +1345,38 @@
     mpSocket.on("roomState", function (msg) {
       if (msg && msg.room) applyMpRoom({ room: msg.room, seat: msg.room.yourSeat || mpSeat, code: msg.room.code });
     });
+    mpSocket.on("customSettingsUpdated", function (msg) {
+      if (!mpActive || !msg) return;
+      if (msg.customSettings) {
+        applyCustomSettingsObject(msg.customSettings, true);
+        if (mpRoom) {
+          mpRoom.customSettings = cloneCustomSettings(msg.customSettings);
+          if (typeof msg.settingsLocked === "boolean") mpRoom.settingsLocked = msg.settingsLocked;
+        }
+      } else if (msg.room) {
+        applyMpRoom({ room: msg.room, seat: (msg.room.yourSeat || mpSeat), code: msg.room.code || mpRoomCode });
+      }
+      updateCustomSettingsUI();
+    });
     mpSocket.on("moveApplied", function (msg) {
       if (!mpActive || !msg) return;
+      if (msg.customSettings) {
+        applyCustomSettingsObject(msg.customSettings, true);
+        if (mpRoom) {
+          mpRoom.customSettings = cloneCustomSettings(msg.customSettings);
+          if (typeof msg.settingsLocked === "boolean") mpRoom.settingsLocked = msg.settingsLocked;
+          else if (msg.plySans && msg.plySans.length > 0) mpRoom.settingsLocked = true;
+        }
+      } else if (mpRoom && typeof msg.settingsLocked === "boolean") {
+        mpRoom.settingsLocked = msg.settingsLocked;
+      }
       if (msg.by === mpSeat && !mpApplyingRemote) {
         if (msg.fen && (msg.fen !== boardToFen(board, turn) || !sameCaptureChain(captureChain, parseCaptureChain(msg.chain)))) applyRemotePosition(msg);
+        updateCustomSettingsUI();
         return;
       }
       applyRemotePosition(msg);
+      updateCustomSettingsUI();
     });
     mpSocket.on("gameReset", function (msg) {
       if (!mpActive) return;
@@ -1377,6 +1426,8 @@
       mpSpectating = false;
       mpSeat = res.room.yourSeat; userColor = mpSeat;
       try { localStorage.setItem(COLOR_KEY, userColor); } catch (e) {}
+    } else if (!(res.seat || (res.room && res.room.yourSeat) || role)) {
+      // Broadcast roomState omits yourRole/yourSeat — keep current seat/spectator role.
     } else {
       mpSpectating = false;
     }

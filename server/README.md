@@ -44,11 +44,13 @@ Flow:
 | `reconnectRoom` | C→S | `{ clientId, code, nick? }` reclaim seat after refresh |
 | `makeMove` | C→S | `{ clientId, code, from, to, fen, san, plySans?, gameOver?, stateSync? }` |
 | `resetGame` | C→S | host only — back to start FEN |
-| `updateCustomSettings` | C→S | checkers-custom: `{ clientId, code, customSettings }` (host/white, before first ply) |
-| `updateSetup` | C→S | chess custom: `{ clientId, code, fen, ready? }` sync setup FEN / ready flags |
-| `startCustomGame` | C→S | chess custom: host force-start or confirm; requires one king each |
+| `updateCustomSettings` | C→S | checkers-custom shared rules: `{ clientId, code, customSettings }` (host/white only; rejected with `settings_locked` after first ply) |
+| `updateSetup` | C→S | chess custom shared setup: `{ clientId, code, fen, ready? }` — rejected once `phase === "play"` |
+| `startCustomGame` | C→S | chess custom: host force-start or confirm; requires one king each; locks setup |
 | `leaveRoom` | C→S | leave seat |
-| `roomState` / `moveApplied` / `gameReset` | S→C | sync |
+| `roomState` / `moveApplied` / `gameReset` | S→C | sync (includes `customSettings` + `settingsLocked` where applicable) |
+| `customSettingsUpdated` | S→C | checkers-custom: `{ customSettings, settingsLocked, room }` broadcast when rules change |
+| `setupUpdated` / `customGameStarted` | S→C | chess custom setup sync / match start (setup locked) |
 | `opponentJoined` / `opponentLeft` / `opponentDisconnected` / `opponentReconnected` | S→C | presence |
 | `roomEnded` | S→C | room deleted (no seated players left) |
 
@@ -61,12 +63,16 @@ Flow:
 
 Room codes are 6 characters (`A–Z` / `2–9`, no ambiguous `0/O/1/I`).
 
-Customizable checkers rooms sync `customSettings` (`backwardCapture`, `mandatoryCapture`, `moveTimer`) with FEN/chain.
+**Shared vs local settings**
 
-Chess **custom** / `chess-custom` rooms use `phase` (`setup`|`play`) and sync free-setup FEN + `setupReady` before play. Do not confuse with `checkers-custom`.
+- **Checkers custom (shared, room-scoped):** `customSettings` — `backwardCapture`, `mandatoryCapture`, `moveTimer`. Host / White may edit until the first ply; then `settingsLocked: true` and further client updates are ignored. Spectators receive the same values via `roomState` / `customSettingsUpdated`.
+- **Chess custom (shared):** free-setup FEN + side-to-move + `setupReady` while `phase === "setup"`. Locked after `startCustomGame` / both ready (`phase === "play"`, `settingsLocked: true`). `updateSetup` rejected with `already_playing`.
+- **Chess custom (local UX, not synced):** move-quality analysis and position-eval toggles stay per-client.
+
+Do not confuse chess `custom` / `chess-custom` with `checkers-custom`.
 
 Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black) with starting position for Russian draughts; chess rooms keep standard FIDE FEN.
 
 ## Deploy note
 
-After pulling server changes (room lifecycle: 30s offline kick, host transfer, empty-room delete), **redeploy the Render service** so production picks up the update.
+After pulling server changes (`settingsLocked`, `customSettingsUpdated`, stricter setup lock), **redeploy the Render service** (`https://chessboard-ulhg.onrender.com`) so production picks up the update.

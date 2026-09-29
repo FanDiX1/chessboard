@@ -200,6 +200,7 @@
             <div class="custom-setting-row" id="moveAnalysisWrap">
               <div class="custom-setting-text">
                 <span class="custom-setting-label" id="moveAnalysisLabel"></span>
+                <span class="custom-setting-hint" id="moveAnalysisHint"></span>
               </div>
               <button type="button" class="custom-toggle" id="moveAnalysisToggle" role="switch" aria-checked="false" aria-labelledby="moveAnalysisLabel">
                 <span class="custom-toggle-knob" aria-hidden="true"></span>
@@ -208,11 +209,13 @@
             <div class="custom-setting-row" id="posEvalWrap">
               <div class="custom-setting-text">
                 <span class="custom-setting-label" id="posEvalLabel"></span>
+                <span class="custom-setting-hint" id="posEvalHint"></span>
               </div>
               <button type="button" class="custom-toggle" id="posEvalToggle" role="switch" aria-checked="false" aria-labelledby="posEvalLabel">
                 <span class="custom-toggle-knob" aria-hidden="true"></span>
               </button>
             </div>
+            <p class="custom-settings-locked mp-hidden" id="setupSettingsLocked"></p>
           </div>
         </section>
 
@@ -436,7 +439,11 @@
           metaOpp: "Противник",
           customSettingsTitle: "Настройки",
           moveAnalysis: "Оценка ходов",
+          moveAnalysisHint: "Личная настройка — не синхронизируется в комнате",
           posEval: "Оценка позиции",
+          posEvalHint: "Личная настройка — не синхронизируется в комнате",
+          setupSettingsLocked: "Расстановка зафиксирована — партия началась",
+          setupSpectatorReadonly: "Наблюдение: расстановка только для просмотра",
           mqBest: "Лучший",
           mqExcellent: "Отлично",
           mqGood: "Хорошо",
@@ -592,7 +599,11 @@
           metaOpp: "Opponent",
           customSettingsTitle: "Settings",
           moveAnalysis: "Move analysis",
+          moveAnalysisHint: "Personal only — not synced in the room",
           posEval: "Position eval",
+          posEvalHint: "Personal only — not synced in the room",
+          setupSettingsLocked: "Setup locked — the match has started",
+          setupSpectatorReadonly: "Spectating: setup is view-only",
           mqBest: "Best",
           mqExcellent: "Excellent",
           mqGood: "Good",
@@ -640,9 +651,16 @@
         if ($("#moveAnalysisLabel").length) {
           $("#moveAnalysisLabel").text(t("moveAnalysis"));
         }
+        if ($("#moveAnalysisHint").length) {
+          $("#moveAnalysisHint").text(t("moveAnalysisHint"));
+        }
         if ($("#posEvalLabel").length) {
           $("#posEvalLabel").text(t("posEval"));
         }
+        if ($("#posEvalHint").length) {
+          $("#posEvalHint").text(t("posEvalHint"));
+        }
+        if (typeof updateSetupLockUI === "function") updateSetupLockUI();
         if ($("#modeSelect").length) {
           $("#modeSelectLabel").text(t("modeSelectLabel"));
           $("#modeSelect option[value='classic']").text(t("modeClassic"));
@@ -1202,6 +1220,8 @@
           mpSeat = res.room.yourSeat;
           userColor = mpSeat;
           saveUserColor();
+        } else if (!(res.seat || (res.room && res.room.yourSeat) || role)) {
+          // Broadcast roomState omits yourRole/yourSeat — keep current seat/spectator role.
         } else {
           mpSpectating = false;
         }
@@ -2125,8 +2145,7 @@
 
       function handleSetupSquareClick(square) {
         if (!isSetupPhase() || !board) return;
-        if (isMultiplayer() && isSpectating()) return;
-        if (isMultiplayer() && !canMpAct()) return;
+        if (!canEditSetup()) return;
         var pos = board.position() || {};
         var cur = pos[square];
         if (setupPalettePiece === null) {
@@ -2235,6 +2254,7 @@
         updateMoveList();
         updateStatus();
         applyStaticLang();
+        if (typeof updateSetupLockUI === "function") updateSetupLockUI();
         if (typeof isPosEvalOn === "function" && isPosEvalOn()) {
           setPosEvalVisible(true);
           schedulePositionEval();
@@ -2262,6 +2282,32 @@
         beginPlayFromSetup();
       }
 
+      function canEditSetup() {
+        if (!isSetupPhase()) return false;
+        if (!isMultiplayer()) return true;
+        if (isSpectating() || !canMpAct()) return false;
+        if (mpRoom && mpRoom.settingsLocked === true) return false;
+        if (mpRoom && mpRoom.phase === "play") return false;
+        return true;
+      }
+
+      function updateSetupLockUI() {
+        var editable = canEditSetup();
+        $("#setupClearBtn, #setupStandardBtn, #setupStartBtn, #setupReadyBtn, #setupHostStartBtn").prop("disabled", isSetupPhase() ? !editable : false);
+        $("#setupTurnSelect").prop("disabled", isSetupPhase() ? !editable : false);
+        var $locked = $("#setupSettingsLocked");
+        if (!$locked.length) return;
+        if (isMultiplayer() && isSpectating() && isSetupPhase()) {
+          $locked.removeClass("mp-hidden").text(t("setupSpectatorReadonly"));
+        } else if (!isSetupPhase() && isMultiplayer()) {
+          $locked.removeClass("mp-hidden").text(t("setupSettingsLocked"));
+        } else {
+          $locked.addClass("mp-hidden").text("");
+        }
+        // Local UX toggles stay editable always
+        $("#moveAnalysisToggle, #posEvalToggle").prop("disabled", false);
+      }
+
       function updateSetupMpUI() {
         var $actions = $("#setupMpActions");
         var $hint = $("#setupMpHint");
@@ -2270,12 +2316,14 @@
         if (!isSetupPhase()) {
           $actions.addClass("mp-hidden");
           $hint.addClass("mp-hidden");
+          updateSetupLockUI();
           return;
         }
         if (!isMultiplayer() || isSpectating()) {
           $actions.addClass("mp-hidden");
           $hint.toggleClass("mp-hidden", !isMultiplayer());
           $("#setupStartBtn").toggleClass("mp-hidden", isMultiplayer());
+          updateSetupLockUI();
           return;
         }
         $("#setupStartBtn").addClass("mp-hidden");
@@ -2290,6 +2338,7 @@
         } else {
           $hint.text(t("setupMpHint"));
         }
+        updateSetupLockUI();
       }
 
       function publishSetupSync() {
@@ -3604,13 +3653,11 @@
         $("#newGameBtn").on("click", newGame);
         $("#undoBtn").on("click", undoMove);
         $("#setupClearBtn").on("click", function () {
-          if (!isSetupPhase()) return;
-          if (isMultiplayer() && (isSpectating() || !canMpAct())) return;
+          if (!canEditSetup()) return;
           clearSetupBoard();
         });
         $("#setupStandardBtn").on("click", function () {
-          if (!isSetupPhase()) return;
-          if (isMultiplayer() && (isSpectating() || !canMpAct())) return;
+          if (!canEditSetup()) return;
           standardSetupBoard();
         });
         $("#setupStartBtn").on("click", function () {
@@ -3629,8 +3676,7 @@
         });
         $("#setupHostStartBtn").on("click", function () { publishHostStart(); });
         $("#setupTurnSelect").on("change", function () {
-          if (!isSetupPhase()) return;
-          if (isMultiplayer() && (isSpectating() || !canMpAct())) {
+          if (!canEditSetup()) {
             $("#setupTurnSelect").val(setupTurn);
             return;
           }
