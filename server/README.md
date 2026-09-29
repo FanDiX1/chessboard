@@ -75,4 +75,4 @@ Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black
 
 ## Deploy note
 
-After pulling server changes (`settingsLocked`, `customSettingsUpdated`, stricter setup lock), **redeploy the Render service** (`https://chessboard-ulhg.onrender.com`) so production picks up the update.
+After pulling server changes (chess-custom shared `moveAnalysis`/`posEval`, `settingsLocked`, `customSettingsUpdated`), **redeploy the Render service** (`https://chessboard-ulhg.onrender.com`) so production picks up the update.

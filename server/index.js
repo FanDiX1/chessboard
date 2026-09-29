@@ -50,7 +50,7 @@ const rooms = new Map();
  * @property {object|null} dice  // diceCount, diceRoll, remainingDice, diceSide, lastSkipMsg
  * @property {{color:string,current:string}|null} checkersChain // active stepwise capture
  * @property {number} diceCount  // 1|2|3 authoritative MP dice count (host-controlled)
- * @property {object|null} customSettings  // checkers-custom shared rules: backwardCapture, mandatoryCapture, moveTimer (locked after first ply)
+ * @property {object|null} customSettings  // checkers-custom rules, or chess-custom {moveAnalysis, posEval}; host-only, locked after start
  * @property {'setup'|'play'|null} phase  // chess custom free-setup
  * @property {{w:boolean,b:boolean}|null} setupReady
  */
@@ -158,10 +158,10 @@ function publicRoom(room, forClientId) {
     diceCount: room.diceCount === 1 || room.diceCount === 3 ? room.diceCount : 2,
     customSettings: room.mode === "checkers-custom"
       ? sanitizeCustomSettings(room.customSettings)
-      : null,
+      : (isChessCustomMode(room.mode) ? sanitizeChessCustomSettings(room.customSettings) : null),
     settingsLocked: room.mode === "checkers-custom"
       ? isCheckersCustomSettingsLocked(room)
-      : (isChessCustomMode(room.mode) ? isChessCustomSetupLocked(room) : null),
+      : (isChessCustomMode(room.mode) ? isChessCustomSettingsLocked(room) : null),
     chain: room.checkersChain || null,
     phase: isChessCustomMode(room.mode) ? (room.phase === "play" ? "play" : "setup") : null,
     setupReady: isChessCustomMode(room.mode)
@@ -279,10 +279,49 @@ function isChessCustomSetupLocked(room) {
   return room.phase === "play";
 }
 
+function defaultChessCustomSettings() {
+  return { moveAnalysis: false, posEval: false };
+}
+
+function sanitizeChessCustomSettings(raw) {
+  const base = defaultChessCustomSettings();
+  if (!raw || typeof raw !== "object") return base;
+  return {
+    moveAnalysis: Object.prototype.hasOwnProperty.call(raw, "moveAnalysis")
+      ? !!raw.moveAnalysis
+      : base.moveAnalysis,
+    posEval: Object.prototype.hasOwnProperty.call(raw, "posEval")
+      ? !!raw.posEval
+      : base.posEval,
+  };
+}
+
+/** Chess-custom eval toggles: host only, locked once the match has started. */
+function isChessCustomSettingsLocked(room) {
+  if (!room || !isChessCustomMode(room.mode)) return true;
+  if (room.status === "finished") return true;
+  return room.phase === "play";
+}
+
+function canEditChessCustomSettings(room, clientId) {
+  if (!room || !isChessCustomMode(room.mode) || !clientId) return false;
+  if (isChessCustomSettingsLocked(room)) return false;
+  return room.hostId === clientId;
+}
+
 function emitCustomSettingsUpdated(room) {
-  if (!room || room.mode !== "checkers-custom") return;
-  const settings = sanitizeCustomSettings(room.customSettings);
-  const locked = isCheckersCustomSettingsLocked(room);
+  if (!room) return;
+  let settings = null;
+  let locked = null;
+  if (room.mode === "checkers-custom") {
+    settings = sanitizeCustomSettings(room.customSettings);
+    locked = isCheckersCustomSettingsLocked(room);
+  } else if (isChessCustomMode(room.mode)) {
+    settings = sanitizeChessCustomSettings(room.customSettings);
+    locked = isChessCustomSettingsLocked(room);
+  } else {
+    return;
+  }
   io.to(room.code).emit("customSettingsUpdated", {
     code: room.code,
     customSettings: settings,
@@ -317,7 +356,9 @@ function createRoom(clientId, mode) {
     updatedAt: Date.now(),
     dice: null,
     diceCount: 2,
-    customSettings: norm === "checkers-custom" ? defaultCustomSettings() : null,
+    customSettings: norm === "checkers-custom"
+      ? defaultCustomSettings()
+      : (isChessCustomMode(norm) ? defaultChessCustomSettings() : null),
     checkersChain: null,
     phase: isChessCustomMode(norm) ? "setup" : null,
     setupReady: isChessCustomMode(norm) ? { w: false, b: false } : null,
@@ -588,6 +629,9 @@ io.on("connection", (socket) => {
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       if (room.mode === "checkers-custom" && payload && payload.customSettings) {
         room.customSettings = sanitizeCustomSettings(payload.customSettings);
+      }
+      if (isChessCustomMode(room.mode) && payload && payload.customSettings) {
+        room.customSettings = sanitizeChessCustomSettings(payload.customSettings);
       }
       if (isChessCustomMode(room.mode) && payload && payload.fen) {
         room.fen = sanitizeSetupFen(payload.fen);
@@ -915,10 +959,12 @@ io.on("connection", (socket) => {
         status: room.status,
         by: seat,
         dice: room.dice || null,
-        customSettings: room.mode === "checkers-custom" ? sanitizeCustomSettings(room.customSettings) : null,
+        customSettings: room.mode === "checkers-custom"
+          ? sanitizeCustomSettings(room.customSettings)
+          : (isChessCustomMode(room.mode) ? sanitizeChessCustomSettings(room.customSettings) : null),
         settingsLocked: room.mode === "checkers-custom"
           ? isCheckersCustomSettingsLocked(room)
-          : (isChessCustomMode(room.mode) ? isChessCustomSetupLocked(room) : null),
+          : (isChessCustomMode(room.mode) ? isChessCustomSettingsLocked(room) : null),
         stateSync: isStateSync,
         chain: room.checkersChain || null,
       };
@@ -959,7 +1005,7 @@ io.on("connection", (socket) => {
       room.status = room.seats.w && room.seats.b ? "playing" : "waiting";
       touch(room);
       io.to(code).emit("gameReset", { room: publicRoom(room, null) });
-      if (room.mode === "checkers-custom") emitCustomSettingsUpdated(room);
+      if (room.mode === "checkers-custom" || isChessCustomMode(room.mode)) emitCustomSettingsUpdated(room);
       emitRoom(room);
       if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
     } catch (e) {
@@ -1014,6 +1060,7 @@ io.on("connection", (socket) => {
         room.lastMove = null;
         touch(room);
         io.to(code).emit("customGameStarted", { fen: room.fen, room: publicRoom(room, null) });
+        emitCustomSettingsUpdated(room);
         emitRoom(room);
         if (typeof ack === "function") ack({ ok: true, started: true, room: publicRoom(room, clientId) });
         return;
@@ -1079,6 +1126,7 @@ io.on("connection", (socket) => {
       room.lastMove = null;
       touch(room);
       io.to(code).emit("customGameStarted", { fen: room.fen, room: publicRoom(room, null) });
+      emitCustomSettingsUpdated(room);
       emitRoom(room);
       if (typeof ack === "function") ack({ ok: true, started: true, room: publicRoom(room, clientId) });
     } catch (e) {
@@ -1094,27 +1142,48 @@ io.on("connection", (socket) => {
         .trim();
       const room = rooms.get(code);
       if (!room) return ack && ack({ ok: false, error: "room_not_found" });
-      if (room.mode !== "checkers-custom") return ack && ack({ ok: false, error: "wrong_mode" });
+      const chessCustom = isChessCustomMode(room.mode);
+      if (room.mode !== "checkers-custom" && !chessCustom) {
+        return ack && ack({ ok: false, error: "wrong_mode" });
+      }
       const seat = findSeatByClient(room, clientId);
       if (!seat) return ack && ack({ ok: false, error: "not_a_member" });
-      if (isCheckersCustomSettingsLocked(room)) {
+      const locked = chessCustom
+        ? isChessCustomSettingsLocked(room)
+        : isCheckersCustomSettingsLocked(room);
+      const currentSettings = chessCustom
+        ? sanitizeChessCustomSettings(room.customSettings)
+        : sanitizeCustomSettings(room.customSettings);
+      if (locked) {
         return ack && ack({
           ok: false,
           error: "settings_locked",
-          customSettings: sanitizeCustomSettings(room.customSettings),
+          customSettings: currentSettings,
           settingsLocked: true,
           room: publicRoom(room, clientId),
         });
       }
-      if (room.hostId !== clientId) return ack && ack({ ok: false, error: "host_only" });
-      room.customSettings = sanitizeCustomSettings(payload && payload.customSettings);
+      if (room.hostId !== clientId) {
+        return ack && ack({
+          ok: false,
+          error: "host_only",
+          customSettings: currentSettings,
+          settingsLocked: false,
+          room: publicRoom(room, clientId),
+        });
+      }
+      room.customSettings = chessCustom
+        ? sanitizeChessCustomSettings(payload && payload.customSettings)
+        : sanitizeCustomSettings(payload && payload.customSettings);
       touch(room);
       emitCustomSettingsUpdated(room);
       emitRoom(room);
       if (typeof ack === "function") {
         ack({
           ok: true,
-          customSettings: sanitizeCustomSettings(room.customSettings),
+          customSettings: chessCustom
+            ? sanitizeChessCustomSettings(room.customSettings)
+            : sanitizeCustomSettings(room.customSettings),
           settingsLocked: false,
           room: publicRoom(room, clientId),
         });

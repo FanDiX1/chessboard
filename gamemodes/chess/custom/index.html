@@ -420,9 +420,13 @@
           metaOpp: "Противник",
           customSettingsTitle: "Настройки",
           moveAnalysis: "Оценка ходов",
-          moveAnalysisHint: "Личная настройка — не синхронизируется в комнате",
+          moveAnalysisHint: "Только на этом устройстве",
           posEval: "Оценка позиции",
-          posEvalHint: "Личная настройка — не синхронизируется в комнате",
+          posEvalHint: "Только на этом устройстве",
+          evalHintLocal: "Только на этом устройстве",
+          evalHintHost: "Общая настройка комнаты — включает создатель до старта",
+          evalHintGuest: "Только создатель комнаты может включить",
+          evalHintLocked: "Зафиксировано до конца партии",
           setupSettingsLocked: "Расстановка зафиксирована — партия началась",
           setupSpectatorReadonly: "Наблюдение: расстановка только для просмотра",
           mqBest: "Лучший",
@@ -581,9 +585,13 @@
           metaOpp: "Opponent",
           customSettingsTitle: "Settings",
           moveAnalysis: "Move analysis",
-          moveAnalysisHint: "Personal only — not synced in the room",
+          moveAnalysisHint: "This device only",
           posEval: "Position eval",
-          posEvalHint: "Personal only — not synced in the room",
+          posEvalHint: "This device only",
+          evalHintLocal: "This device only",
+          evalHintHost: "Shared room setting — host can change it before the start",
+          evalHintGuest: "Only the room creator can turn this on",
+          evalHintLocked: "Locked for the rest of the game",
           setupSettingsLocked: "Setup locked — the match has started",
           setupSpectatorReadonly: "Spectating: setup is view-only",
           mqBest: "Best",
@@ -1113,6 +1121,19 @@
         mpSocket.on("roomState", function (msg) {
           if (msg && msg.room) applyMpRoom({ room: msg.room, seat: msg.room.yourSeat || mpSeat, code: msg.room.code });
         });
+        mpSocket.on("customSettingsUpdated", function (msg) {
+          if (!mpActive || !msg) return;
+          if (msg.room) {
+            mpRoom = msg.room;
+            if (typeof msg.settingsLocked === "boolean") mpRoom.settingsLocked = msg.settingsLocked;
+            if (msg.customSettings) mpRoom.customSettings = msg.customSettings;
+          } else if (mpRoom) {
+            if (msg.customSettings) mpRoom.customSettings = msg.customSettings;
+            if (typeof msg.settingsLocked === "boolean") mpRoom.settingsLocked = msg.settingsLocked;
+          }
+          if (typeof applySharedEvalFromRoom === "function") applySharedEvalFromRoom(mpRoom);
+          if (typeof updateSetupLockUI === "function") updateSetupLockUI();
+        });
         mpSocket.on("moveApplied", function (msg) {
           if (!mpActive || !msg) return;
           if (msg.by === mpSeat && !mpApplyingRemote) {
@@ -1180,6 +1201,7 @@
         mpSocket.on("customGameStarted", function (msg) {
           if (!mpActive || !msg) return;
           if (msg.room) mpRoom = msg.room;
+          if (typeof applySharedEvalFromRoom === "function") applySharedEvalFromRoom(msg.room || mpRoom);
           var fen = (msg.room && msg.room.fen) || msg.fen;
           beginPlayFromSetup(fen);
           updateMpUI();
@@ -1228,6 +1250,8 @@
           board.orientation(boardOrientation());
         }
         syncBoardFromMpRoom(false);
+        if (typeof retainMoveQualityBadge === "function") retainMoveQualityBadge();
+        if (typeof applySharedEvalFromRoom === "function") applySharedEvalFromRoom(mpRoom);
         updateStatus();
       }
 
@@ -1251,8 +1275,11 @@
             if (board) board.position(game.fen(), false);
             clearSelection();
             updateMoveList();
-            reattachMoveQualityBadge();
-            if (typeof schedulePositionEval === "function") schedulePositionEval();
+            if (typeof retainMoveQualityBadge === "function") retainMoveQualityBadge();
+            else reattachMoveQualityBadge();
+            if (typeof schedulePositionEval === "function" && !(typeof mqBusy !== "undefined" && mqBusy)) schedulePositionEval();
+          } else if (typeof retainMoveQualityBadge === "function") {
+            retainMoveQualityBadge();
           }
           applyGameEndFromPosition();
         }
@@ -1270,8 +1297,19 @@
           if (board) board.position(game.fen());
           clearSelection();
           updateMoveList();
-          reattachMoveQualityBadge();
-          if (typeof schedulePositionEval === "function") schedulePositionEval();
+          var remoteNewPly = msg && msg.move && msg.move.from && !msg.stateSync && msg.by !== mpSeat;
+          if (remoteNewPly) {
+            mqLast = null;
+            clearMoveQualityBadge();
+            updateMoveList();
+          }
+          if (typeof retainMoveQualityBadge === "function") retainMoveQualityBadge();
+          else reattachMoveQualityBadge();
+          if (remoteNewPly && typeof analyzeRemotePlayedMove === "function") {
+            analyzeRemotePlayedMove(msg);
+          } else if (typeof schedulePositionEval === "function" && !(typeof mqBusy !== "undefined" && mqBusy)) {
+            schedulePositionEval();
+          }
           if (msg.status === "finished" || applyGameEndFromPosition()) {
             /* status updated inside */
           } else {
@@ -1361,7 +1399,7 @@
           if (err) return;
           mpSocket.emit(
             "createRoom",
-            { clientId: getOrCreateClientId(), mode: GAME_MODE, preferredSeat: (userColor === "b" ? "b" : "w"), nick: getNick(), fen: buildSetupFen(), phase: gamePhase },
+            { clientId: getOrCreateClientId(), mode: GAME_MODE, preferredSeat: (userColor === "b" ? "b" : "w"), nick: getNick(), fen: buildSetupFen(), phase: gamePhase, customSettings: { moveAnalysis: !!moveAnalysisEnabled, posEval: !!posEvalEnabled } },
             function (res) {
               if (!res || !res.ok) {
                 setMpConn("error", (res && res.error) || t("mpError"));
@@ -1435,6 +1473,7 @@
         }
         setMpConn("offline");
         updateMpUI();
+        if (typeof restoreLocalEvalSettings === "function") restoreLocalEvalSettings();
       }
 
       function leaveMultiplayer() {
@@ -1586,18 +1625,23 @@
       var mqGen = 0;
       var mqLast = null; // { square, kind, cpl, sanIndex }
       var mqPendingAfterBot = false;
+      var mqBusy = false;
 
       function isMoveAnalysisOn() {
         return !!moveAnalysisEnabled;
       }
 
-      function setMoveAnalysisEnabled(on) {
+      function setMoveAnalysisEnabled(on, opts) {
+        opts = opts || {};
         moveAnalysisEnabled = !!on;
-        try {
-          localStorage.setItem(MOVE_ANALYSIS_KEY, moveAnalysisEnabled ? "1" : "0");
-        } catch (e) {}
+        if (opts.persist !== false) {
+          try {
+            localStorage.setItem(MOVE_ANALYSIS_KEY, moveAnalysisEnabled ? "1" : "0");
+          } catch (e) {}
+        }
         if (!moveAnalysisEnabled) {
           mqGen += 1;
+          mqBusy = false;
           if (typeof BoardHackStockfish !== "undefined") {
             try { BoardHackStockfish.cancelSearch(); } catch (e) {}
           }
@@ -1677,10 +1721,28 @@
         $sq.append($b);
       }
 
+      function badgeMatchesCurrentPly() {
+        return !!(mqLast && mqLast.kind && mqLast.square && mqLast.sanIndex === plySans.length - 1);
+      }
+
       function reattachMoveQualityBadge() {
-        if (mqLast && isMoveAnalysisOn()) {
-          placeMoveQualityBadge(mqLast.square, mqLast.kind);
+        if (!isMoveAnalysisOn() || !badgeMatchesCurrentPly()) {
+          if (mqLast && mqLast.sanIndex !== plySans.length - 1) clearMoveQualityBadge();
+          return;
         }
+        placeMoveQualityBadge(mqLast.square, mqLast.kind);
+      }
+
+      var mqRetainTimer = null;
+      /** Re-apply after chessboard rebuilds squares (orientation / roomState / resize / move anim). */
+      function retainMoveQualityBadge() {
+        reattachMoveQualityBadge();
+        if (mqRetainTimer) clearTimeout(mqRetainTimer);
+        // position() animations finish by redrawing pieces; restore once they settle
+        mqRetainTimer = setTimeout(function () {
+          mqRetainTimer = null;
+          reattachMoveQualityBadge();
+        }, 320);
       }
 
       function refreshMoveQualityBadgeLabel() {
@@ -1703,6 +1765,7 @@
           return;
         }
         var myGen = ++mqGen;
+        mqBusy = true;
         BoardHackStockfish.analyzePosition(fenBefore, 10)
           .then(function (bestInfo) {
             if (myGen !== mqGen || !isMoveAnalysisOn()) {
@@ -1756,7 +1819,8 @@
               if (done) done(null);
               return;
             }
-            if (result) {
+            if (myGen === mqGen) mqBusy = false;
+            if (result && myGen === mqGen) {
               mqLast = {
                 square: result.square,
                 kind: result.kind,
@@ -1769,6 +1833,7 @@
             if (done) done(result || null);
           })
           .catch(function (err) {
+            if (myGen === mqGen) mqBusy = false;
             if (err && err.message === "cancelled") {
               if (done) done(null);
               return;
@@ -1776,6 +1841,23 @@
             console.warn("Move analysis failed:", err && err.message ? err.message : err);
             if (done) done(null);
           });
+      }
+
+      function analyzeRemotePlayedMove(msg) {
+        if (!isMoveAnalysisOn() || !msg || msg.stateSync || msg.by === mpSeat) return;
+        var mv = msg.move;
+        if (!mv || !mv.from || !mv.to) return;
+        var fenAfter = msg.fen || (game && game.fen());
+        if (!fenAfter) return;
+        var g2;
+        try { g2 = new Chess(fenAfter); } catch (e) { return; }
+        var undone = g2.undo();
+        if (!undone) return;
+        var uci = mv.from + mv.to + (mv.promotion ? String(mv.promotion).toLowerCase() : "");
+        analyzePlayedMove(g2.fen(), uci, mv.to, function () {
+          retainMoveQualityBadge();
+          if (typeof schedulePositionEval === "function") schedulePositionEval();
+        });
       }
 
       /** After local user ply: analyze then continue (bot / status). */
@@ -1789,6 +1871,9 @@
             if (typeof schedulePositionEval === "function") schedulePositionEval();
           }, 40);
         }
+        mqLast = null;
+        clearMoveQualityBadge();
+        updateMoveList();
         if (!movedObj || !isMoveAnalysisOn()) {
           finishAnalysisChain();
           return;
@@ -1863,11 +1948,14 @@
         resetPosEvalDisplay();
       }
 
-      function setPosEvalEnabled(on) {
+      function setPosEvalEnabled(on, opts) {
+        opts = opts || {};
         posEvalEnabled = !!on;
-        try {
-          localStorage.setItem(POS_EVAL_KEY, posEvalEnabled ? "1" : "0");
-        } catch (e) {}
+        if (opts.persist !== false) {
+          try {
+            localStorage.setItem(POS_EVAL_KEY, posEvalEnabled ? "1" : "0");
+          } catch (e) {}
+        }
         if (!posEvalEnabled) {
           hidePosEval();
           return;
@@ -1938,6 +2026,7 @@
       }
 
       function schedulePositionEval() {
+        if (typeof mqBusy !== "undefined" && mqBusy) return;
         if (!isPosEvalOn()) return;
         if (typeof isSetupPhase === "function" && isSetupPhase()) {
           resetPosEvalDisplay();
@@ -2299,8 +2388,91 @@
         if ($locked.length) {
           $locked.addClass("mp-hidden").text("");
         }
-        // Local UX toggles stay editable always (personal, not shared)
-        $("#moveAnalysisToggle, #posEvalToggle").prop("disabled", false);
+        if (typeof updateEvalSettingsLockUI === "function") updateEvalSettingsLockUI();
+      }
+
+      function sharedEvalLocked() {
+        if (!isMultiplayer()) return false;
+        if (mpRoom && mpRoom.settingsLocked === true) return true;
+        if (mpRoom && mpRoom.phase === "play") return true;
+        if (typeof gamePhase !== "undefined" && gamePhase === "play") return true;
+        return false;
+      }
+
+      function canEditSharedEvalSettings() {
+        if (!isMultiplayer()) return true;
+        if (isSpectating() || !mpRoom || !canMpAct()) return false;
+        if (sharedEvalLocked()) return false;
+        return isMpHost();
+      }
+
+      function evalSettingsHintKey() {
+        if (!isMultiplayer()) return "evalHintLocal";
+        if (sharedEvalLocked()) return "evalHintLocked";
+        if (!isMpHost()) return "evalHintGuest";
+        return "evalHintHost";
+      }
+
+      function updateEvalSettingsLockUI() {
+        var editable = canEditSharedEvalSettings();
+        $("#moveAnalysisToggle, #posEvalToggle").prop("disabled", !editable);
+        var hint = t(evalSettingsHintKey());
+        if ($("#moveAnalysisHint").length) $("#moveAnalysisHint").text(hint);
+        if ($("#posEvalHint").length) $("#posEvalHint").text(hint);
+      }
+
+      function applySharedEvalFromRoom(room) {
+        if (!isMultiplayer() || !room || !room.customSettings) {
+          updateEvalSettingsLockUI();
+          return;
+        }
+        var cs = room.customSettings;
+        if (typeof cs.moveAnalysis === "boolean" && cs.moveAnalysis !== !!moveAnalysisEnabled) {
+          setMoveAnalysisEnabled(cs.moveAnalysis, { persist: false });
+          syncMoveAnalysisToggle();
+        }
+        if (typeof cs.posEval === "boolean" && cs.posEval !== !!posEvalEnabled) {
+          setPosEvalEnabled(cs.posEval, { persist: false });
+          syncPosEvalToggle();
+        }
+        updateEvalSettingsLockUI();
+      }
+
+      function restoreLocalEvalSettings() {
+        var ma = false;
+        var pe = false;
+        try {
+          ma = localStorage.getItem(MOVE_ANALYSIS_KEY) === "1";
+          pe = localStorage.getItem(POS_EVAL_KEY) === "1";
+        } catch (e) {}
+        if (ma !== !!moveAnalysisEnabled) setMoveAnalysisEnabled(ma, { persist: false });
+        if (pe !== !!posEvalEnabled) setPosEvalEnabled(pe, { persist: false });
+        syncMoveAnalysisToggle();
+        syncPosEvalToggle();
+        updateEvalSettingsLockUI();
+      }
+
+      function publishChessEvalSettings() {
+        if (!isMultiplayer() || !canMpAct() || !mpSocket || !mpRoomCode) return;
+        if (!canEditSharedEvalSettings()) return;
+        mpSocket.emit("updateCustomSettings", {
+          clientId: getOrCreateClientId(),
+          code: mpRoomCode,
+          customSettings: {
+            moveAnalysis: !!moveAnalysisEnabled,
+            posEval: !!posEvalEnabled
+          }
+        }, function (res) {
+          if (!res) return;
+          var cs = res.customSettings || (res.room && res.room.customSettings);
+          if (mpRoom) {
+            if (cs) mpRoom.customSettings = cs;
+            if (typeof res.settingsLocked === "boolean") mpRoom.settingsLocked = res.settingsLocked;
+            else if (res.room && typeof res.room.settingsLocked === "boolean") mpRoom.settingsLocked = res.room.settingsLocked;
+          }
+          if (cs) applySharedEvalFromRoom(mpRoom || { customSettings: cs, settingsLocked: res.settingsLocked });
+          else updateEvalSettingsLockUI();
+        });
       }
 
       function updateSetupMpUI() {
@@ -3642,8 +3814,31 @@
           pieceTheme: PIECE_THEME,
           onDragStart: onDragStart,
           onDrop: onDrop,
-          onSnapEnd: onSnapEnd
+          onSnapEnd: onSnapEnd,
+          onMoveEnd: function () { retainMoveQualityBadge(); }
         });
+        (function wrapBoardRedraws() {
+          var rawPosition = board.position.bind(board);
+          var rawOrientation = board.orientation.bind(board);
+          var rawResize = board.resize.bind(board);
+          board.position = function (pos, animate) {
+            var ret = rawPosition.apply(board, arguments);
+            if (arguments.length && !(typeof pos === "string" && pos.toLowerCase() === "fen")) {
+              retainMoveQualityBadge();
+            }
+            return ret;
+          };
+          board.orientation = function (orient) {
+            var ret = rawOrientation.apply(board, arguments);
+            if (arguments.length) retainMoveQualityBadge();
+            return ret;
+          };
+          board.resize = function () {
+            var ret = rawResize();
+            retainMoveQualityBadge();
+            return ret;
+          };
+        })();
 
         $("#board").on("click", ".square-55d63", function () {
           var sq = $(this).data("square");
@@ -3708,10 +3903,12 @@
         });
         syncMoveAnalysisToggle();
         $("#moveAnalysisToggle").on("click", function () {
+          if (!canEditSharedEvalSettings()) return;
           var next = $(this).attr("aria-checked") !== "true";
-          setMoveAnalysisEnabled(next);
+          setMoveAnalysisEnabled(next, { persist: !isMultiplayer() });
           syncMoveAnalysisToggle();
-          if (!next && typeof isPosEvalOn === "function" && isPosEvalOn()) {
+          if (isMultiplayer()) publishChessEvalSettings();
+          else if (!next && typeof isPosEvalOn === "function" && isPosEvalOn()) {
             schedulePositionEval();
           }
         });
@@ -3726,9 +3923,11 @@
           hidePosEval();
         }
         $("#posEvalToggle").on("click", function () {
+          if (!canEditSharedEvalSettings()) return;
           var next = $(this).attr("aria-checked") !== "true";
-          setPosEvalEnabled(next);
+          setPosEvalEnabled(next, { persist: !isMultiplayer() });
           syncPosEvalToggle();
+          if (isMultiplayer()) publishChessEvalSettings();
         });
 
         if (typeof BoardHackStockfish !== "undefined") {
@@ -3742,9 +3941,7 @@
 
         $(window).on("resize", function () {
           board.resize();
-          if (mqLast && isMoveAnalysisOn()) {
-            placeMoveQualityBadge(mqLast.square, mqLast.kind);
-          }
+          retainMoveQualityBadge();
         });
 
         updateMoveList();
