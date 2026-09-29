@@ -179,7 +179,8 @@ a:hover { text-decoration: underline; }
 
 #board { width: 100%; }
 
-/* Suppress iOS/Android long-press image callout on board pieces (CDN imgs). */
+/* Suppress iOS/Android long-press image callout on board pieces (CDN imgs).
+   touch-action: none — block browser pan/zoom gestures on the board during piece drags. */
 .board-wrap,
 .board-wrap #board,
 #board,
@@ -189,6 +190,7 @@ a:hover { text-decoration: underline; }
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none;
 }
 
 .board-b72b1 {
