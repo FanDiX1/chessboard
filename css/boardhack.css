@@ -1475,3 +1475,79 @@ button.btn:disabled {
 .setup-mp-actions {
   flex-wrap: wrap;
 }
+
+/* --- Move quality indicators (custom chess mode) --- */
+.mq-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: -0.35rem 0 0.85rem;
+  padding: 0 0.15rem;
+}
+.mq-toggle-row input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mq-toggle-row label {
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+}
+
+.mq-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 12;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: clamp(0.55rem, 1.8vw, 0.68rem);
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.18rem 0.28rem;
+  border-radius: 4px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  max-width: 92%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mq-badge.mq-best,
+.mq-badge.mq-excellent {
+  background: #1a7a3c;
+  color: #e8ffe8;
+}
+.mq-badge.mq-good {
+  background: #2d6a4f;
+  color: #d8f3dc;
+}
+.mq-badge.mq-inaccuracy {
+  background: #b8860b;
+  color: #fff8e1;
+}
+.mq-badge.mq-mistake {
+  background: #c45c16;
+  color: #fff3e6;
+}
+.mq-badge.mq-blunder {
+  background: #b91c1c;
+  color: #ffe4e4;
+}
+
+.move-san.mq-annot {
+  border-radius: 3px;
+  padding: 0 0.15rem;
+}
+.move-san.mq-annot.mq-best,
+.move-san.mq-annot.mq-excellent { color: #7dffa0; }
+.move-san.mq-annot.mq-good { color: #95d5b2; }
+.move-san.mq-annot.mq-inaccuracy { color: #ffd166; }
+.move-san.mq-annot.mq-mistake { color: #ff9f1c; }
+.move-san.mq-annot.mq-blunder { color: #ff6b6b; }

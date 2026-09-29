@@ -81,11 +81,27 @@
       return;
     }
 
+    // Capture last score from info lines (for analyzePosition)
+    if (line.indexOf("info ") === 0 && pending && pending.wantScore) {
+      var sm = line.match(/\bscore\s+(cp|mate)\s+(-?\d+)/);
+      if (sm) {
+        pending.lastScore = { type: sm[1], value: parseInt(sm[2], 10) };
+      }
+    }
+
     if (line.indexOf("bestmove ") === 0) {
       var rest = line.slice(9).trim();
       var move = rest.split(/\s+/)[0] || "(none)";
       if (pending && pending.gen === searchGen) {
-        resolvePending(move === "(none)" ? null : move);
+        if (pending.wantScore) {
+          var result = {
+            bestMove: move === "(none)" ? null : move,
+            score: pending.lastScore || null
+          };
+          resolvePending(result);
+        } else {
+          resolvePending(move === "(none)" ? null : move);
+        }
       }
     }
   }
@@ -204,6 +220,49 @@
     });
   }
 
+  /**
+   * Full-strength positional analysis (ignores bot skill caps).
+   * @param {string} fen
+   * @param {number} [depth=10]
+   * @returns {Promise<{bestMove:string|null, score:{type:string,value:number}|null}>}
+   */
+  function analyzePosition(fen, depth) {
+    var d = typeof depth === "number" && depth > 0 ? depth : 10;
+    return ensureReady().then(function () {
+      searchGen += 1;
+      var gen = searchGen;
+      if (pending) {
+        post("stop");
+        failPending(new Error("cancelled"));
+      }
+
+      // Analysis wants true eval — unlock strength temporarily
+      post("setoption name Skill Level value 20");
+      post("setoption name UCI_LimitStrength value false");
+      appliedSkillKey = null; // force re-apply on next bot getBestMove
+
+      return new Promise(function (resolve, reject) {
+        pending = { gen: gen, resolve: resolve, reject: reject, wantScore: true, lastScore: null };
+
+        post("ucinewgame");
+        post("position fen " + fen);
+        post("go depth " + d);
+
+        setTimeout(function () {
+          if (pending && pending.gen === gen) {
+            post("stop");
+            failPending(new Error("Stockfish analysis timeout"));
+          }
+        }, d * 2000 + 6000);
+      }).then(function (result) {
+        if (gen !== searchGen) {
+          return { bestMove: null, score: null };
+        }
+        return result || { bestMove: null, score: null };
+      });
+    });
+  }
+
   /** Abort current search (e.g. newGame). Does not kill the worker. */
   function cancelSearch() {
     searchGen += 1;
@@ -259,6 +318,7 @@
     setWorkerUrl: setWorkerUrl,
     ensureReady: ensureReady,
     getBestMove: getBestMove,
+    analyzePosition: analyzePosition,
     cancelSearch: cancelSearch,
     terminate: terminate,
     parseUci: parseUci,

@@ -67,6 +67,10 @@
           <span class="status-dot" id="statusDot"></span>
           <span id="statusText"></span>
         </div>
+        <div class="mq-toggle-row" id="moveAnalysisWrap">
+          <input type="checkbox" id="moveAnalysisToggle" />
+          <label for="moveAnalysisToggle" id="moveAnalysisLabel"></label>
+        </div>
         <div class="board-wrap">
           <div id="board"></div>
           <div class="thinking" id="thinking"><div class="thinking-pill" id="thinkingText"></div></div>
@@ -257,6 +261,7 @@
       var COLOR_KEY = "boardhack-color";
       var MODE_KEY = "boardhack-mode";
       var DICE_COUNT_KEY = "boardhack-dice-count";
+      var MOVE_ANALYSIS_KEY = "boardhack-custom-move-analysis";
 
       var I18N = {
         ru: {
@@ -403,7 +408,15 @@
           mpYourTurn: "Ваш ход (онлайн)",
           mpOppTurn: "Ход соперника…",
           turnOpponent: "Соперник",
-          metaOpp: "Противник"
+          metaOpp: "Противник",
+          moveAnalysis: "Оценка ходов",
+          mqBest: "Лучший",
+          mqExcellent: "Отлично",
+          mqGood: "Хорошо",
+          mqInaccuracy: "Неточность",
+          mqMistake: "Ошибка",
+          mqBlunder: "Зевок",
+          mqAnalyzing: "Оценка…"
         },
         en: {
           docTitle: "BoardHack — Hack the Board",
@@ -549,7 +562,15 @@
           mpYourTurn: "Your move (online)",
           mpOppTurn: "Opponent's turn…",
           turnOpponent: "Opponent",
-          metaOpp: "Opponent"
+          metaOpp: "Opponent",
+          moveAnalysis: "Move analysis",
+          mqBest: "Best",
+          mqExcellent: "Excellent",
+          mqGood: "Good",
+          mqInaccuracy: "Inaccuracy",
+          mqMistake: "Mistake",
+          mqBlunder: "Blunder",
+          mqAnalyzing: "Analyzing…"
         }
       };
 
@@ -584,6 +605,9 @@
         $("#difficulty option[value='hard']").text(t("diffHard"));
         $("#difficulty option[value='expert']").text(t("diffExpert"));
         $("#difficulty option[value='master']").text(t("diffMaster"));
+        if ($("#moveAnalysisLabel").length) {
+          $("#moveAnalysisLabel").text(t("moveAnalysis"));
+        }
         if ($("#modeSelect").length) {
           $("#modeSelectLabel").text(t("modeSelectLabel"));
           $("#modeSelect option[value='classic']").text(t("modeClassic"));
@@ -651,6 +675,7 @@
         applyStaticLang();
         updateMoveList();
         updateStatus();
+        if (typeof refreshMoveQualityBadgeLabel === "function") refreshMoveQualityBadgeLabel();
       }
 
       
@@ -1187,6 +1212,7 @@
             if (board) board.position(game.fen(), false);
             clearSelection();
             updateMoveList();
+            reattachMoveQualityBadge();
           }
           applyGameEndFromPosition();
         }
@@ -1204,6 +1230,7 @@
           if (board) board.position(game.fen());
           clearSelection();
           updateMoveList();
+          reattachMoveQualityBadge();
           if (msg.status === "finished" || applyGameEndFromPosition()) {
             /* status updated inside */
           } else {
@@ -1510,6 +1537,220 @@
       }
 
 
+      /* ===== Move quality analysis (custom only; toggle default OFF) ===== */
+      var moveAnalysisEnabled = false;
+      try {
+        moveAnalysisEnabled = localStorage.getItem(MOVE_ANALYSIS_KEY) === "1";
+      } catch (e) {}
+      var mqGen = 0;
+      var mqLast = null; // { square, kind, cpl, sanIndex }
+      var mqPendingAfterBot = false;
+
+      function isMoveAnalysisOn() {
+        return !!moveAnalysisEnabled;
+      }
+
+      function setMoveAnalysisEnabled(on) {
+        moveAnalysisEnabled = !!on;
+        try {
+          localStorage.setItem(MOVE_ANALYSIS_KEY, moveAnalysisEnabled ? "1" : "0");
+        } catch (e) {}
+        if (!moveAnalysisEnabled) {
+          mqGen += 1;
+          if (typeof BoardHackStockfish !== "undefined") {
+            try { BoardHackStockfish.cancelSearch(); } catch (e) {}
+          }
+          clearMoveQualityBadge();
+          mqLast = null;
+          updateMoveList();
+        }
+      }
+
+      function syncMoveAnalysisToggle() {
+        var $el = $("#moveAnalysisToggle");
+        if ($el.length) $el.prop("checked", moveAnalysisEnabled);
+      }
+
+      /** Convert Stockfish score to centipawns from side-to-move perspective. */
+      function scoreToCp(score) {
+        if (!score || score.type == null) return 0;
+        if (score.type === "mate") {
+          var m = score.value;
+          if (m === 0) return 0;
+          // Prefer faster mates; large magnitude so CPL thresholds still work
+          return m > 0 ? 100000 - Math.min(Math.abs(m), 50) * 1000
+                       : -100000 + Math.min(Math.abs(m), 50) * 1000;
+        }
+        return score.value | 0;
+      }
+
+      function classifyCpLoss(cpl) {
+        var x = Math.max(0, cpl | 0);
+        if (x <= 20) return "best";
+        if (x <= 50) return "good";
+        if (x <= 100) return "inaccuracy";
+        if (x <= 300) return "mistake";
+        return "blunder";
+      }
+
+      function mqKindLabel(kind) {
+        if (kind === "best") return t("mqBest");
+        if (kind === "excellent") return t("mqExcellent");
+        if (kind === "good") return t("mqGood");
+        if (kind === "inaccuracy") return t("mqInaccuracy");
+        if (kind === "mistake") return t("mqMistake");
+        if (kind === "blunder") return t("mqBlunder");
+        return "";
+      }
+
+      function clearMoveQualityBadge() {
+        $("#board .mq-badge").remove();
+      }
+
+      function placeMoveQualityBadge(square, kind) {
+        clearMoveQualityBadge();
+        if (!square || !kind || !isMoveAnalysisOn()) return;
+        var $sq = $("#board .square-" + square);
+        if (!$sq.length) return;
+        var $b = $('<span class="mq-badge"></span>');
+        $b.addClass("mq-" + kind);
+        $b.attr("data-mq-kind", kind);
+        $b.text(mqKindLabel(kind));
+        $b.attr("title", mqKindLabel(kind));
+        $sq.append($b);
+      }
+
+      function reattachMoveQualityBadge() {
+        if (mqLast && isMoveAnalysisOn()) {
+          placeMoveQualityBadge(mqLast.square, mqLast.kind);
+        }
+      }
+
+      function refreshMoveQualityBadgeLabel() {
+        if (!mqLast) return;
+        placeMoveQualityBadge(mqLast.square, mqLast.kind);
+        updateMoveList();
+      }
+
+      /**
+       * Analyze a played move given the FEN before it was played and the UCI.
+       * Calls done(null) on skip/cancel; done({kind,cpl,square}) on success.
+       */
+      function analyzePlayedMove(fenBefore, playedUci, toSquare, done) {
+        if (!isMoveAnalysisOn() || !fenBefore || !playedUci) {
+          if (done) done(null);
+          return;
+        }
+        if (typeof BoardHackStockfish === "undefined" || !BoardHackStockfish.analyzePosition) {
+          if (done) done(null);
+          return;
+        }
+        var myGen = ++mqGen;
+        BoardHackStockfish.analyzePosition(fenBefore, 10)
+          .then(function (bestInfo) {
+            if (myGen !== mqGen || !isMoveAnalysisOn()) {
+              if (done) done(null);
+              return null;
+            }
+            var bestUci = bestInfo && bestInfo.bestMove;
+            var bestScore = bestInfo && bestInfo.score;
+            if (bestUci && bestUci === playedUci) {
+              return {
+                kind: "best",
+                cpl: 0,
+                square: toSquare,
+                bestUci: bestUci
+              };
+            }
+            // Eval after the played move (opponent to move) → negate for mover
+            var g2 = new Chess(fenBefore);
+            var parsed = BoardHackStockfish.parseUci(playedUci);
+            if (!parsed) return null;
+            var mv = g2.move({
+              from: parsed.from,
+              to: parsed.to,
+              promotion: parsed.promotion || "q"
+            });
+            if (!mv) return null;
+            var fenAfter = g2.fen();
+            return BoardHackStockfish.analyzePosition(fenAfter, 10).then(function (afterInfo) {
+              if (myGen !== mqGen || !isMoveAnalysisOn()) return null;
+              var bestCp = scoreToCp(bestScore);
+              var afterCp = scoreToCp(afterInfo && afterInfo.score);
+              var playedCp = -afterCp;
+              var cpl = bestCp - playedCp;
+              if (cpl < 0) cpl = 0;
+              // Mate miss / getting mated adjustments already live in scoreToCp scale
+              var kind = classifyCpLoss(Math.round(cpl));
+              // Soft-upgrade near-best when engine noise is tiny and move was almost best
+              if (kind === "best" && bestUci && bestUci !== playedUci) {
+                kind = "excellent";
+              }
+              return {
+                kind: kind,
+                cpl: Math.round(cpl),
+                square: toSquare || (parsed && parsed.to),
+                bestUci: bestUci
+              };
+            });
+          })
+          .then(function (result) {
+            if (myGen !== mqGen) {
+              if (done) done(null);
+              return;
+            }
+            if (result) {
+              mqLast = {
+                square: result.square,
+                kind: result.kind,
+                cpl: result.cpl,
+                sanIndex: plySans.length - 1
+              };
+              placeMoveQualityBadge(result.square, result.kind);
+              updateMoveList();
+            }
+            if (done) done(result || null);
+          })
+          .catch(function (err) {
+            if (err && err.message === "cancelled") {
+              if (done) done(null);
+              return;
+            }
+            console.warn("Move analysis failed:", err && err.message ? err.message : err);
+            if (done) done(null);
+          });
+      }
+
+      /** After local user ply: analyze then continue (bot / status). */
+      function afterLocalMoveForAnalysis(movedObj, continueFn) {
+        if (!movedObj || !isMoveAnalysisOn()) {
+          if (continueFn) continueFn();
+          return;
+        }
+        if (typeof BoardHackStockfish === "undefined" || !BoardHackStockfish.analyzePosition) {
+          if (continueFn) continueFn();
+          return;
+        }
+        // fen before = from undo stack snapshot if available
+        var fenBefore = null;
+        if (undoStack.length) {
+          var snap = undoStack[undoStack.length - 1];
+          fenBefore = snap && snap.fen ? snap.fen : null;
+        }
+        if (!fenBefore) {
+          // reconstruct by undoing temporarily
+          var tmp = game.undo();
+          if (tmp) {
+            fenBefore = game.fen();
+            game.move(tmp);
+          }
+        }
+        var uci = BoardHackStockfish.moveToUci(movedObj);
+        analyzePlayedMove(fenBefore, uci, movedObj.to, function () {
+          if (continueFn) continueFn();
+        });
+      }
+
       function isSetupPhase() {
         return gamePhase === "setup";
       }
@@ -1719,6 +1960,9 @@
         setupReadyLocal = false;
         setupReadyRemote = { w: false, b: false };
         setupPalettePiece = null;
+        mqGen += 1;
+        mqLast = null;
+        clearMoveQualityBadge();
         gameOver = false;
         botThinking = false;
         undoStack = [];
@@ -2469,6 +2713,7 @@
       }
 
       // Standard chess.js move (includes O-O / O-O-O); castling needs king on dice
+      // Returns the verbose move object on success, or false.
       function tryMakeUserMove(from, to) {
         var piece = game.get(from);
         if (piece && !pieceAllowedByDice(piece.type)) return false;
@@ -2488,7 +2733,7 @@
         if (isDiceMode()) {
           consumeDie(move.piece);
         }
-        return true;
+        return move;
       }
 
       /**
@@ -2632,11 +2877,19 @@
           var num = Math.floor(i / 2) + 1;
           var white = history[i] ? history[i] : "";
           var black = history[i + 1] ? history[i + 1] : "";
+          var wCls = "move-san" + (userColor === "b" ? " bot" : "");
+          var bCls = "move-san" + (userColor === "w" ? " bot" : "");
+          if (mqLast && isMoveAnalysisOn() && mqLast.sanIndex === i && mqLast.kind) {
+            wCls += " mq-annot mq-" + mqLast.kind;
+          }
+          if (mqLast && isMoveAnalysisOn() && mqLast.sanIndex === i + 1 && mqLast.kind) {
+            bCls += " mq-annot mq-" + mqLast.kind;
+          }
           html +=
             '<div class="move-row">' +
             '<span class="move-num">' + num + ".</span>" +
-            '<span class="move-san' + (userColor === "b" ? " bot" : "") + '">' + white + "</span>" +
-            '<span class="move-san' + (userColor === "w" ? " bot" : "") + '">' + black + "</span>" +
+            '<span class="' + wCls + '">' + white + "</span>" +
+            '<span class="' + bCls + '">' + black + "</span>" +
             "</div>";
         }
         $moveList.html(html);
@@ -2855,6 +3108,8 @@
               // End before any multi-move side restore (mate / king capture)
               if (applyGameEndFromPosition()) {
                 finishBotThinking();
+                // Still show quality for the mating move if toggle on
+                afterLocalMoveForAnalysis(moved, null);
                 return;
               }
 
@@ -2866,7 +3121,10 @@
                 }
               }
               updateDiceUI();
-              startUserTurnAfterBot();
+              // Analyze bot move after search finished (engine free); then hand over
+              afterLocalMoveForAnalysis(moved, function () {
+                startUserTurnAfterBot();
+              });
             } else {
               undoStack.pop();
               startUserTurnAfterBot();
@@ -2906,7 +3164,8 @@
       function onDrop(source, target) {
         unlockDragScroll();
         clearSelection();
-        if (!tryMakeUserMove(source, target)) return "snapback";
+        var moved = tryMakeUserMove(source, target);
+        if (!moved) return "snapback";
         board.position(game.fen());
         updateMoveList();
         updateDiceUI();
@@ -2916,15 +3175,21 @@
           publishMpMove(source, target, san);
           updateStatus();
           cancelScheduledBot();
+          // Local-only analysis in MP (own moves)
+          afterLocalMoveForAnalysis(moved, null);
           return;
         }
         var handOff = afterUserDicePly();
         updateStatus();
-        if (handOff && !gameOver && !userHasRemainingDice() && canBotActNow(false)) {
-          scheduleBot(250);
-        } else {
-          cancelScheduledBot();
+        function continueAfterAnalysis() {
+          if (handOff && !gameOver && !userHasRemainingDice() && canBotActNow(false)) {
+            scheduleBot(250);
+          } else {
+            cancelScheduledBot();
+          }
         }
+        // Analyze before kicking the bot so the shared engine is free
+        afterLocalMoveForAnalysis(moved, continueAfterAnalysis);
       }
 
       function onSnapEnd() {
@@ -2971,7 +3236,8 @@
 
         var from = selectedSquare;
         clearSelection();
-        if (!tryMakeUserMove(from, square)) return;
+        var moved = tryMakeUserMove(from, square);
+        if (!moved) return;
 
         board.position(game.fen());
         updateMoveList();
@@ -2981,15 +3247,19 @@
           publishMpMove(from, square, san);
           updateStatus();
           cancelScheduledBot();
+          afterLocalMoveForAnalysis(moved, null);
           return;
         }
         var handOff = afterUserDicePly();
         updateStatus();
-        if (handOff && !gameOver && !userHasRemainingDice() && canBotActNow(false)) {
-          scheduleBot(250);
-        } else {
-          cancelScheduledBot();
+        function continueAfterAnalysis() {
+          if (handOff && !gameOver && !userHasRemainingDice() && canBotActNow(false)) {
+            scheduleBot(250);
+          } else {
+            cancelScheduledBot();
+          }
         }
+        afterLocalMoveForAnalysis(moved, continueAfterAnalysis);
       }
 
       function boardOrientation() {
@@ -3020,6 +3290,9 @@
       function undoMove() {
         if (isMultiplayer() || isSetupPhase()) return;
         if (botThinking || undoStack.length === 0) return;
+        mqGen += 1;
+        mqLast = null;
+        clearMoveQualityBadge();
         if (isDiceMode()) {
           // Undo one ply; dice state restored from snapshot
           restoreSnapshot(undoStack.pop());
@@ -3162,6 +3435,10 @@
         $("#difficulty").on("change", function () {
           updateOpponentLabel();
         });
+        syncMoveAnalysisToggle();
+        $("#moveAnalysisToggle").on("change", function () {
+          setMoveAnalysisEnabled($(this).is(":checked"));
+        });
 
         if (typeof BoardHackStockfish !== "undefined") {
           BoardHackStockfish.ensureReady().catch(function (e) {
@@ -3174,6 +3451,9 @@
 
         $(window).on("resize", function () {
           board.resize();
+          if (mqLast && isMoveAnalysisOn()) {
+            placeMoveQualityBadge(mqLast.square, mqLast.kind);
+          }
         });
 
         updateMoveList();
