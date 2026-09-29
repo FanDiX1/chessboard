@@ -712,21 +712,20 @@
       move: function (m) {
         var legal = legalMoves(state);
         var match = null;
+        // Match chess.js: promotion is only required for promoting moves.
+        // Callers often pass promotion:"q" for every drop; ignore it unless needed.
         for (var i = 0; i < legal.length; i++) {
           var L = legal[i];
-          if (L.from === m.from && L.to === m.to) {
-            if (!m.promotion || L.promotion === m.promotion) {
+          if (L.from !== m.from || L.to !== m.to) continue;
+          if (L.promotion) {
+            var want = m.promotion || "q";
+            if (L.promotion === want) {
               match = L;
               break;
             }
-          }
-        }
-        if (!match && m.promotion) {
-          for (var j = 0; j < legal.length; j++) {
-            if (legal[j].from === m.from && legal[j].to === m.to && legal[j].promotion === m.promotion) {
-              match = legal[j];
-              break;
-            }
+          } else {
+            match = L;
+            break;
           }
         }
         if (!match) return null;
