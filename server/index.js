@@ -7,6 +7,8 @@ const { Server } = require("socket.io");
 
 const PORT = Number(process.env.PORT) || 3001;
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const KNIGHTS_START_FEN = "nnnnknnn/pppppppp/8/8/8/8/PPPPPPPP/NNNNKNNN w - - 0 1";
+const ATOMIC_START_FEN = START_FEN;
 // Russian draughts: dark squares only; w/W white man/king, b/B black; white to move
 const CHECKERS_START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
@@ -38,7 +40,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode  // classic | dice | custom | checkers | checkers-custom
+ * @property {string} mode  // classic | dice | custom | knights | atomic | checkers | checkers-custom
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -207,6 +209,8 @@ function normalizeMode(mode) {
   if (mode === "checkers-custom") return "checkers-custom";
   if (mode === "custom" || mode === "chess-custom") return "custom";
   if (mode === "checkers" || mode === "checkers-classic") return "checkers";
+  if (mode === "knights" || mode === "chess-knights") return "knights";
+  if (mode === "atomic" || mode === "chess-atomic") return "atomic";
   return "classic";
 }
 
@@ -334,6 +338,8 @@ function emitCustomSettingsUpdated(room) {
 function startFenForMode(mode) {
   if (isCheckersMode(mode)) return CHECKERS_START_FEN;
   if (isChessCustomMode(mode)) return CUSTOM_EMPTY_FEN;
+  if (mode === "knights") return KNIGHTS_START_FEN;
+  if (mode === "atomic") return ATOMIC_START_FEN;
   return START_FEN;
 }
 
@@ -573,7 +579,7 @@ function lobbyChannel(mode) {
   return "lobby:" + normalizeMode(mode);
 }
 
-const LOBBY_MODES = ["classic", "dice", "custom", "checkers", "checkers-custom"];
+const LOBBY_MODES = ["classic", "dice", "custom", "knights", "atomic", "checkers", "checkers-custom"];
 
 function broadcastRoomList(modeOrRoom) {
   let modes;
