@@ -131,7 +131,8 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="../../../js/atomic-chess.js?v=20260929-atomic2"></script>
+    <script src="../../../js/i18n.js?v=20261002a"></script>
+<script src="../../../js/atomic-chess.js?v=20260929-atomic2"></script>
   <script src="../../../js/drag-scroll-lock.js"></script>
   <script src="../../../js/board-context-guard.js"></script>
   <script>
@@ -147,126 +148,16 @@
 
     (function () {
       "use strict";
-      var LANG_KEY = "boardhack-lang";
       var COLOR_KEY = "boardhack-atomic-color";
 
-      var I18N = {
-        ru: {
-          docTitle: "BoardHack — Атомные шахматы",
-          playArea: "Игровая зона",
-          mission: "Управление",
-          session: "Сессия",
-          history: "История ходов",
-          rulesButton: "Правила",
-          rulesTitle: "Атомные шахматы — правила",
-          rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Взятие:</strong> при взятии снимаются бьющая фигура, взятая фигура и все фигуры в радиусе 1 (король-соседние клетки) от клетки взятия — <em>кроме пешек</em> (пешки не взрываются).</li><li><strong>Король:</strong> если король попадает в зону взрыва — сторона проигрывает. Ход, взрывающий собственного короля (при живом короле соперника), запрещён.</li><li><strong>Мат:</strong> король под угрозой взрыва/взятия и нет легальных ходов.</li><li><strong>Бот:</strong> локальный поиск по атомным правилам (не Stockfish).</li></ul>",
-          sideSelectLabel: "Играть за",
-          diffLabel: "Сложность бота",
-          diffEasy: "Новичок",
-          diffMedium: "Любитель",
-          diffHard: "Продвинутый",
-          diffExpert: "Эксперт",
-          diffMaster: "Мастер",
-          newGame: "Новая игра",
-          undo: "Отмена",
-          metaSide: "Сторона",
-          metaTurn: "Ход",
-          metaMoves: "Ходы",
-          metaBot: "Бот",
-          metaOpp: "Противник",
-          sideWhite: "Белые",
-          sideBlack: "Чёрные",
-          turnYou: "Вы",
-          turnBot: "Бот",
-          turnOver: "Конец игры",
-          turnDraw: "Ничья",
-          easy: "Новичок",
-          medium: "Любитель",
-          hard: "Продвинутый",
-          expert: "Эксперт",
-          master: "Мастер",
-          emptyMoves: "Ходов пока нет. Сделайте первый.",
-          thinking: "бот думает…",
-          yourMove: "Ваш ход",
-          checkYou: "Под угрозой взрыва! Защищайтесь.",
-          botThinking: "Бот думает…",
-          botInCheck: "Бот под угрозой — считает…",
-          checkmateWin: "Мат — {winner}!",
-          explodeWin: "Взрыв короля — {winner}!",
-          winnerYou: "вы победили",
-          winnerBot: "победил бот",
-          stalemate: "Пат — ничья.",
-          draw: "Ничья.",
-          settingsTitle: "Настройки",
-          settingsLangLabel: "Язык",
-          modeBadge: "шахматы · атомные"
-        },
-        en: {
-          docTitle: "BoardHack — Atomic Chess",
-          playArea: "Play area",
-          mission: "Mission control",
-          session: "Session",
-          history: "Move history",
-          rulesButton: "Rules",
-          rulesTitle: "Atomic Chess — rules",
-          rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Capture:</strong> the capturing piece, the captured piece, and all pieces within king-adjacent radius 1 of the capture square are removed — <em>except pawns</em> (pawns do not explode).</li><li><strong>King:</strong> if a king is in the blast, that side loses. A move that explodes your own king while the enemy king survives is illegal.</li><li><strong>Mate:</strong> king threatened with explosion/capture and no legal moves.</li><li><strong>Bot:</strong> local search on atomic rules (not Stockfish).</li></ul>",
-          sideSelectLabel: "Play as",
-          diffLabel: "Bot difficulty",
-          diffEasy: "Beginner",
-          diffMedium: "Amateur",
-          diffHard: "Advanced",
-          diffExpert: "Expert",
-          diffMaster: "Master",
-          newGame: "New Game",
-          undo: "Undo",
-          metaSide: "Side",
-          metaTurn: "Turn",
-          metaMoves: "Moves",
-          metaBot: "Bot",
-          metaOpp: "Opponent",
-          sideWhite: "White",
-          sideBlack: "Black",
-          turnYou: "You",
-          turnBot: "Bot",
-          turnOver: "Game over",
-          turnDraw: "Draw",
-          easy: "Beginner",
-          medium: "Amateur",
-          hard: "Advanced",
-          expert: "Expert",
-          master: "Master",
-          emptyMoves: "No moves yet. Make the first strike.",
-          thinking: "bot thinking…",
-          yourMove: "Your move",
-          checkYou: "Blast threat! Defend yourself.",
-          botThinking: "Bot thinking…",
-          botInCheck: "Bot under threat — calculating…",
-          checkmateWin: "Checkmate — {winner}!",
-          explodeWin: "King exploded — {winner}!",
-          winnerYou: "you win",
-          winnerBot: "bot wins",
-          stalemate: "Stalemate — draw.",
-          draw: "Draw.",
-          settingsTitle: "Settings",
-          settingsLangLabel: "Language",
-          modeBadge: "chess · atomic"
-        }
-      };
-
-      var lang = "ru";
-      try {
-        var saved = localStorage.getItem(LANG_KEY);
-        if (saved === "en" || saved === "ru") lang = saved;
-      } catch (e) {}
+                  var i18nReady = BoardHackI18n.init({ page: "chess/atomic", base: "../../../locales" });
+      var lang = BoardHackI18n.getLang();
 
       function t(key) {
-        var pack = I18N[lang] || I18N.ru;
-        return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+        return BoardHackI18n.t(key);
       }
 
-      var START_FEN = BoardHackAtomic.START_FEN;
+var START_FEN = BoardHackAtomic.START_FEN;
       var START_POSITION = "start";
       var PIECE_THEME =
         "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
@@ -336,12 +227,12 @@
       }
 
       function setLang(next) {
-        if (next !== "ru" && next !== "en") return;
-        lang = next;
-        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-        applyStaticLang();
-        updateMoveList();
-        updateStatus();
+        BoardHackI18n.setLang(next).then(function () {
+          lang = BoardHackI18n.getLang();
+          applyStaticLang();
+          updateMoveList();
+          updateStatus();
+        });
       }
 
       function wireSettingsMenu() {
@@ -753,6 +644,9 @@
       }
 
       $(function () {
+        i18nReady.then(function () {
+        lang = BoardHackI18n.getLang();
+
         syncSideSelect();
         applyStaticLang();
         wireSettingsMenu();
@@ -800,6 +694,7 @@
         updateMoveList();
         updateStatus();
         if (userColor === "b") scheduleBot(250);
+              });
       });
     })();
   </script>

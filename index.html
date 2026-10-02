@@ -138,6 +138,7 @@
     </div>
   </dialog>
 
+  <script src="js/i18n.js?v=20261002a"></script>
 <script>
 
     (function () {
@@ -152,105 +153,19 @@
 
     (function () {
       "use strict";
-      var LANG_KEY = "boardhack-lang";
       var GAME_KEY = "boardhack-hub-game";
-      var I18N = {
-        ru: {
-          docTitle: "BoardHack — Взломай доску",
-          heroTitleHtml: "Рады видеть вас за столом.",
-          settingsTitle: "Настройки",
-          settingsLangLabel: "Язык",
-          heroDesc: "Выберите стол и сделайте первый ход.",
-          tabChess: "Шахматы",
-          tabCheckers: "Шашки",
-          tabMahjong: "Маджонг",
-          panelChessTitle: "Шахматы",
-          panelCheckersTitle: "Шашки",
-          panelCheckersDesc: "Русские шашки и настраиваемый режим — бот или мультиплеер по коду.",
-          panelMahjongTitle: "Маджонг",
-          panelMahjongDesc: "Режимы маджонга появятся здесь.",
-          cardClassicTitle: "Классика",
-          cardClassicDesc: "Стандартные FIDE-шахматы. Ход за ходом, без ограничений по фигурам.",
-          cardClassicGo: "Открыть →",
-          cardDiceTitle: "Кости",
-          cardDiceDesc: "Каждый ход бросаются кости — ходите только выпавшими типами фигур. Можно 1–3 кости.",
-          cardDiceGo: "Открыть →",
-          cardChessCustomTitle: "Настраиваемый",
-          cardChessCustomDesc: "Свободная расстановка фигур перед партией. Stockfish или онлайн-комната.",
-          cardChessCustomGo: "Открыть →",
-          cardKnightsTitle: "Битва коней",
-          cardKnightsDesc: "Короли и пешки как в классике — все остальные фигуры заменены конями. Против Stockfish.",
-          cardKnightsGo: "Открыть →",
-          cardAtomicTitle: "Атомные",
-          cardAtomicDesc: "Взятие вызывает взрыв: фигуры рядом исчезают (пешки не взрываются). Локальный бот.",
-          cardAtomicGo: "Открыть →",
-          cardCheckersClassicTitle: "Классика",
-          cardCheckersClassicDesc: "Русские шашки 8×8: дамка, обязательное взятие, бот или онлайн-комната.",
-          cardCheckersClassicGo: "Открыть →",
-          cardCheckersCustomTitle: "Настраиваемый",
-          cardCheckersCustomDesc: "Шашки с правилами на выбор: взятие назад, обязательное взятие, таймер хода. Бот или онлайн-комната.",
-          cardCheckersCustomGo: "Открыть →",
-          cardMahjongSoonTitle: "Скоро",
-          cardMahjongSoonDesc: "Режимы маджонга в разработке. Загляните позже.",
-          cardMahjongSoonGo: "Скоро",
-        },
-        en: {
-          docTitle: "BoardHack — Hack the Board",
-          heroTitleHtml: "Glad to have you at the table.",
-          settingsTitle: "Settings",
-          settingsLangLabel: "Language",
-          heroDesc: "Choose a table and make the first move.",
-          tabChess: "Chess",
-          tabCheckers: "Checkers",
-          tabMahjong: "Mahjong",
-          panelChessTitle: "Chess",
-          panelCheckersTitle: "Checkers",
-          panelCheckersDesc: "Russian draughts and customizable — local bot or online multiplayer.",
-          panelMahjongTitle: "Mahjong",
-          panelMahjongDesc: "Mahjong modes will land here.",
-          cardClassicTitle: "Classic",
-          cardClassicDesc: "Standard FIDE chess. Move by move, no piece restrictions.",
-          cardClassicGo: "Open →",
-          cardDiceTitle: "Dice Chess",
-          cardDiceDesc: "Each turn rolls dice — move only the rolled piece types. 1–3 dice.",
-          cardDiceGo: "Open →",
-          cardChessCustomTitle: "Customizable",
-          cardChessCustomDesc: "Free piece setup before play. Stockfish or online room.",
-          cardChessCustomGo: "Open →",
-          cardKnightsTitle: "Knights Battle",
-          cardKnightsDesc: "Kings and pawns as in classic — every other piece becomes a knight. Vs Stockfish.",
-          cardKnightsGo: "Open →",
-          cardAtomicTitle: "Atomic",
-          cardAtomicDesc: "Captures explode nearby pieces (pawns are immune). Local bot.",
-          cardAtomicGo: "Open →",
-          cardCheckersClassicTitle: "Classic",
-          cardCheckersClassicDesc: "Russian draughts 8×8: flying kings, mandatory captures, bot or online room.",
-          cardCheckersClassicGo: "Open →",
-          cardCheckersCustomTitle: "Customizable",
-          cardCheckersCustomDesc: "Draughts with optional house rules: backward capture, mandatory capture, move timer. Bot or online room.",
-          cardCheckersCustomGo: "Open →",
-          cardMahjongSoonTitle: "Coming soon",
-          cardMahjongSoonDesc: "Mahjong modes are in the works. Check back later.",
-          cardMahjongSoonGo: "Coming soon",
-        }
-      };
+                  var i18nReady = BoardHackI18n.init({ page: "hub", base: "locales" });
+      var lang = BoardHackI18n.getLang();
 
-      var lang = "ru";
-      try {
-        var saved = localStorage.getItem(LANG_KEY);
-        if (saved === "en" || saved === "ru") lang = saved;
-      } catch (e) {}
+      function t(key) {
+        return BoardHackI18n.t(key);
+      }
 
-      var game = "chess";
+var game = "chess";
       try {
         var savedGame = localStorage.getItem(GAME_KEY);
         if (savedGame === "chess" || savedGame === "checkers" || savedGame === "mahjong") game = savedGame;
       } catch (e) {}
-
-      function t(key) {
-        var pack = I18N[lang] || I18N.ru;
-        return pack[key] != null ? pack[key] : (I18N.en[key] || key);
-      }
 
       function applyLang() {
         document.documentElement.lang = lang;
@@ -305,10 +220,10 @@
       }
 
       function setLang(next) {
-        if (next !== "ru" && next !== "en") return;
-        lang = next;
-        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-        applyLang();
+        BoardHackI18n.setLang(next).then(function () {
+          lang = BoardHackI18n.getLang();
+          applyLang();
+        });
       }
 
       function setGame(next) {
@@ -360,8 +275,11 @@
         });
       }
 
-      applyLang();
-      setGame(game);
+      i18nReady.then(function () {
+        lang = BoardHackI18n.getLang();
+        applyLang();
+        setGame(game);
+      });
     })();
   </script>
 

@@ -15,7 +15,7 @@ Dark-themed multi-game hub: chess (classic / dice / customizable / knights battl
 - **Mahjong** — stub panel (modes coming soon)
 - **Stockfish bot** — browser WASM engine (`vendor/stockfish`)
 - **Multiplayer** — room codes via Socket.IO server (`server/`); nicknames + spectate by code; live public room list in each MP lobby
-- **i18n** — Russian / English UI
+- **i18n** — Russian / English UI; editable JSON in `locales/` (only the selected language is fetched). See `locales/README.md`.
 
 ## Quick start (static site)
 

@@ -339,6 +339,7 @@
 </dialog>
 
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="../../../js/i18n.js?v=20261002a"></script>
 <script src="../../../js/drag-scroll-lock.js"></script>
 <script src="../../../js/board-context-guard.js"></script>
 <script>
@@ -356,7 +357,6 @@
 (function () {
   "use strict";
 
-  var LANG_KEY = "boardhack-lang";
   var COLOR_KEY = "boardhack-checkers-custom-color";
   var DIFF_KEY = "boardhack-checkers-custom-diff";
   var CLIENT_ID_KEY = "boardhack-client-id";
@@ -365,218 +365,14 @@
   var DEFAULT_SERVER = "https://chessboard-ulhg.onrender.com";
   var START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
 
-  var I18N = {
-    ru: {
-      docTitle: "BoardHack — Настраиваемые шашки",
-      modeBadge: "шашки · настраиваемый",
-      settingsTitle: "Настройки",
-      settingsLangLabel: "Язык",
-      playArea: "Игровая зона",
-      mission: "Управление",
-      session: "Сессия",
-      history: "История ходов",
-      rulesButton: "Правила",
-      rulesTitle: "Настраиваемые шашки",
-      rulesClose: "Закрыть правила",
-      rulesHtml: "<ul><li><strong>База:</strong> русские шашки 8×8, дамка летает.</li><li><strong>Взятие назад:</strong> если включено — простые шашки бьют вперёд и назад (как в русских); если выкл. — только вперёд (как в международных).</li><li><strong>Обязательное взятие:</strong> если включено — нельзя ходить тихо, когда есть бой; если выкл. — тихий ход разрешён.</li><li><strong>Таймер хода:</strong> выкл. / 10 / 30 / 60 / 120 сек. Просрочка — поражение стороны, чей ход.</li><li><strong>Мультиплеер:</strong> только создатель комнаты правит настройками до первого хода; если соперник вышел — партия продолжается против бота.</li></ul>",
-      sideSelectLabel: "Играть за",
-      sideWhite: "Белые",
-      sideBlack: "Чёрные",
-      diffLabel: "Сложность бота",
-      diffEasy: "Легко",
-      diffMedium: "Средне",
-      diffHard: "Сложно",
-      newGame: "Новая игра",
-      metaSide: "Сторона",
-      metaTurn: "Ход",
-      metaMoves: "Ходы",
-      metaOpp: "Противник",
-      metaBot: "Бот",
-      turnWhite: "Белые",
-      turnBlack: "Чёрные",
-      statusYour: "Ваш ход",
-      statusOpp: "Ход соперника",
-      statusMustCapture: "Нужно взять",
-      statusThinking: "Бот думает…",
-      statusWinW: "Победа белых",
-      statusWinB: "Победа чёрных",
-      statusDraw: "Ничья",
-      thinking: "Думаю…",
-      noMoves: "Пока нет ходов",
-      mpTitle: "Мультиплеер",
-      mpCreate: "Создать комнату",
-      mpJoin: "Войти",
-      mpJoinOk: "OK",
-      mpNickLabel: "Ник",
-      mpNickPlaceholder: "Ваш ник",
-      mpSpectate: "Наблюдать",
-      mpSpectateOk: "OK",
-      mpSpectating: "Вы наблюдаете",
-      mpSpectatingMeta: "Наблюдение",
-      mpSpectators: "зрители",
-      mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
-      mpCodeLabel: "Код комнаты",
-      mpCopy: "Копировать приглашение",
-          mpCopyInvite: "Копировать приглашение",
-          mpCopySpectate: "Копировать ссылку наблюдения",
-      mpCopied: "Скопировано",
-      mpLeave: "Выйти",
-      mpOffline: "Офлайн",
-      mpConnecting: "Подключение…",
-      mpConnected: "На сервере",
-      mpWaiting: "Ожидание соперника…",
-      mpPlaying: "Игра идёт",
-      mpOpponent: "Соперник",
-      mpOpponentGone: "Соперник отключился",
-      mpError: "Ошибка связи",
-      mpSeatEmpty: "Свободно",
-      mpPlayerStub: "Игрок",
-      mpSeatYou: "Вы",
-      mpSeatOpp: "Соперник",
-      mpSeatOffline: "Офлайн",
-      mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
-      mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
-      mpBotOff: "Бот отключён в мультиплеере",
-      mpRoomFull: "Комната заполнена",
-      mpNotFound: "Комната не найдена",
-      mpWrongMode: "Комната другого режима",
-      mpYouSpectate: "Вы наблюдаете",
-      mpSpectatorCount: "Зрители: {n}",
-      mpRooms: "Комнаты",
-      mpRoomsRefresh: "Обновить",
-      mpRoomsEmpty: "Нет открытых комнат",
-      mpYourTurn: "Ваш ход (онлайн)",
-      mpOppTurn: "Ход соперника…",
-      mpContinueBot: "Соперник вышел — продолжаем против бота",
-      customSettingsTitle: "Настройки",
-      setBackwardLabel: "Взятие при ходьбе назад",
-      setBackwardHint: "Вкл. — простые бьют назад (русские); выкл. — только вперёд",
-      setMandatoryLabel: "Обязательно бить если можно",
-      setMandatoryHint: "Выкл. — можно ходить без взятия, даже если бой есть",
-      setTimerLabel: "Таймер хода",
-      setTimerHint: "Секунды на ход; 0 — без таймера",
-      timerOff: "Выкл.",
-      timerStatus: "Таймер: {n} с",
-      timerTimeoutLossYou: "Время вышло — вы проиграли",
-      timerTimeoutLossOther: "Время вышло — проиграл {loser}",
-      winnerYou: "вы",
-      winnerOpp: "соперник",
-      winnerBot: "бот",
-      customSettingsLocked: "Настройки зафиксированы до конца партии",
-      customSettingsHostOnly: "Только создатель комнаты меняет настройки до старта"
-    },
-    en: {
-      docTitle: "BoardHack — Customizable draughts",
-      modeBadge: "checkers · custom",
-      settingsTitle: "Settings",
-      settingsLangLabel: "Language",
-      playArea: "Play area",
-      mission: "Controls",
-      session: "Session",
-      history: "Move history",
-      rulesButton: "Rules",
-      rulesTitle: "Customizable draughts",
-      rulesClose: "Close rules",
-      rulesHtml: "<ul><li><strong>Base:</strong> Russian draughts 8×8 with flying kings.</li><li><strong>Backward capture:</strong> ON — men capture both ways (Russian); OFF — men capture forward only (international-like).</li><li><strong>Mandatory capture:</strong> ON — quiet moves illegal when a capture exists; OFF — quiet moves allowed.</li><li><strong>Move timer:</strong> off / 10 / 30 / 60 / 120 s. Timeout loses for the side to move.</li><li><strong>Multiplayer:</strong> only the room creator owns settings until the first move; if the opponent leaves, continue vs bot.</li></ul>",
-      sideSelectLabel: "Play as",
-      sideWhite: "White",
-      sideBlack: "Black",
-      diffLabel: "Bot difficulty",
-      diffEasy: "Easy",
-      diffMedium: "Medium",
-      diffHard: "Hard",
-      newGame: "New game",
-      metaSide: "Side",
-      metaTurn: "Turn",
-      metaMoves: "Moves",
-      metaOpp: "Opponent",
-      metaBot: "Bot",
-      turnWhite: "White",
-      turnBlack: "Black",
-      statusYour: "Your turn",
-      statusOpp: "Opponent's turn",
-      statusMustCapture: "Capture required",
-      statusThinking: "Bot thinking…",
-      statusWinW: "White wins",
-      statusWinB: "Black wins",
-      statusDraw: "Draw",
-      thinking: "Thinking…",
-      noMoves: "No moves yet",
-      mpTitle: "Multiplayer",
-      mpCreate: "Create room",
-      mpJoin: "Join",
-      mpJoinOk: "OK",
-      mpNickLabel: "Nickname",
-      mpNickPlaceholder: "Your nickname",
-      mpSpectate: "Spectate",
-      mpSpectateOk: "OK",
-      mpSpectating: "Spectating",
-      mpSpectatingMeta: "Spectating",
-      mpSpectators: "spectators",
-      mpHint: "Invite a friend with a room code. No account needed.",
-      mpCodeLabel: "Room code",
-      mpCopy: "Copy invite link",
-          mpCopyInvite: "Copy invite link",
-          mpCopySpectate: "Copy spectate link",
-      mpCopied: "Copied",
-      mpLeave: "Leave",
-      mpOffline: "Offline",
-      mpConnecting: "Connecting…",
-      mpConnected: "On server",
-      mpWaiting: "Waiting for opponent…",
-      mpPlaying: "Match live",
-      mpOpponentGone: "Opponent disconnected",
-      mpError: "Connection error",
-      mpSeatEmpty: "Open",
-      mpPlayerStub: "Player",
-      mpSeatYou: "You",
-      mpSeatOpp: "Opponent",
-      mpSeatOffline: "Offline",
-      mpWaitingHint: "Share the code or link. Bot is disabled.",
-      mpSeatPickHint: "While alone — click a color to switch side",
-      mpBotOff: "Bot disabled in multiplayer",
-      mpRoomFull: "Room is full",
-      mpNotFound: "Room not found",
-      mpWrongMode: "Wrong game mode room",
-      mpYouSpectate: "You are spectating",
-      mpSpectatorCount: "Spectators: {n}",
-      mpRooms: "Rooms",
-      mpRoomsRefresh: "Refresh",
-      mpRoomsEmpty: "No open rooms",
-      mpYourTurn: "Your move (online)",
-      mpOppTurn: "Opponent's turn…",
-      mpContinueBot: "Opponent left — continuing vs bot",
-      customSettingsTitle: "Settings",
-      setBackwardLabel: "Capture while moving backward",
-      setBackwardHint: "ON — men capture both ways (Russian); OFF — forward only",
-      setMandatoryLabel: "Must capture if possible",
-      setMandatoryHint: "OFF — quiet moves allowed even when a capture exists",
-      setTimerLabel: "Move timer",
-      setTimerHint: "Seconds per move; 0 = off",
-      timerOff: "Off",
-      timerStatus: "Timer: {n}s",
-      timerTimeoutLossYou: "Time out — you lose",
-      timerTimeoutLossOther: "Time out — {loser} loses",
-      winnerYou: "you",
-      winnerOpp: "opponent",
-      winnerBot: "bot",
-      customSettingsLocked: "Settings locked for this game",
-      customSettingsHostOnly: "Only the room creator can change settings before the first move"
-    }
-  };
-
-  var lang = "ru";
-  try {
-    var saved = localStorage.getItem(LANG_KEY);
-    if (saved === "en" || saved === "ru") lang = saved;
-  } catch (e) {}
+    var i18nReady = BoardHackI18n.init({ page: "checkers/custom", base: "../../../locales" });
+  var lang = BoardHackI18n.getLang();
 
   function t(key) {
-    var pack = I18N[lang] || I18N.ru;
-    return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+    return BoardHackI18n.t(key);
   }
 
-  /* ---- Board model (Russian draughts) ---- */
+/* ---- Board model (Russian draughts) ---- */
   function emptyBoard() {
     var b = [];
     for (var r = 0; r < 8; r++) {
@@ -1975,10 +1771,10 @@
   }
 
   function setLang(next) {
-    if (next !== "ru" && next !== "en") return;
-    lang = next;
-    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-    applyLang();
+    BoardHackI18n.setLang(next).then(function () {
+      lang = BoardHackI18n.getLang();
+      applyLang();
+    });
   }
 
   function updateMeta() {
@@ -2427,74 +2223,77 @@
     });
   }
 
-  wireSettingsMenu();
-  document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
-  document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
-  document.getElementById("newGameBtn").addEventListener("click", newGame);
-  document.getElementById("sideSelect").addEventListener("change", function (e) {
-    userColor = e.target.value;
-    try { localStorage.setItem(COLOR_KEY, userColor); } catch (err) {}
-    if (!isMultiplayer()) newGame();
+  i18nReady.then(function () {
+    lang = BoardHackI18n.getLang();
+    wireSettingsMenu();
+    document.getElementById("langRu").addEventListener("click", function () { setLang("ru"); });
+    document.getElementById("langEn").addEventListener("click", function () { setLang("en"); });
+    document.getElementById("newGameBtn").addEventListener("click", newGame);
+    document.getElementById("sideSelect").addEventListener("change", function (e) {
+      userColor = e.target.value;
+      try { localStorage.setItem(COLOR_KEY, userColor); } catch (err) {}
+      if (!isMultiplayer()) newGame();
+    });
+    document.getElementById("difficulty").addEventListener("change", function (e) {
+      difficulty = e.target.value;
+      try { localStorage.setItem(DIFF_KEY, difficulty); } catch (err) {}
+      updateOpponentLabel();
+      if (!isMultiplayer()) newGame();
+    });
+
+    document.getElementById("sideSelect").value = userColor;
+    document.getElementById("difficulty").value = difficulty;
+    wireMp();
+
+    function wireCustomSettings() {
+      var bt = document.getElementById("setBackwardToggle");
+      var mtog = document.getElementById("setMandatoryToggle");
+      var sel = document.getElementById("setMoveTimer");
+      if (bt) bt.addEventListener("click", function () {
+        if (bt.disabled) return;
+        setCustomToggle("backwardCapture", bt.getAttribute("aria-checked") !== "true");
+      });
+      if (mtog) mtog.addEventListener("click", function () {
+        if (mtog.disabled) return;
+        setCustomToggle("mandatoryCapture", mtog.getAttribute("aria-checked") !== "true");
+      });
+      if (sel) sel.addEventListener("change", function () {
+        if (sel.disabled || !canEditCustomSettings()) return;
+        var v = Number(sel.value);
+        customSettings.moveTimer = (v === 10 || v === 30 || v === 60 || v === 120) ? v : 0;
+        persistCustomSettings();
+        updateCustomSettingsUI();
+        if (isMultiplayer()) publishCustomSettings();
+        restartMoveTimer();
+      });
+    }
+    wireCustomSettings();
+
+    applyLang();
+    setMpConn("offline");
+
+    var paramsEarly = new URLSearchParams(window.location.search);
+    var maybeMp = !!(paramsEarly.get("join") || paramsEarly.get("room") || paramsEarly.get("spectate") || (function () {
+      try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
+    })());
+    tryAutoRejoin();
+
+    if (!isMultiplayer() && !maybeMp) {
+      newGame();
+    } else if (!maybeMp) {
+      renderBoard();
+      updateMeta();
+      updateStatus();
+    } else {
+      // waiting for MP reconnect — show empty start until room sync
+      board = initialBoard();
+      turn = "w";
+      renderBoard();
+      updateMeta();
+      updateStatus();
+    }
+  })();
   });
-  document.getElementById("difficulty").addEventListener("change", function (e) {
-    difficulty = e.target.value;
-    try { localStorage.setItem(DIFF_KEY, difficulty); } catch (err) {}
-    updateOpponentLabel();
-    if (!isMultiplayer()) newGame();
-  });
-
-  document.getElementById("sideSelect").value = userColor;
-  document.getElementById("difficulty").value = difficulty;
-  wireMp();
-
-  function wireCustomSettings() {
-    var bt = document.getElementById("setBackwardToggle");
-    var mtog = document.getElementById("setMandatoryToggle");
-    var sel = document.getElementById("setMoveTimer");
-    if (bt) bt.addEventListener("click", function () {
-      if (bt.disabled) return;
-      setCustomToggle("backwardCapture", bt.getAttribute("aria-checked") !== "true");
-    });
-    if (mtog) mtog.addEventListener("click", function () {
-      if (mtog.disabled) return;
-      setCustomToggle("mandatoryCapture", mtog.getAttribute("aria-checked") !== "true");
-    });
-    if (sel) sel.addEventListener("change", function () {
-      if (sel.disabled || !canEditCustomSettings()) return;
-      var v = Number(sel.value);
-      customSettings.moveTimer = (v === 10 || v === 30 || v === 60 || v === 120) ? v : 0;
-      persistCustomSettings();
-      updateCustomSettingsUI();
-      if (isMultiplayer()) publishCustomSettings();
-      restartMoveTimer();
-    });
-  }
-  wireCustomSettings();
-
-  applyLang();
-  setMpConn("offline");
-
-  var paramsEarly = new URLSearchParams(window.location.search);
-  var maybeMp = !!(paramsEarly.get("join") || paramsEarly.get("room") || paramsEarly.get("spectate") || (function () {
-    try { return localStorage.getItem(MP_ROOM_KEY); } catch (e) { return null; }
-  })());
-  tryAutoRejoin();
-
-  if (!isMultiplayer() && !maybeMp) {
-    newGame();
-  } else if (!maybeMp) {
-    renderBoard();
-    updateMeta();
-    updateStatus();
-  } else {
-    // waiting for MP reconnect — show empty start until room sync
-    board = initialBoard();
-    turn = "w";
-    renderBoard();
-    updateMeta();
-    updateStatus();
-  }
-})();
 </script>
 </body>
 </html>

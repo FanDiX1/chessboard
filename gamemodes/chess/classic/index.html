@@ -194,7 +194,8 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
+    <script src="../../../js/i18n.js?v=20261002a"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="../../../js/stockfish-bot.js"></script>
   <script src="../../../js/drag-scroll-lock.js"></script>
@@ -217,288 +218,18 @@
 
       "use strict";
 
-      var LANG_KEY = "boardhack-lang";
       var COLOR_KEY = "boardhack-color";
       var MODE_KEY = "boardhack-mode";
       var DICE_COUNT_KEY = "boardhack-dice-count";
 
-      var I18N = {
-        ru: {
-          docTitle: "BoardHack — Взломай доску",
-          heroTitleHtml: 'Взломай доску. <span class="accent">Захвати флаг.</span>',
-          heroDesc: "Тёмная шахматная лаборатория. Выберите сторону, переиграйте бота, поставьте мат и удержите позицию.",
-          playArea: "Игровая зона",
-          mission: "Управление",
-          session: "Сессия",
-          history: "История ходов",
-          rulesButton: "Правила",
-          rulesTitle: "Правила шахмат",
-          rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Цель:</strong> поставить мат королю соперника.</li><li><strong>Фигуры:</strong> ладья ходит по прямой, слон — по диагонали, ферзь — обоими способами, конь — буквой «Г», король — на одну клетку.</li><li><strong>Ход:</strong> белые начинают. Нельзя оставлять своего короля под шахом.</li><li><strong>Шах и мат:</strong> шах нужно снять; мат завершает партию.</li><li><strong>Особые ходы:</strong> рокировка, взятие на проходе и превращение пешки.</li><li><strong>Ничья:</strong> пат, повторение позиции, недостаток материала или соглашение.</li></ul>",
-          sideSelectLabel: "Играть за",
-          diffLabel: "Сложность бота",
-          diffEasy: "Новичок",
-          diffMedium: "Любитель",
-          diffHard: "Продвинутый",
-          diffExpert: "Эксперт",
-          diffMaster: "Мастер",
-          newGame: "Новая игра",
-          undo: "Отмена",
-          metaSide: "Сторона",
-          metaTurn: "Ход",
-          metaMoves: "Ходы",
-          metaBot: "Бот",
-          sideWhite: "Белые",
-          sideBlack: "Чёрные",
-          turnYou: "Вы",
-          turnBot: "Бот",
-          turnOver: "Конец игры",
-          turnDraw: "Ничья",
-          easy: "Новичок",
-          medium: "Любитель",
-          hard: "Продвинутый",
-          expert: "Эксперт",
-          master: "Мастер",
-          emptyMoves: "Ходов пока нет. Сделайте первый.",
-          thinking: "бот думает…",
-          yourMove: "Ваш ход",
-          checkYou: "Шах! Ваш ход — защищайтесь или контратакуйте.",
-          botThinking: "Бот думает…",
-          botInCheck: "Бот под шахом — считает…",
-          checkmateWin: "Мат — {winner}!",
-          kingCaptureWin: "Король взят — {winner}!",
-          winnerYou: "вы победили",
-          winnerBot: "победил бот",
-          winnerOpp: "победил соперник",
-          stalemate: "Пат — ничья.",
-          drawRepetition: "Ничья — троекратное повторение.",
-          drawMaterial: "Ничья — недостаточно материала.",
-          draw: "Ничья.",
-          menuLabel: "Режим",
-          settingsTitle: "Настройки",
-          settingsLangLabel: "Язык",
-          menuClassic: "Классика",
-          menuClassicDesc: "Стандартные шахматы",
-          menuDice: "Кости",
-          menuDiceDesc: "Ходы по броску костей",
-          menuCustom: "Настраиваемый",
-          menuCustomDesc: "Свободная расстановка фигур",
-          modeBadgeClassic: "шахматы · классика",
-          modeBadgeDice: "шахматы · кости",
-          modeBadgeCustom: "Шахматы · Настраиваемый",
-          mpContinueBot: "Соперник вышел — продолжаем против бота",
-          modeSelectLabel: "Режим",
-          modeClassic: "Классика",
-          modeDice: "Кости",
-          diceCountLabel: "Количество костей",
-          diceCount1: "1 кость",
-          diceCount2: "2 кости",
-          diceCount3: "3 кости",
-          dicePanelTitle: "Бросок",
-          diceRemaining: "Осталось сходить: {pieces}",
-          diceDone: "Все кости сыграны",
-          diceNone: "—",
-          diceSkip: "Пропуск: нет хода {piece}",
-          pieceP: "пешка",
-          pieceN: "конь",
-          pieceB: "слон",
-          pieceR: "ладья",
-          pieceQ: "ферзь",
-          pieceK: "король",
-          yourMoveDice: "Ваш ход — выполните все кости",
-          botThinkingDice: "Бот ходит по костям…",
-          mpTitle: "Мультиплеер",
-          mpCreate: "Создать комнату",
-          mpJoin: "Войти",
-          mpJoinOk: "OK",
-          mpNickLabel: "Ник",
-          mpNickPlaceholder: "Ваш ник",
-          mpSpectate: "Наблюдать",
-          mpSpectateOk: "OK",
-          mpSpectating: "Вы наблюдаете",
-          mpSpectatingMeta: "Наблюдение",
-          mpSpectators: "зрители",
-          mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
-          mpCodeLabel: "Код комнаты",
-          mpCopy: "Копировать приглашение",
-          mpCopyInvite: "Копировать приглашение",
-          mpCopySpectate: "Копировать ссылку наблюдения",
-          mpCopied: "Скопировано",
-          mpLeave: "Выйти",
-          mpOffline: "Офлайн",
-          mpConnecting: "Подключение…",
-          mpConnected: "На сервере",
-          mpWaiting: "Ожидание соперника…",
-          mpPlaying: "Игра идёт",
-          mpOpponent: "Соперник",
-          mpOpponentGone: "Соперник отключился",
-          mpError: "Ошибка связи",
-          mpSeatEmpty: "Свободно",
-          mpPlayerStub: "Игрок",
-          mpSeatYou: "Вы",
-          mpSeatOpp: "Соперник",
-          mpSeatOffline: "Офлайн",
-          mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
-          mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
-          mpBotOff: "Бот отключён в мультиплеере",
-          mpRoomFull: "Комната заполнена",
-          mpNotFound: "Комната не найдена",
-          mpWrongMode: "Комната другого режима",
-          mpYouSpectate: "Вы наблюдаете",
-          mpSpectatorCount: "Зрители: {n}",
-          mpRooms: "Комнаты",
-          mpRoomsRefresh: "Обновить",
-          mpRoomsEmpty: "Нет открытых комнат",
-          mpYourTurn: "Ваш ход (онлайн)",
-          mpOppTurn: "Ход соперника…",
-          turnOpponent: "Соперник",
-          metaOpp: "Противник"
-        },
-        en: {
-          docTitle: "BoardHack — Hack the Board",
-          heroTitleHtml: 'Breach the board. <span class="accent">Capture the flag.</span>',
-          heroDesc: "Dark-ops chess lab. Pick a side, outsmart the bot, force checkmate, and own the position.",
-          playArea: "Play area",
-          mission: "Mission control",
-          session: "Session",
-          history: "Move history",
-          rulesButton: "Rules",
-          rulesTitle: "Chess rules",
-          rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Goal:</strong> checkmate the opponent’s king.</li><li><strong>Pieces:</strong> rooks move straight, bishops diagonally, queens both ways, knights in an L, and kings one square.</li><li><strong>Moves:</strong> White moves first. You may not leave your king in check.</li><li><strong>Check and mate:</strong> answer check; checkmate ends the game.</li><li><strong>Special moves:</strong> castling, en passant, and pawn promotion.</li><li><strong>Draw:</strong> stalemate, repeated position, insufficient material, or agreement.</li></ul>",
-          sideSelectLabel: "Play as",
-          diffLabel: "Bot difficulty",
-          diffEasy: "Beginner",
-          diffMedium: "Amateur",
-          diffHard: "Advanced",
-          diffExpert: "Expert",
-          diffMaster: "Master",
-          newGame: "New Game",
-          undo: "Undo",
-          metaSide: "Side",
-          metaTurn: "Turn",
-          metaMoves: "Moves",
-          metaBot: "Bot",
-          sideWhite: "White",
-          sideBlack: "Black",
-          turnYou: "You",
-          turnBot: "Bot",
-          turnOver: "Game over",
-          turnDraw: "Draw",
-          easy: "Beginner",
-          medium: "Amateur",
-          hard: "Advanced",
-          expert: "Expert",
-          master: "Master",
-          emptyMoves: "No moves yet. Make the first strike.",
-          thinking: "bot thinking…",
-          yourMove: "Your move",
-          checkYou: "Check! Your move — defend or counter.",
-          botThinking: "Bot thinking…",
-          botInCheck: "Bot is in check — calculating…",
-          checkmateWin: "Checkmate — {winner}!",
-          kingCaptureWin: "King captured — {winner}!",
-          winnerYou: "you win",
-          winnerBot: "bot wins",
-          winnerOpp: "opponent wins",
-          stalemate: "Stalemate — draw.",
-          drawRepetition: "Draw — threefold repetition.",
-          drawMaterial: "Draw — insufficient material.",
-          draw: "Draw.",
-          menuLabel: "Mode",
-          settingsTitle: "Settings",
-          settingsLangLabel: "Language",
-          menuClassic: "Classic",
-          menuClassicDesc: "Standard chess",
-          menuDice: "Dice Chess",
-          menuDiceDesc: "Move by dice rolls",
-          menuCustom: "Customizable",
-          menuCustomDesc: "Free piece setup before play",
-          modeBadgeClassic: "chess · classic",
-          modeBadgeDice: "chess · dice",
-          modeBadgeCustom: "Chess · Customizable",
-          mpContinueBot: "Opponent left — continuing vs bot",
-          modeSelectLabel: "Mode",
-          modeClassic: "Classic",
-          modeDice: "Dice Chess",
-          diceCountLabel: "Number of dice",
-          diceCount1: "1 die",
-          diceCount2: "2 dice",
-          diceCount3: "3 dice",
-          dicePanelTitle: "Dice roll",
-          diceRemaining: "Still to move: {pieces}",
-          diceDone: "All dice played",
-          diceNone: "—",
-          diceSkip: "Skip: no legal {piece} move",
-          pieceP: "pawn",
-          pieceN: "knight",
-          pieceB: "bishop",
-          pieceR: "rook",
-          pieceQ: "queen",
-          pieceK: "king",
-          yourMoveDice: "Your turn — fulfill all dice",
-          botThinkingDice: "Bot playing dice moves…",
-          mpTitle: "Multiplayer",
-          mpCreate: "Create room",
-          mpJoin: "Join",
-          mpJoinOk: "OK",
-          mpNickLabel: "Nickname",
-          mpNickPlaceholder: "Your nickname",
-          mpSpectate: "Spectate",
-          mpSpectateOk: "OK",
-          mpSpectating: "Spectating",
-          mpSpectatingMeta: "Spectating",
-          mpSpectators: "spectators",
-          mpHint: "Invite a friend with a room code. No account needed.",
-          mpCodeLabel: "Room code",
-          mpCopy: "Copy invite link",
-          mpCopyInvite: "Copy invite link",
-          mpCopySpectate: "Copy spectate link",
-          mpCopied: "Copied",
-          mpLeave: "Leave",
-          mpOffline: "Offline",
-          mpConnecting: "Connecting…",
-          mpConnected: "On server",
-          mpWaiting: "Waiting for opponent…",
-          mpPlaying: "Match live",
-          mpOpponent: "Opponent",
-          mpOpponentGone: "Opponent disconnected",
-          mpError: "Connection error",
-          mpSeatEmpty: "Open",
-          mpPlayerStub: "Player",
-          mpSeatYou: "You",
-          mpSeatOpp: "Opponent",
-          mpSeatOffline: "Offline",
-          mpWaitingHint: "Share the code or link. Bot is disabled.",
-          mpSeatPickHint: "While alone — click a color to switch side",
-          mpBotOff: "Bot disabled in multiplayer",
-          mpRoomFull: "Room is full",
-          mpNotFound: "Room not found",
-          mpWrongMode: "Wrong game mode room",
-          mpYouSpectate: "You are spectating",
-          mpSpectatorCount: "Spectators: {n}",
-          mpRooms: "Rooms",
-          mpRoomsRefresh: "Refresh",
-          mpRoomsEmpty: "No open rooms",
-          mpYourTurn: "Your move (online)",
-          mpOppTurn: "Opponent's turn…",
-          turnOpponent: "Opponent",
-          metaOpp: "Opponent"
-        }
-      };
-
-      var lang = "ru";
-      try {
-        var saved = localStorage.getItem(LANG_KEY);
-        if (saved === "en" || saved === "ru") lang = saved;
-      } catch (e) {}
+                  var i18nReady = BoardHackI18n.init({ page: "chess/classic", base: "../../../locales" });
+      var lang = BoardHackI18n.getLang();
 
       function t(key) {
-        var pack = I18N[lang] || I18N.ru;
-        return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+        return BoardHackI18n.t(key);
       }
 
-      function applyStaticLang() {
+function applyStaticLang() {
         document.documentElement.lang = lang;
         document.title = t("docTitle");
         $("#playAreaTitle").text(t("playArea"));
@@ -572,12 +303,12 @@
       }
 
       function setLang(next) {
-        if (next !== "ru" && next !== "en") return;
-        lang = next;
-        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-        applyStaticLang();
-        updateMoveList();
-        updateStatus();
+        BoardHackI18n.setLang(next).then(function () {
+          lang = BoardHackI18n.getLang();
+          applyStaticLang();
+          updateMoveList();
+          updateStatus();
+        });
       }
 
       
@@ -2555,6 +2286,9 @@
       }
 
       $(function () {
+        i18nReady.then(function () {
+        lang = BoardHackI18n.getLang();
+
         syncSideSelect();
         syncModeSelects();
         applyStaticLang();
@@ -2686,8 +2420,8 @@
             }
           }
         }
+              });
       });
-    
     })();
   </script>
 

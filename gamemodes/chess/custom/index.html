@@ -248,7 +248,8 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
+    <script src="../../../js/i18n.js?v=20261002a"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="../../../js/stockfish-bot.js"></script>
   <script src="../../../js/drag-scroll-lock.js"></script>
@@ -271,360 +272,20 @@
 
       "use strict";
 
-      var LANG_KEY = "boardhack-lang";
       var COLOR_KEY = "boardhack-color";
       var MODE_KEY = "boardhack-mode";
       var DICE_COUNT_KEY = "boardhack-dice-count";
       var MOVE_ANALYSIS_KEY = "boardhack-custom-move-analysis";
       var POS_EVAL_KEY = "boardhack-custom-pos-eval";
 
-      var I18N = {
-        ru: {
-          docTitle: "BoardHack — Взломай доску",
-          heroTitleHtml: 'Взломай доску. <span class="accent">Захвати флаг.</span>',
-          heroDesc: "Тёмная шахматная лаборатория. Выберите сторону, переиграйте бота, поставьте мат и удержите позицию.",
-          playArea: "Игровая зона",
-          mission: "Управление",
-          session: "Сессия",
-          history: "История ходов",
-          rulesButton: "Правила",
-          rulesTitle: "Правила: настраиваемые шахматы",
-          rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Расстановка:</strong> перед партией вы сами ставите фигуры на пустую или стандартную доску.</li><li><strong>Палитра:</strong> выберите фигуру (белую или чёрную), затем клетку — чтобы поставить. Повторный клик по клетке с той же фигурой снимает её; другая фигура заменяет. Второй король того же цвета не ставится (на доске не больше одного белого и одного чёрного короля).</li><li><strong>Старт:</strong> нужны ровно один белый и один чёрный король. Если сторона хода уже под матом — предупреждение, но начать можно.</li><li><strong>Игра:</strong> дальше как в классике — Stockfish, выбор стороны, онлайн-комнаты.</li><li><strong>Мультиплеер:</strong> расстановка синхронизируется (FEN); оба подтверждают старт или хост начинает, когда позиция готова. Зрители только смотрят.</li></ul>",
-          sideSelectLabel: "Играть за",
-          diffLabel: "Сложность бота",
-          diffEasy: "Новичок",
-          diffMedium: "Любитель",
-          diffHard: "Продвинутый",
-          diffExpert: "Эксперт",
-          diffMaster: "Мастер",
-          newGame: "Новая игра",
-          undo: "Отмена",
-          metaSide: "Сторона",
-          metaTurn: "Ход",
-          metaMoves: "Ходы",
-          metaBot: "Бот",
-          sideWhite: "Белые",
-          sideBlack: "Чёрные",
-          turnYou: "Вы",
-          turnBot: "Бот",
-          turnOver: "Конец игры",
-          turnDraw: "Ничья",
-          easy: "Новичок",
-          medium: "Любитель",
-          hard: "Продвинутый",
-          expert: "Эксперт",
-          master: "Мастер",
-          emptyMoves: "Ходов пока нет. Сделайте первый.",
-          thinking: "бот думает…",
-          yourMove: "Ваш ход",
-          checkYou: "Шах! Ваш ход — защищайтесь или контратакуйте.",
-          botThinking: "Бот думает…",
-          botInCheck: "Бот под шахом — считает…",
-          checkmateWin: "Мат — {winner}!",
-          kingCaptureWin: "Король взят — {winner}!",
-          winnerYou: "вы победили",
-          winnerBot: "победил бот",
-          winnerOpp: "победил соперник",
-          stalemate: "Пат — ничья.",
-          drawRepetition: "Ничья — троекратное повторение.",
-          drawMaterial: "Ничья — недостаточно материала.",
-          draw: "Ничья.",
-          menuLabel: "Режим",
-          settingsTitle: "Настройки",
-          settingsLangLabel: "Язык",
-          menuClassic: "Классика",
-          menuClassicDesc: "Стандартные шахматы",
-          menuDice: "Кости",
-          menuDiceDesc: "Ходы по броску костей",
-          menuCustom: "Настраиваемый",
-          menuCustomDesc: "Свободная расстановка фигур",
-          modeBadgeClassic: "шахматы · классика",
-          modeBadgeDice: "шахматы · кости",
-          modeBadgeCustom: "Шахматы · Настраиваемый",
-          setupTitle: "Расстановка",
-          setupHint: "Выберите фигуру в палитре и кликните по клетке. Клик по фигуре на доске снимает или заменяет её.",
-          setupClear: "Очистить",
-          setupStandard: "Стандартная позиция",
-          setupStart: "Начать игру",
-          setupReady: "Готов",
-          setupReadyDone: "Готов ✓",
-          setupHostStart: "Начать (хост)",
-          setupTurnLabel: "Ход при старте",
-          setupNeedKings: "Нужны ровно один белый и один чёрный король.",
-          setupWarnMate: "Сторона хода уже под матом — партия всё равно может начаться.",
-          setupWarnCheck: "Сторона хода под шахом.",
-          setupInvalid: "Нельзя загрузить позицию (проверьте королей и шах).",
-          setupMpHint: "Расстановка общая. Оба нажмите «Готов» или хост начнёт игру.",
-          setupWaitingReady: "Ожидание готовности соперника…",
-          setupPhaseStatus: "Расстановка фигур",
-          setupPaletteEraser: "Снять фигуру",
-          mpContinueBot: "Соперник вышел — продолжаем против бота",
-          modeSelectLabel: "Режим",
-          modeClassic: "Классика",
-          modeDice: "Кости",
-          diceCountLabel: "Количество костей",
-          diceCount1: "1 кость",
-          diceCount2: "2 кости",
-          diceCount3: "3 кости",
-          dicePanelTitle: "Бросок",
-          diceRemaining: "Осталось сходить: {pieces}",
-          diceDone: "Все кости сыграны",
-          diceNone: "—",
-          diceSkip: "Пропуск: нет хода {piece}",
-          pieceP: "пешка",
-          pieceN: "конь",
-          pieceB: "слон",
-          pieceR: "ладья",
-          pieceQ: "ферзь",
-          pieceK: "король",
-          yourMoveDice: "Ваш ход — выполните все кости",
-          botThinkingDice: "Бот ходит по костям…",
-          mpTitle: "Мультиплеер",
-          mpCreate: "Создать комнату",
-          mpJoin: "Войти",
-          mpJoinOk: "OK",
-          mpNickLabel: "Ник",
-          mpNickPlaceholder: "Ваш ник",
-          mpSpectate: "Наблюдать",
-          mpSpectateOk: "OK",
-          mpSpectating: "Вы наблюдаете",
-          mpSpectatingMeta: "Наблюдение",
-          mpSpectators: "зрители",
-          mpHint: "Пригласите друга по коду. Аккаунт не нужен.",
-          mpCodeLabel: "Код комнаты",
-          mpCopy: "Копировать приглашение",
-          mpCopyInvite: "Копировать приглашение",
-          mpCopySpectate: "Копировать ссылку наблюдения",
-          mpCopied: "Скопировано",
-          mpLeave: "Выйти",
-          mpOffline: "Офлайн",
-          mpConnecting: "Подключение…",
-          mpConnected: "На сервере",
-          mpWaiting: "Ожидание соперника…",
-          mpPlaying: "Игра идёт",
-          mpOpponent: "Соперник",
-          mpOpponentGone: "Соперник отключился",
-          mpError: "Ошибка связи",
-          mpSeatEmpty: "Свободно",
-          mpPlayerStub: "Игрок",
-          mpSeatYou: "Вы",
-          mpSeatOpp: "Соперник",
-          mpSeatOffline: "Офлайн",
-          mpWaitingHint: "Поделитесь кодом или ссылкой. Бот отключён.",
-          mpSeatPickHint: "Пока вы один — нажмите цвет, чтобы сменить сторону",
-          mpBotOff: "Бот отключён в мультиплеере",
-          mpRoomFull: "Комната заполнена",
-          mpNotFound: "Комната не найдена",
-          mpWrongMode: "Комната другого режима",
-          mpYouSpectate: "Вы наблюдаете",
-          mpSpectatorCount: "Зрители: {n}",
-          mpRooms: "Комнаты",
-          mpRoomsRefresh: "Обновить",
-          mpRoomsEmpty: "Нет открытых комнат",
-          mpYourTurn: "Ваш ход (онлайн)",
-          mpOppTurn: "Ход соперника…",
-          turnOpponent: "Соперник",
-          metaOpp: "Противник",
-          customSettingsTitle: "Настройки",
-          moveAnalysis: "Оценка ходов",
-          moveAnalysisHint: "Только на этом устройстве",
-          posEval: "Оценка позиции",
-          posEvalHint: "Только на этом устройстве",
-          evalHintLocal: "Только на этом устройстве",
-          evalHintHost: "Общая настройка комнаты — включает создатель до старта",
-          evalHintGuest: "Только создатель комнаты может включить",
-          evalHintLocked: "Зафиксировано до конца партии",
-          setupSettingsLocked: "Расстановка зафиксирована — партия началась",
-          setupSpectatorReadonly: "Наблюдение: расстановка только для просмотра",
-          mqBest: "Лучший",
-          mqExcellent: "Отлично",
-          mqGood: "Хорошо",
-          mqInaccuracy: "Неточность",
-          mqMistake: "Ошибка",
-          mqBlunder: "Зевок",
-          mqAnalyzing: "Оценка…"
-        },
-        en: {
-          docTitle: "BoardHack — Hack the Board",
-          heroTitleHtml: 'Breach the board. <span class="accent">Capture the flag.</span>',
-          heroDesc: "Dark-ops chess lab. Pick a side, outsmart the bot, force checkmate, and own the position.",
-          playArea: "Play area",
-          mission: "Mission control",
-          session: "Session",
-          history: "Move history",
-          rulesButton: "Rules",
-          rulesTitle: "Rules: customizable chess",
-          rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Setup:</strong> before play, place pieces freely on an empty or standard board.</li><li><strong>Palette:</strong> select a piece (white or black), then a square to place it. Clicking the same piece again removes it; another piece replaces it. A second king of the same color is refused (at most one white and one black king).</li><li><strong>Start:</strong> exactly one white and one black king. If the side to move is already mated — warning, but start is allowed.</li><li><strong>Play:</strong> same as classic — Stockfish, side select, online rooms.</li><li><strong>Multiplayer:</strong> setup FEN is synced; both confirm start or the host starts when ready. Spectators are read-only.</li></ul>",
-          sideSelectLabel: "Play as",
-          diffLabel: "Bot difficulty",
-          diffEasy: "Beginner",
-          diffMedium: "Amateur",
-          diffHard: "Advanced",
-          diffExpert: "Expert",
-          diffMaster: "Master",
-          newGame: "New Game",
-          undo: "Undo",
-          metaSide: "Side",
-          metaTurn: "Turn",
-          metaMoves: "Moves",
-          metaBot: "Bot",
-          sideWhite: "White",
-          sideBlack: "Black",
-          turnYou: "You",
-          turnBot: "Bot",
-          turnOver: "Game over",
-          turnDraw: "Draw",
-          easy: "Beginner",
-          medium: "Amateur",
-          hard: "Advanced",
-          expert: "Expert",
-          master: "Master",
-          emptyMoves: "No moves yet. Make the first strike.",
-          thinking: "bot thinking…",
-          yourMove: "Your move",
-          checkYou: "Check! Your move — defend or counter.",
-          botThinking: "Bot thinking…",
-          botInCheck: "Bot is in check — calculating…",
-          checkmateWin: "Checkmate — {winner}!",
-          kingCaptureWin: "King captured — {winner}!",
-          winnerYou: "you win",
-          winnerBot: "bot wins",
-          winnerOpp: "opponent wins",
-          stalemate: "Stalemate — draw.",
-          drawRepetition: "Draw — threefold repetition.",
-          drawMaterial: "Draw — insufficient material.",
-          draw: "Draw.",
-          menuLabel: "Mode",
-          settingsTitle: "Settings",
-          settingsLangLabel: "Language",
-          menuClassic: "Classic",
-          menuClassicDesc: "Standard chess",
-          menuDice: "Dice Chess",
-          menuDiceDesc: "Move by dice rolls",
-          menuCustom: "Customizable",
-          menuCustomDesc: "Free piece setup before play",
-          modeBadgeClassic: "chess · classic",
-          modeBadgeDice: "chess · dice",
-          modeBadgeCustom: "Chess · Customizable",
-          setupTitle: "Setup",
-          setupHint: "Pick a piece from the palette, then click a square. Click a piece on the board to remove or replace it.",
-          setupClear: "Clear",
-          setupStandard: "Standard position",
-          setupStart: "Start game",
-          setupReady: "Ready",
-          setupReadyDone: "Ready ✓",
-          setupHostStart: "Start (host)",
-          setupTurnLabel: "Side to move",
-          setupNeedKings: "Exactly one white king and one black king are required.",
-          setupWarnMate: "Side to move is already checkmated — you can still start.",
-          setupWarnCheck: "Side to move is in check.",
-          setupInvalid: "Cannot load this position (check kings / check).",
-          setupMpHint: "Setup is shared. Both press Ready, or the host starts when the position is valid.",
-          setupWaitingReady: "Waiting for opponent to ready…",
-          setupPhaseStatus: "Piece setup",
-          setupPaletteEraser: "Remove piece",
-          mpContinueBot: "Opponent left — continuing vs bot",
-          modeSelectLabel: "Mode",
-          modeClassic: "Classic",
-          modeDice: "Dice Chess",
-          diceCountLabel: "Number of dice",
-          diceCount1: "1 die",
-          diceCount2: "2 dice",
-          diceCount3: "3 dice",
-          dicePanelTitle: "Dice roll",
-          diceRemaining: "Still to move: {pieces}",
-          diceDone: "All dice played",
-          diceNone: "—",
-          diceSkip: "Skip: no legal {piece} move",
-          pieceP: "pawn",
-          pieceN: "knight",
-          pieceB: "bishop",
-          pieceR: "rook",
-          pieceQ: "queen",
-          pieceK: "king",
-          yourMoveDice: "Your turn — fulfill all dice",
-          botThinkingDice: "Bot playing dice moves…",
-          mpTitle: "Multiplayer",
-          mpCreate: "Create room",
-          mpJoin: "Join",
-          mpJoinOk: "OK",
-          mpNickLabel: "Nickname",
-          mpNickPlaceholder: "Your nickname",
-          mpSpectate: "Spectate",
-          mpSpectateOk: "OK",
-          mpSpectating: "Spectating",
-          mpSpectatingMeta: "Spectating",
-          mpSpectators: "spectators",
-          mpHint: "Invite a friend with a room code. No account needed.",
-          mpCodeLabel: "Room code",
-          mpCopy: "Copy invite link",
-          mpCopyInvite: "Copy invite link",
-          mpCopySpectate: "Copy spectate link",
-          mpCopied: "Copied",
-          mpLeave: "Leave",
-          mpOffline: "Offline",
-          mpConnecting: "Connecting…",
-          mpConnected: "On server",
-          mpWaiting: "Waiting for opponent…",
-          mpPlaying: "Match live",
-          mpOpponent: "Opponent",
-          mpOpponentGone: "Opponent disconnected",
-          mpError: "Connection error",
-          mpSeatEmpty: "Open",
-          mpPlayerStub: "Player",
-          mpSeatYou: "You",
-          mpSeatOpp: "Opponent",
-          mpSeatOffline: "Offline",
-          mpWaitingHint: "Share the code or link. Bot is disabled.",
-          mpSeatPickHint: "While alone — click a color to switch side",
-          mpBotOff: "Bot disabled in multiplayer",
-          mpRoomFull: "Room is full",
-          mpNotFound: "Room not found",
-          mpWrongMode: "Wrong game mode room",
-          mpYouSpectate: "You are spectating",
-          mpSpectatorCount: "Spectators: {n}",
-          mpRooms: "Rooms",
-          mpRoomsRefresh: "Refresh",
-          mpRoomsEmpty: "No open rooms",
-          mpYourTurn: "Your move (online)",
-          mpOppTurn: "Opponent's turn…",
-          turnOpponent: "Opponent",
-          metaOpp: "Opponent",
-          customSettingsTitle: "Settings",
-          moveAnalysis: "Move analysis",
-          moveAnalysisHint: "This device only",
-          posEval: "Position eval",
-          posEvalHint: "This device only",
-          evalHintLocal: "This device only",
-          evalHintHost: "Shared room setting — host can change it before the start",
-          evalHintGuest: "Only the room creator can turn this on",
-          evalHintLocked: "Locked for the rest of the game",
-          setupSettingsLocked: "Setup locked — the match has started",
-          setupSpectatorReadonly: "Spectating: setup is view-only",
-          mqBest: "Best",
-          mqExcellent: "Excellent",
-          mqGood: "Good",
-          mqInaccuracy: "Inaccuracy",
-          mqMistake: "Mistake",
-          mqBlunder: "Blunder",
-          mqAnalyzing: "Analyzing…"
-        }
-      };
-
-      var lang = "ru";
-      try {
-        var saved = localStorage.getItem(LANG_KEY);
-        if (saved === "en" || saved === "ru") lang = saved;
-      } catch (e) {}
+                  var i18nReady = BoardHackI18n.init({ page: "chess/custom", base: "../../../locales" });
+      var lang = BoardHackI18n.getLang();
 
       function t(key) {
-        var pack = I18N[lang] || I18N.ru;
-        return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+        return BoardHackI18n.t(key);
       }
 
-      function applyStaticLang() {
+function applyStaticLang() {
         document.documentElement.lang = lang;
         document.title = t("docTitle");
         $("#playAreaTitle").text(t("playArea"));
@@ -727,13 +388,13 @@
       }
 
       function setLang(next) {
-        if (next !== "ru" && next !== "en") return;
-        lang = next;
-        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-        applyStaticLang();
-        updateMoveList();
-        updateStatus();
-        if (typeof refreshMoveQualityBadgeLabel === "function") refreshMoveQualityBadgeLabel();
+        BoardHackI18n.setLang(next).then(function () {
+          lang = BoardHackI18n.getLang();
+          applyStaticLang();
+          updateMoveList();
+          updateStatus();
+          if (typeof refreshMoveQualityBadgeLabel === "function") refreshMoveQualityBadgeLabel();
+        });
       }
 
       
@@ -3816,6 +3477,9 @@
       }
 
       $(function () {
+        i18nReady.then(function () {
+        lang = BoardHackI18n.getLang();
+
         syncSideSelect();
         syncModeSelects();
         applyStaticLang();
@@ -4030,8 +3694,8 @@
         if (!isMultiplayer() && !_maybeMp) {
           updateStatus();
         }
+              });
       });
-    
     })();
   </script>
 

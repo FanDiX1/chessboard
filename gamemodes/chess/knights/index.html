@@ -131,7 +131,8 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
+    <script src="../../../js/i18n.js?v=20261002a"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
   <script src="../../../js/stockfish-bot.js"></script>
   <script src="../../../js/drag-scroll-lock.js"></script>
   <script src="../../../js/board-context-guard.js"></script>
@@ -149,130 +150,16 @@
     (function () {
       "use strict";
       var GAME_MODE = "knights";
-      var LANG_KEY = "boardhack-lang";
       var COLOR_KEY = "boardhack-knights-color";
 
-      var I18N = {
-        ru: {
-          docTitle: "BoardHack — Битва коней",
-          playArea: "Игровая зона",
-          mission: "Управление",
-          session: "Сессия",
-          history: "История ходов",
-          rulesButton: "Правила",
-          rulesTitle: "Битва коней — правила",
-          rulesClose: "Закрыть правила",
-          rulesHtml: "<ul><li><strong>Расстановка:</strong> короли и пешки как в классике; все остальные фигуры заменены конями того же цвета.</li><li><strong>Ходы:</strong> кони ходят буквой «Г»; пешки и король — как обычно. Рокировки нет (ладей нет).</li><li><strong>Цель:</strong> мат или взятие короля.</li><li><strong>Бот:</strong> Stockfish по FEN с конями.</li></ul>",
-          sideSelectLabel: "Играть за",
-          diffLabel: "Сложность бота",
-          diffEasy: "Новичок",
-          diffMedium: "Любитель",
-          diffHard: "Продвинутый",
-          diffExpert: "Эксперт",
-          diffMaster: "Мастер",
-          newGame: "Новая игра",
-          undo: "Отмена",
-          metaSide: "Сторона",
-          metaTurn: "Ход",
-          metaMoves: "Ходы",
-          metaBot: "Бот",
-          metaOpp: "Противник",
-          sideWhite: "Белые",
-          sideBlack: "Чёрные",
-          turnYou: "Вы",
-          turnBot: "Бот",
-          turnOver: "Конец игры",
-          turnDraw: "Ничья",
-          easy: "Новичок",
-          medium: "Любитель",
-          hard: "Продвинутый",
-          expert: "Эксперт",
-          master: "Мастер",
-          emptyMoves: "Ходов пока нет. Сделайте первый.",
-          thinking: "бот думает…",
-          yourMove: "Ваш ход",
-          checkYou: "Шах! Ваш ход — защищайтесь или контратакуйте.",
-          botThinking: "Бот думает…",
-          botInCheck: "Бот под шахом — считает…",
-          checkmateWin: "Мат — {winner}!",
-          kingCaptureWin: "Король взят — {winner}!",
-          winnerYou: "вы победили",
-          winnerBot: "победил бот",
-          stalemate: "Пат — ничья.",
-          drawRepetition: "Ничья — троекратное повторение.",
-          drawMaterial: "Ничья — недостаточно материала.",
-          draw: "Ничья.",
-          settingsTitle: "Настройки",
-          settingsLangLabel: "Язык",
-          modeBadge: "шахматы · битва коней"
-        },
-        en: {
-          docTitle: "BoardHack — Knights Battle",
-          playArea: "Play area",
-          mission: "Mission control",
-          session: "Session",
-          history: "Move history",
-          rulesButton: "Rules",
-          rulesTitle: "Knights Battle — rules",
-          rulesClose: "Close rules",
-          rulesHtml: "<ul><li><strong>Setup:</strong> kings and pawns as in classic chess; every other piece is replaced by a same-color knight.</li><li><strong>Moves:</strong> knights move in an L; pawns and kings are normal. No castling (no rooks).</li><li><strong>Goal:</strong> checkmate or capture the king.</li><li><strong>Bot:</strong> Stockfish on the knights FEN.</li></ul>",
-          sideSelectLabel: "Play as",
-          diffLabel: "Bot difficulty",
-          diffEasy: "Beginner",
-          diffMedium: "Amateur",
-          diffHard: "Advanced",
-          diffExpert: "Expert",
-          diffMaster: "Master",
-          newGame: "New Game",
-          undo: "Undo",
-          metaSide: "Side",
-          metaTurn: "Turn",
-          metaMoves: "Moves",
-          metaBot: "Bot",
-          metaOpp: "Opponent",
-          sideWhite: "White",
-          sideBlack: "Black",
-          turnYou: "You",
-          turnBot: "Bot",
-          turnOver: "Game over",
-          turnDraw: "Draw",
-          easy: "Beginner",
-          medium: "Amateur",
-          hard: "Advanced",
-          expert: "Expert",
-          master: "Master",
-          emptyMoves: "No moves yet. Make the first strike.",
-          thinking: "bot thinking…",
-          yourMove: "Your move",
-          checkYou: "Check! Your move — defend or counter.",
-          botThinking: "Bot thinking…",
-          botInCheck: "Bot is in check — calculating…",
-          checkmateWin: "Checkmate — {winner}!",
-          kingCaptureWin: "King captured — {winner}!",
-          winnerYou: "you win",
-          winnerBot: "bot wins",
-          stalemate: "Stalemate — draw.",
-          drawRepetition: "Draw — threefold repetition.",
-          drawMaterial: "Draw — insufficient material.",
-          draw: "Draw.",
-          settingsTitle: "Settings",
-          settingsLangLabel: "Language",
-          modeBadge: "chess · knights battle"
-        }
-      };
-
-      var lang = "ru";
-      try {
-        var saved = localStorage.getItem(LANG_KEY);
-        if (saved === "en" || saved === "ru") lang = saved;
-      } catch (e) {}
+                  var i18nReady = BoardHackI18n.init({ page: "chess/knights", base: "../../../locales" });
+      var lang = BoardHackI18n.getLang();
 
       function t(key) {
-        var pack = I18N[lang] || I18N.ru;
-        return pack[key] != null ? pack[key] : (I18N.en[key] || key);
+        return BoardHackI18n.t(key);
       }
 
-      // Kings + pawns stay; R/N/B/Q → knights. No castling rights.
+// Kings + pawns stay; R/N/B/Q → knights. No castling rights.
       var START_FEN = "nnnnknnn/pppppppp/8/8/8/8/PPPPPPPP/NNNNKNNN w - - 0 1";
       var START_POSITION = {
         a8: "bN", b8: "bN", c8: "bN", d8: "bN", e8: "bK", f8: "bN", g8: "bN", h8: "bN",
@@ -347,12 +234,12 @@
       }
 
       function setLang(next) {
-        if (next !== "ru" && next !== "en") return;
-        lang = next;
-        try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-        applyStaticLang();
-        updateMoveList();
-        updateStatus();
+        BoardHackI18n.setLang(next).then(function () {
+          lang = BoardHackI18n.getLang();
+          applyStaticLang();
+          updateMoveList();
+          updateStatus();
+        });
       }
 
       function wireSettingsMenu() {
@@ -811,6 +698,9 @@
       }
 
       $(function () {
+        i18nReady.then(function () {
+        lang = BoardHackI18n.getLang();
+
         syncSideSelect();
         applyStaticLang();
         wireSettingsMenu();
@@ -856,6 +746,7 @@
         updateMoveList();
         updateStatus();
         if (userColor === "b") scheduleBot(250);
+              });
       });
     })();
   </script>
