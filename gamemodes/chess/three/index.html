@@ -22,8 +22,44 @@
       -webkit-touch-callout: none;
       user-select: none;
     }
+    .three-board .pc.dragging { opacity: 0.28; }
     .three-board .dot { pointer-events: none; }
+    .three-board.is-dragging, .three-board.is-dragging .sq { cursor: grabbing; }
+    .three-drag-ghost {
+      position: fixed;
+      display: none;
+      pointer-events: none;
+      z-index: 40;
+      transform: translate(-50%, -55%);
+      filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
+      -webkit-user-drag: none;
+    }
+    .three-drag-ghost.red { filter: url(#redPiece) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45)); }
     .three-note { margin-top: 0.45rem; color: var(--warn); font-size: 0.92rem; min-height: 1.2em; }
+    .three-page .move-head,
+    .three-page .move-row {
+      display: grid;
+      grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.2rem 0.35rem;
+      align-items: center;
+    }
+    .three-page .move-head {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 0.15rem 0.4rem 0.4rem;
+      margin: -0.15rem 0 0.15rem;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+    .three-page .move-row { padding: 0.28rem 0.4rem; }
+    .three-page .move-san {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .rules-dialog .rules-box p { margin: 0 0 0.7rem; color: var(--text-muted); }
   </style>
 </head>
@@ -60,6 +96,7 @@
           <div class="three-board" id="boardMount">
             <svg id="boardSvg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 640 640" role="img" aria-label="Three-player board"></svg>
           </div>
+          <img id="dragGhost" class="three-drag-ghost" alt="" draggable="false" />
         </div>
       </section>
 
@@ -136,8 +173,10 @@
     <div class="rules-box" id="rulesBox"></div>
   </dialog>
 
-  <script src="../../../js/i18n.js?v=20261003b"></script>
-  <script src="three-chess.js?v=20261003b"></script>
-  <script src="three-ui.js?v=20261003b"></script>
+  <script src="../../../js/i18n.js?v=20261003c"></script>
+  <script src="../../../js/drag-scroll-lock.js"></script>
+  <script src="../../../js/board-context-guard.js"></script>
+  <script src="three-chess.js?v=20261003c"></script>
+  <script src="three-ui.js?v=20261003c"></script>
 </body>
 </html>
