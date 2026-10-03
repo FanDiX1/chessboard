@@ -173,11 +173,19 @@
   }
 
   function undo() {
+    if (isMultiplayer()) return;
     if (locked || !past.length) return;
     clearBot();
-    state = past.pop();
     selected = null;
     note = "";
+    // Like classic: undo the human ply and every bot reply after it,
+    // so bots do not immediately replay the same sequence.
+    while (past.length && !isHuman(past[past.length - 1].turn)) {
+      state = past.pop();
+    }
+    if (past.length && isHuman(past[past.length - 1].turn)) {
+      state = past.pop();
+    }
     render();
     scheduleBot();
   }
