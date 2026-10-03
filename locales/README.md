@@ -19,6 +19,7 @@
     "chess/dice": { "...": "..." },
     "chess/atomic": { "...": "..." },
     "chess/knights": { "...": "..." },
+    "chess/three": { "...": "..." },
     "checkers/classic": { "...": "..." },
     "checkers/custom": { "...": "..." }
   }
