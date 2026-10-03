@@ -42,6 +42,19 @@
     }
     .three-drag-ghost.red { filter: url(#redPiece) drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45)); }
     .three-note { margin-top: 0.45rem; color: var(--warn); font-size: 0.92rem; min-height: 1.2em; }
+    .three-page .three-move-panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #14181d;
+      overflow: hidden;
+    }
+    .three-page .three-move-panel .move-list {
+      border: none;
+      border-radius: 0;
+      background: #14181d;
+      padding: 0.2rem 0.5rem 0.5rem;
+      max-height: 240px;
+    }
     .three-page .move-head,
     .three-page .move-row {
       display: grid;
@@ -50,16 +63,17 @@
       align-items: center;
     }
     .three-page .move-head {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      padding: 0.15rem 0.4rem 0.4rem;
-      margin: -0.15rem 0 0.15rem;
+      position: relative;
+      z-index: 2;
+      padding: 0.45rem 0.65rem 0.4rem;
+      margin: 0;
       color: var(--text-muted);
       font-size: 0.72rem;
-      background: var(--bg-elevated);
+      background: #14181d;
       border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
     }
+    .three-page .move-head[hidden] { display: none !important; }
     .three-page .move-row { padding: 0.28rem 0.4rem; }
     .three-page .move-san {
       overflow: hidden;
@@ -219,7 +233,10 @@
 
         <section class="card">
           <div class="card-title" id="historyTitle">История ходов</div>
-          <div class="move-list" id="moveList"></div>
+          <div class="three-move-panel">
+            <div class="move-head" id="moveHead" hidden></div>
+            <div class="move-list" id="moveList"></div>
+          </div>
         </section>
       </aside>
     </div>
@@ -256,6 +273,6 @@
   <script src="../../../js/drag-scroll-lock.js"></script>
   <script src="../../../js/board-context-guard.js"></script>
   <script src="three-chess.js?v=20261003c"></script>
-  <script src="three-ui.js?v=20261003e"></script>
+  <script src="three-ui.js?v=20261003f"></script>
 </body>
 </html>

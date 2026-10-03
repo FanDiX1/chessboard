@@ -595,8 +595,13 @@
     setText("moveCount", String(state.log.length));
 
     var list = document.getElementById("moveList");
+    var head = document.getElementById("moveHead");
     if (list) {
       if (!state.log.length) {
+        if (head) {
+          head.hidden = true;
+          head.innerHTML = "";
+        }
         list.innerHTML = '<div class="empty-moves"></div>';
         list.querySelector(".empty-moves").textContent = t("emptyMoves");
       } else {
@@ -607,9 +612,13 @@
           if (buckets[mv.mover]) buckets[mv.mover].push(mv);
         }
         var rows = Math.max(buckets.w.length, buckets.r.length, buckets.b.length);
-        var html = '<div class="move-head"><span></span>';
-        for (var hc = 0; hc < cols.length; hc++) html += "<span>" + colorName(cols[hc]) + "</span>";
-        html += "</div>";
+        if (head) {
+          var headHtml = "<span></span>";
+          for (var hc = 0; hc < cols.length; hc++) headHtml += "<span>" + colorName(cols[hc]) + "</span>";
+          head.innerHTML = headHtml;
+          head.hidden = false;
+        }
+        var html = "";
         for (var ri = 0; ri < rows; ri++) {
           html += '<div class="move-row"><span class="move-num">' + (ri + 1) + ".</span>";
           for (var cc = 0; cc < cols.length; cc++) {
