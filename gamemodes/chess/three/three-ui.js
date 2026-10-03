@@ -6,6 +6,7 @@
   var past = [];
   var human = "w";
   var first = "w";
+  var firstPref = "lot";
   var selected = null;
   var locked = false;
   var botTimer = null;
