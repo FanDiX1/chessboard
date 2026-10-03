@@ -19,7 +19,7 @@ Health check: `GET http://localhost:3001/health`
 Open a game mode in a browser:
 
 - Static site: open `/gamemodes/chess/classic/` or `/gamemodes/checkers/*/` (or serve the repo root; directory indexes resolve to `index.html`).
-- Default production server: `https://chessboard-ulhg.onrender.com`
+- Default production server: `https://chessboard-main.onrender.com`
 - Local: `http://localhost:3001` — override via `?server=http://HOST:3001`
 - Join/invite link (open seat): `...?join=ABC123` or `...?room=ABC123` (optional `&server=...`)
 - Spectate link (both seats filled): `...?spectate=ABC123`
@@ -75,4 +75,4 @@ Checkers rooms use a draughts-style board FEN (`w/W` white man/king, `b/B` black
 
 ## Deploy note
 
-After pulling server changes (chess-custom shared `moveAnalysis`/`posEval`, `settingsLocked`, `customSettingsUpdated`), **redeploy the Render service** (`https://chessboard-ulhg.onrender.com`) so production picks up the update.
+After pulling server changes (chess-custom shared `moveAnalysis`/`posEval`, `settingsLocked`, `customSettingsUpdated`), **redeploy the Render service** (`https://chessboard-main.onrender.com`) so production picks up the update.

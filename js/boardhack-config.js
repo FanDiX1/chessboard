@@ -10,7 +10,7 @@
   "use strict";
 
   return {
-    defaultServer: "https://chessboard-ulhg.onrender.com",
+    defaultServer: "https://chessboard-main.onrender.com",
     pieceTheme:
       "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png",
     standardStartFen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
