@@ -371,7 +371,9 @@
       "statusStale": "Stalemate — {name} is out and the pieces are removed.",
       "statusWin": "{name} wins",
       "thinking": "bot is thinking…",
-      "youSuffix": "you"
+      "youSuffix": "you",
+      "firstMoveLabel": "First move",
+      "firstMoveLottery": "Lottery"
     }
   }
 }

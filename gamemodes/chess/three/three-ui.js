@@ -6,6 +6,7 @@
   var past = [];
   var human = "w";
   var first = "w";
+  var firstChoice = "lot";
   var selected = null;
   var locked = false;
   var botTimer = null;
@@ -16,7 +17,7 @@
     "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
   var PIECE_SIZE = 58;
 
-  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003b" });
+  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003d" });
 
   function t(key) { return BoardHackI18n.t(key); }
   function fill(template, map) {
@@ -54,6 +55,8 @@
     setText("metaTurnK", t("metaTurn"));
     setText("historyTitle", t("history"));
     setText("settingsTitle", t("settingsTitle"));
+    setText("boardSettingsTitle", t("settingsTitle"));
+    setText("firstMoveLabel", t("firstMoveLabel"));
     setText("settingsLangLabel", t("settingsLangLabel"));
     var rules = document.getElementById("rulesBox");
     if (rules) rules.innerHTML = t("rulesHtml");
@@ -62,6 +65,13 @@
       var opts = sel.options;
       var labels = [t("sideWhite"), t("sideRed"), t("sideBlack"), t("sideHotseat")];
       for (var i = 0; i < opts.length && i < labels.length; i++) opts[i].textContent = labels[i];
+    }
+    var firstSel = document.getElementById("firstMoveSelect");
+    if (firstSel) {
+      var flabels = [t("firstMoveLottery"), t("sideWhite"), t("sideRed"), t("sideBlack")];
+      for (var fi = 0; fi < firstSel.options.length && fi < flabels.length; fi++) {
+        firstSel.options[fi].textContent = flabels[fi];
+      }
     }
     var gear = document.getElementById("settingsMenuBtn");
     if (gear) {
@@ -119,8 +129,12 @@
 
   function newGame() {
     clearBot();
-    var order = ThreeChess.COLORS.slice();
-    first = order[Math.floor(Math.random() * order.length)];
+    if (firstChoice === "w" || firstChoice === "r" || firstChoice === "b") {
+      first = firstChoice;
+    } else {
+      var order = ThreeChess.COLORS.slice();
+      first = order[Math.floor(Math.random() * order.length)];
+    }
     state = ThreeChess.newGame(first);
     past = [];
     selected = null;
@@ -418,6 +432,7 @@
     };
     if (typeof lockDragScroll === "function") lockDragScroll();
     selected = key;
+    render();
   }
 
   function onPointerMove(e) {
@@ -481,11 +496,18 @@
         }
       }
     }
+    var caps = [];
     for (var di in dest) {
       if (!Object.prototype.hasOwnProperty.call(dest, di)) continue;
       var parsed = ThreeChess.parse(di);
-      var center = ThreeChess.toSvg(ThreeChess.cellCenter(parsed.c, parsed.r, parsed.f), SIZE);
-      chunks.push('<circle class="dot" data-key="' + di + '" cx="' + center[0].toFixed(1) + '" cy="' + center[1].toFixed(1) + '" r="7" fill="#9fef00" fill-opacity="0.9" />');
+      if (state.board[di]) {
+        var cpts = ThreeChess.cellPolygon(parsed.c, parsed.r, parsed.f).map(function (p) { return ThreeChess.toSvg(p, SIZE); });
+        var cpoints = cpts.map(function (p) { return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ");
+        caps.push('<polygon class="cap" points="' + cpoints + '" />');
+      } else {
+        var center = ThreeChess.toSvg(ThreeChess.cellCenter(parsed.c, parsed.r, parsed.f), SIZE);
+        chunks.push('<circle class="dot" data-key="' + di + '" cx="' + center[0].toFixed(1) + '" cy="' + center[1].toFixed(1) + '" r="7" fill="#9fef00" fill-opacity="0.9" />');
+      }
     }
     chunks.unshift(
       '<defs><filter id="redPiece" color-interpolation-filters="sRGB">' +
@@ -507,6 +529,7 @@
         '"' + filter + " />"
       );
     }
+    for (var ci2 = 0; ci2 < caps.length; ci2++) chunks.push(caps[ci2]);
     svg.innerHTML = chunks.join("");
 
     var turnName = colorName(state.turn);
@@ -582,6 +605,10 @@
     clearBot();
     render();
     scheduleBot();
+  });
+  document.getElementById("firstMoveSelect").addEventListener("change", function (e) {
+    firstChoice = e.target.value || "lot";
+    newGame();
   });
 
   try {

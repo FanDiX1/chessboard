@@ -362,7 +362,7 @@
       "emptyMoves": "Ходов пока нет. Сделайте первый.",
       "session": "Сессия",
       "metaTurn": "Ход",
-      "metaFirst": "Жребий",
+      "metaFirst": "Первый ход",
       "statusYour": "Ваш ход",
       "statusWait": "Ход: {name}",
       "statusBot": "{name} думает…",
@@ -371,7 +371,9 @@
       "statusStale": "Пат — {name} выбывает, фигуры сняты.",
       "statusWin": "Победили {name}",
       "thinking": "бот думает…",
-      "youSuffix": "вы"
+      "youSuffix": "вы",
+      "firstMoveLabel": "Первый ход",
+      "firstMoveLottery": "Жребий"
     }
   }
 }
