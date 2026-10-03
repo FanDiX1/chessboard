@@ -110,13 +110,12 @@
         <section class="card">
           <div class="card-title" id="missionTitle">Управление</div>
           <div class="controls">
-            <div>
+            <div id="sideSelectWrap">
               <label class="field-label" for="sideSelect" id="sideSelectLabel">Играть за</label>
               <select id="sideSelect">
-                <option value="w">Белые</option>
-                <option value="r">Красные</option>
-                <option value="b">Чёрные</option>
-                <option value="hot">Втроём</option>
+                <option value="w" selected>Белый</option>
+                <option value="r">Красный</option>
+                <option value="b">Чёрный</option>
               </select>
             </div>
             <div class="btn-row">
@@ -127,19 +126,77 @@
           </div>
         </section>
 
-        <section class="card" id="boardSettingsCard">
-          <div class="card-title" id="boardSettingsTitle">Настройки</div>
-          <div class="controls">
-            <div>
-              <label class="field-label" for="firstMoveSelect" id="firstMoveLabel">Первый ход</label>
-              <select id="firstMoveSelect">
-                <option value="lot">Жребий</option>
-                <option value="w">Белые</option>
-                <option value="r">Красные</option>
-                <option value="b">Чёрные</option>
-              </select>
+        <section class="card mp-card" id="mpCard">
+          <div class="card-title" id="mpTitle">Мультиплеер</div>
+          <div class="mp-conn" id="mpConnRow">
+            <span class="mp-conn-dot" id="mpConnDot"></span>
+            <span id="mpConnText">офлайн</span>
+          </div>
+          <div class="mp-nick-row" id="mpNickRow">
+            <label class="field-label" for="mpNick" id="mpNickLabel">Ник</label>
+            <input type="text" id="mpNick" maxlength="24" autocomplete="nickname" spellcheck="false" placeholder="" />
+          </div>
+          <div id="mpLobby">
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" id="mpCreateBtn">Создать комнату</button>
+              <button type="button" class="btn btn-ghost" id="mpJoinToggleBtn">Войти</button>
+              <button type="button" class="btn btn-ghost" id="mpSpectateToggleBtn">Наблюдать</button>
+            </div>
+            <div id="mpJoinPanel" class="mp-hidden" style="margin-top:0.65rem">
+              <div class="mp-join-row">
+                <input type="text" id="mpJoinCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
+                <button type="button" class="btn btn-primary" id="mpJoinBtn">OK</button>
+              </div>
+            </div>
+            <div id="mpSpectatePanel" class="mp-hidden" style="margin-top:0.65rem">
+              <div class="mp-join-row">
+                <input type="text" id="mpSpectateCode" maxlength="8" autocomplete="off" spellcheck="false" placeholder="КОД" />
+                <button type="button" class="btn btn-primary" id="mpSpectateBtn">OK</button>
+              </div>
+            </div>
+            <p class="mp-hint" id="mpHint">Пригласите друга по коду. Аккаунт не нужен.</p>
+            <div class="mp-room-list" id="mpRoomListSection">
+              <div class="mp-room-list-head">
+                <span class="mp-room-list-title" id="mpRoomsTitle">Комнаты</span>
+                <button type="button" class="btn btn-ghost mp-rooms-refresh" id="mpRoomsRefreshBtn">Обновить</button>
+              </div>
+              <div class="mp-rooms-list" id="mpRoomsList"></div>
+              <p class="mp-hint" id="mpRoomsEmpty">Нет открытых комнат</p>
             </div>
           </div>
+          <div id="mpActive" class="mp-hidden">
+            <div class="mp-code-box">
+              <div class="mp-code-label" id="mpCodeLabel">Код комнаты</div>
+              <div class="mp-code-value" id="mpCodeValue">------</div>
+              <div class="mp-share-link" id="mpShareLink"></div>
+            </div>
+            <div class="mp-seats">
+              <div class="mp-seat" id="mpSeatW" role="button" tabindex="0">White — …</div>
+              <div class="mp-seat" id="mpSeatR" role="button" tabindex="0">Red — …</div>
+              <div class="mp-seat" id="mpSeatB" role="button" tabindex="0">Black — …</div>
+            </div>
+            <p class="mp-seat-pick-hint mp-hidden" id="mpSeatPickHint"></p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-ghost" id="mpCopyBtn">Копировать приглашение</button>
+              <button type="button" class="btn btn-ghost" id="mpLeaveBtn">Выйти</button>
+              <button type="button" class="btn btn-primary mp-hidden" id="mpResetBtn">Новая игра</button>
+            </div>
+            <p class="mp-hint mp-hidden" id="mpSpectateBanner"></p>
+            <p class="mp-copy-toast" id="mpCopyToast" role="status" aria-live="polite"></p>
+            <p class="mp-hint" id="mpSpectatorCount"></p>
+            <p class="mp-hint" id="mpActiveHint"></p>
+          </div>
+        </section>
+
+        <section class="card" id="firstMoveCard">
+          <div class="card-title" id="settingsCardTitle">Настройки</div>
+          <label class="field-label" for="firstMoveSelect" id="firstMoveLabel">Первый ход</label>
+          <select id="firstMoveSelect">
+            <option value="lot" selected>Жребий</option>
+            <option value="w">Белый</option>
+            <option value="r">Красный</option>
+            <option value="b">Чёрный</option>
+          </select>
         </section>
 
         <section class="card">
@@ -194,10 +251,11 @@
     <div class="rules-box" id="rulesBox"></div>
   </dialog>
 
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="../../../js/i18n.js?v=20261003d"></script>
   <script src="../../../js/drag-scroll-lock.js"></script>
   <script src="../../../js/board-context-guard.js"></script>
-  <script src="three-chess.js?v=20261003d"></script>
+  <script src="three-chess.js?v=20261003c"></script>
   <script src="three-ui.js?v=20261003d"></script>
 </body>
 </html>

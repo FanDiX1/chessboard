@@ -9,6 +9,9 @@ const PORT = Number(process.env.PORT) || 3001;
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const KNIGHTS_START_FEN = "nnnnknnn/pppppppp/8/8/8/8/PPPPPPPP/NNNNKNNN w - - 0 1";
 const ATOMIC_START_FEN = START_FEN;
+const ThreeChess = require("../gamemodes/chess/three/three-chess.js");
+const TWO_SEATS = ["w", "b"];
+const THREE_SEATS = ["w", "r", "b"];
 // Russian draughts: dark squares only; w/W white man/king, b/B black; white to move
 const CHECKERS_START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
@@ -40,7 +43,7 @@ const rooms = new Map();
 /**
  * @typedef {Object} Room
  * @property {string} code
- * @property {string} mode  // classic | dice | custom | knights | atomic | checkers | checkers-custom
+ * @property {string} mode  // classic | dice | custom | knights | atomic | three | checkers | checkers-custom
  * @property {string} fen
  * @property {{from:string,to:string,san:string,color:string}|null} lastMove
  * @property {string[]} plySans
@@ -128,17 +131,19 @@ function publicRoom(room, forClientId) {
   let yourSeat = null;
   let yourRole = null;
   if (forClientId) {
-    if (room.seats.w && room.seats.w.clientId === forClientId) {
-      yourSeat = "w";
-      yourRole = "player";
-    } else if (room.seats.b && room.seats.b.clientId === forClientId) {
-      yourSeat = "b";
-      yourRole = "player";
-    } else if (findSpectator(room, forClientId)) {
-      yourRole = "spectator";
+    for (const color of seatColorsOf(room)) {
+      const seat = room.seats[color];
+      if (seat && seat.clientId === forClientId) {
+        yourSeat = color;
+        yourRole = "player";
+        break;
+      }
     }
+    if (!yourRole && findSpectator(room, forClientId)) yourRole = "spectator";
   }
-  const turn = room.fen.split(" ")[1] || "w";
+  const turn = room.mode === "three"
+    ? ((room.threeState && room.threeState.turn) || room.fen.split(" ")[1] || "w")
+    : (room.fen.split(" ")[1] || "w");
   return {
     code: room.code,
     mode: room.mode,
@@ -146,10 +151,20 @@ function publicRoom(room, forClientId) {
     lastMove: room.lastMove,
     plySans: room.plySans.slice(),
     diceTurnLog: Array.isArray(room.diceTurnLog) ? room.diceTurnLog : [],
-    seats: {
-      w: seatPublic(room.seats.w),
-      b: seatPublic(room.seats.b),
-    },
+    seats: room.mode === "three"
+      ? {
+          w: seatPublic(room.seats.w),
+          r: seatPublic(room.seats.r),
+          b: seatPublic(room.seats.b),
+        }
+      : {
+          w: seatPublic(room.seats.w),
+          b: seatPublic(room.seats.b),
+        },
+    firstMove: room.mode === "three" ? sanitizeFirstMove(room.firstMove) : null,
+    firstRolled: room.mode === "three" ? (room.firstRolled || null) : null,
+    threeState: room.mode === "three" ? (room.threeState || null) : null,
+    threeStarted: room.mode === "three" ? !!room.threeStarted : null,
     hostId: room.hostId,
     status: room.status,
     turn,
@@ -161,9 +176,11 @@ function publicRoom(room, forClientId) {
     customSettings: room.mode === "checkers-custom"
       ? sanitizeCustomSettings(room.customSettings)
       : (isChessCustomMode(room.mode) ? sanitizeChessCustomSettings(room.customSettings) : null),
-    settingsLocked: room.mode === "checkers-custom"
-      ? isCheckersCustomSettingsLocked(room)
-      : (isChessCustomMode(room.mode) ? isChessCustomSettingsLocked(room) : null),
+    settingsLocked: room.mode === "three"
+      ? !!room.threeStarted
+      : (room.mode === "checkers-custom"
+        ? isCheckersCustomSettingsLocked(room)
+        : (isChessCustomMode(room.mode) ? isChessCustomSettingsLocked(room) : null)),
     chain: room.checkersChain || null,
     phase: isChessCustomMode(room.mode) ? (room.phase === "play" ? "play" : "setup") : null,
     setupReady: isChessCustomMode(room.mode)
@@ -179,16 +196,51 @@ function touch(room) {
   room.updatedAt = Date.now();
 }
 
+function seatColorsOf(room) {
+  return room && room.mode === "three" ? THREE_SEATS : TWO_SEATS;
+}
+
+function sanitizeFirstMove(raw) {
+  return raw === "w" || raw === "r" || raw === "b" ? raw : "lot";
+}
+
 function findSeatByClient(room, clientId) {
-  if (room.seats.w && room.seats.w.clientId === clientId) return "w";
-  if (room.seats.b && room.seats.b.clientId === clientId) return "b";
+  for (const color of seatColorsOf(room)) {
+    if (room.seats[color] && room.seats[color].clientId === clientId) return color;
+  }
   return null;
+}
+
+function allThreeSeated(room) {
+  return !!(room.seats.w && room.seats.r && room.seats.b);
+}
+
+function maybeStartThree(room) {
+  if (!room || room.mode !== "three") return;
+  if (room.status === "finished") return;
+  if (!allThreeSeated(room)) {
+    room.status = "waiting";
+    return;
+  }
+  if (!room.threeStarted) {
+    const pref = sanitizeFirstMove(room.firstMove);
+    const first = pref === "lot" ? THREE_SEATS[Math.floor(Math.random() * 3)] : pref;
+    room.firstRolled = first;
+    room.threeState = ThreeChess.newGame(first);
+    room.fen = "three " + room.threeState.turn;
+    room.plySans = [];
+    room.lastMove = null;
+    room.threeStarted = true;
+  } else if (room.threeState && room.threeState.turn) {
+    room.fen = "three " + room.threeState.turn;
+  }
+  room.status = room.threeState && room.threeState.over ? "finished" : "playing";
 }
 
 function emitRoom(room) {
   io.to(room.code).emit("roomState", { room: publicRoom(room, null) });
   // Personalized copies for seated players
-  for (const color of ["w", "b"]) {
+  for (const color of seatColorsOf(room)) {
     const seat = room.seats[color];
     if (seat && seat.socketId) {
       io.to(seat.socketId).emit("roomState", { room: publicRoom(room, seat.clientId) });
@@ -211,6 +263,7 @@ function normalizeMode(mode) {
   if (mode === "checkers" || mode === "checkers-classic") return "checkers";
   if (mode === "knights" || mode === "chess-knights") return "knights";
   if (mode === "atomic" || mode === "chess-atomic") return "atomic";
+  if (mode === "three" || mode === "chess-three") return "three";
   return "classic";
 }
 
@@ -340,6 +393,7 @@ function startFenForMode(mode) {
   if (isChessCustomMode(mode)) return CUSTOM_EMPTY_FEN;
   if (mode === "knights") return KNIGHTS_START_FEN;
   if (mode === "atomic") return ATOMIC_START_FEN;
+  if (mode === "three") return "three w";
   return START_FEN;
 }
 
@@ -354,7 +408,11 @@ function createRoom(clientId, mode) {
     lastMove: null,
     plySans: [],
     diceTurnLog: [],
-    seats: { w: null, b: null },
+    seats: { w: null, r: null, b: null },
+    firstMove: norm === "three" ? "lot" : null,
+    firstRolled: null,
+    threeState: norm === "three" ? ThreeChess.newGame("w") : null,
+    threeStarted: false,
     spectators: new Map(),
     hostId: clientId,
     status: "waiting",
@@ -397,19 +455,22 @@ function seatPlayer(room, color, clientId, socketId, nick) {
   // Seated players leave spectator list
   removeSpectator(room, clientId);
   touch(room);
-  if (room.seats.w && room.seats.b) {
+  if (room.mode === "three") {
+    maybeStartThree(room);
+  } else if (room.seats.w && room.seats.b) {
     room.status = room.status === "finished" ? room.status : "playing";
   }
 }
 
 function hasSeatedPlayers(room) {
-  return !!(room.seats && (room.seats.w || room.seats.b));
+  if (!room || !room.seats) return false;
+  return seatColorsOf(room).some((c) => !!room.seats[c]);
 }
 
 function transferHostIfNeeded(room, leavingClientId) {
   if (!room || room.hostId !== leavingClientId) return;
   let next = null;
-  for (const color of ["w", "b"]) {
+  for (const color of seatColorsOf(room)) {
     const s = room.seats[color];
     if (s && s.clientId && s.clientId !== leavingClientId) {
       next = s.clientId;
@@ -438,11 +499,11 @@ function destroyRoom(room, reason) {
   if (!room || !rooms.has(room.code)) return false;
   const code = room.code;
   const mode = room.mode;
-  for (const color of ["w", "b"]) {
+  for (const color of seatColorsOf(room)) {
     if (room.seats[color]) clearSeatOfflineTimer(room.seats[color]);
   }
   io.to(code).emit("roomEnded", { code, reason: reason || "empty" });
-  for (const color of ["w", "b"]) {
+  for (const color of seatColorsOf(room)) {
     const s = room.seats[color];
     if (s) clearSocketRoomBinding(s.socketId, code);
     room.seats[color] = null;
@@ -516,7 +577,7 @@ function freeSocketFromOtherRooms(socketId, keepCode) {
   for (const room of [...rooms.values()]) {
     if (room.code === keepCode) continue;
     let touchedSpec = false;
-    for (const color of ["w", "b"]) {
+    for (const color of seatColorsOf(room)) {
       const s = room.seats[color];
       if (s && s.socketId === socketId) {
         vacateSeat(room, color, { reason: "joined_elsewhere" });
@@ -545,17 +606,18 @@ function roomIsNonEmpty(room) {
 }
 
 function roomListEntry(room) {
-  const w = room.seats && room.seats.w;
-  const b = room.seats && room.seats.b;
-  const openSeats = (w ? 0 : 1) + (b ? 0 : 1);
+  const colors = seatColorsOf(room);
+  const seats = {};
+  let openSeats = 0;
+  for (const color of colors) {
+    const seat = room.seats && room.seats[color];
+    seats[color] = seat ? sanitizeNick(seat.nick || "") : null;
+    if (!seat) openSeats++;
+  }
   return {
     code: room.code,
     mode: room.mode,
-    seats: {
-      // null = empty seat; "" = occupied but no nick (client shows stub)
-      w: w ? sanitizeNick(w.nick || "") : null,
-      b: b ? sanitizeNick(b.nick || "") : null,
-    },
+    seats,
     spectatorCount: spectatorCount(room),
     createdAt: room.createdAt || room.updatedAt || 0,
     joinable: openSeats > 0,
@@ -579,7 +641,7 @@ function lobbyChannel(mode) {
   return "lobby:" + normalizeMode(mode);
 }
 
-const LOBBY_MODES = ["classic", "dice", "custom", "knights", "atomic", "checkers", "checkers-custom"];
+const LOBBY_MODES = ["classic", "dice", "custom", "knights", "atomic", "three", "checkers", "checkers-custom"];
 
 function broadcastRoomList(modeOrRoom) {
   let modes;
@@ -627,10 +689,20 @@ io.on("connection", (socket) => {
       const clientId = String((payload && payload.clientId) || "");
       if (!clientId) return ack && ack({ ok: false, error: "clientId required" });
       const mode = (payload && payload.mode) || "classic";
-      const preferred = payload && (payload.preferredSeat === "b" ? "b" : "w");
+      const normPreview = normalizeMode(mode);
+      let preferred = "w";
+      const prefSeat = payload && payload.preferredSeat;
+      if (normPreview === "three" && (prefSeat === "w" || prefSeat === "r" || prefSeat === "b")) {
+        preferred = prefSeat;
+      } else if (prefSeat === "b") {
+        preferred = "b";
+      }
 
       freeSocketFromOtherRooms(socket.id, null);
       const room = createRoom(clientId, mode);
+      if (room.mode === "three") {
+        room.firstMove = sanitizeFirstMove(payload && (payload.firstMove || (payload.customSettings && payload.customSettings.firstMove)));
+      }
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       if (room.mode === "checkers-custom" && payload && payload.customSettings) {
@@ -685,9 +757,14 @@ io.on("connection", (socket) => {
       // Reclaim own seat if reconnecting via join
       let seat = findSeatByClient(room, clientId);
       if (!seat) {
-        if (!room.seats.w) seat = "w";
-        else if (!room.seats.b) seat = "b";
-        else return ack && ack({ ok: false, error: "room_full" });
+        const pref = payload && payload.preferredSeat;
+        if (pref && seatColorsOf(room).indexOf(pref) >= 0 && !room.seats[pref]) seat = pref;
+        if (!seat) {
+          for (const color of seatColorsOf(room)) {
+            if (!room.seats[color]) { seat = color; break; }
+          }
+        }
+        if (!seat) return ack && ack({ ok: false, error: "room_full" });
       }
 
       freeSocketFromOtherRooms(socket.id, code);
@@ -822,19 +899,29 @@ io.on("connection", (socket) => {
       const code = String((payload && payload.code) || socket.data.roomCode || "")
         .toUpperCase()
         .trim();
-      const want = payload && payload.seat === "b" ? "b" : "w";
+      const rawSeat = payload && payload.seat;
       if (!clientId || !code) return ack && ack({ ok: false, error: "clientId and code required" });
 
       const room = rooms.get(code);
       if (!room) return ack && ack({ ok: false, error: "room_not_found" });
+      const allowed = seatColorsOf(room);
+      const want = allowed.indexOf(rawSeat) >= 0 ? rawSeat : (room.mode === "three" ? null : "w");
+      if (!want) return ack && ack({ ok: false, error: "invalid_seat" });
 
       const current = findSeatByClient(room, clientId);
       if (!current) return ack && ack({ ok: false, error: "not_a_member" });
 
-      const occupied = (room.seats.w ? 1 : 0) + (room.seats.b ? 1 : 0);
-      // Alone in room → can switch; once opponent occupies the other seat, locked.
-      if (occupied !== 1) {
-        return ack && ack({ ok: false, error: "seats_locked" });
+      if (room.mode === "three") {
+        if (room.threeStarted) return ack && ack({ ok: false, error: "seats_locked" });
+        if (want !== current && room.seats[want]) {
+          return ack && ack({ ok: false, error: "seats_locked" });
+        }
+      } else {
+        const occupied = (room.seats.w ? 1 : 0) + (room.seats.b ? 1 : 0);
+        // Alone in room → can switch; once opponent occupies the other seat, locked.
+        if (occupied !== 1) {
+          return ack && ack({ ok: false, error: "seats_locked" });
+        }
       }
 
       if (want === current) {
@@ -886,6 +973,38 @@ io.on("connection", (socket) => {
         return ack && ack({ ok: false, error: "setup_phase" });
       }
       if (room.status === "waiting") return ack && ack({ ok: false, error: "waiting_for_opponent" });
+
+      if (room.mode === "three") {
+        if (!room.threeStarted || !room.threeState || room.status !== "playing") {
+          return ack && ack({ ok: false, error: "waiting_for_opponent" });
+        }
+        const turn = room.threeState.turn;
+        if (seat !== turn) return ack && ack({ ok: false, error: "not_your_turn" });
+        const from = payload && payload.from ? String(payload.from) : "";
+        const to = payload && payload.to ? String(payload.to) : "";
+        if (!from || !to) return ack && ack({ ok: false, error: "invalid_move_payload" });
+        const res = ThreeChess.move(room.threeState, from, to);
+        if (!res.ok) return ack && ack({ ok: false, error: res.error || "illegal" });
+        const san = ThreeChess.label(from) + "-" + ThreeChess.label(to);
+        room.fen = "three " + (room.threeState.turn || turn);
+        room.lastMove = { from, to, san, color: seat };
+        room.plySans.push(san);
+        if (room.threeState.over) room.status = "finished";
+        touch(room);
+        const movePayload = {
+          move: room.lastMove,
+          fen: room.fen,
+          plySans: room.plySans.slice(),
+          status: room.status,
+          by: seat,
+          threeState: room.threeState,
+          notes: res.notes || [],
+        };
+        io.to(code).emit("moveApplied", movePayload);
+        emitRoom(room);
+        if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
+        return;
+      }
 
       const isStateSync = !!(payload && (payload.stateSync || payload.pass));
       const turn = room.fen.split(" ")[1] || "w";
@@ -996,6 +1115,22 @@ io.on("connection", (socket) => {
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
       if (room.mode === "checkers-custom" && payload && payload.customSettings) {
         room.customSettings = sanitizeCustomSettings(payload.customSettings);
+      }
+
+      if (room.mode === "three") {
+        room.threeStarted = false;
+        room.firstRolled = null;
+        room.threeState = ThreeChess.newGame("w");
+        room.fen = "three w";
+        room.lastMove = null;
+        room.plySans = [];
+        room.status = "waiting";
+        maybeStartThree(room);
+        touch(room);
+        io.to(code).emit("gameReset", { room: publicRoom(room, null) });
+        emitRoom(room);
+        if (typeof ack === "function") ack({ ok: true, room: publicRoom(room, clientId) });
+        return;
       }
 
       room.fen = startFenForMode(room.mode);
@@ -1148,6 +1283,49 @@ io.on("connection", (socket) => {
         .trim();
       const room = rooms.get(code);
       if (!room) return ack && ack({ ok: false, error: "room_not_found" });
+      if (room.mode === "three") {
+        const member = findSeatByClient(room, clientId);
+        if (!member) return ack && ack({ ok: false, error: "not_a_member" });
+        const currentFirst = sanitizeFirstMove(room.firstMove);
+        if (room.threeStarted) {
+          return ack && ack({
+            ok: false,
+            error: "settings_locked",
+            firstMove: currentFirst,
+            settingsLocked: true,
+            room: publicRoom(room, clientId),
+          });
+        }
+        if (room.hostId !== clientId) {
+          return ack && ack({
+            ok: false,
+            error: "host_only",
+            firstMove: currentFirst,
+            settingsLocked: false,
+            room: publicRoom(room, clientId),
+          });
+        }
+        const rawFirst = (payload && payload.firstMove)
+          || (payload && payload.customSettings && payload.customSettings.firstMove);
+        room.firstMove = sanitizeFirstMove(rawFirst);
+        touch(room);
+        io.to(code).emit("customSettingsUpdated", {
+          code: room.code,
+          firstMove: room.firstMove,
+          settingsLocked: false,
+          room: publicRoom(room, null),
+        });
+        emitRoom(room);
+        if (typeof ack === "function") {
+          ack({
+            ok: true,
+            firstMove: room.firstMove,
+            settingsLocked: false,
+            room: publicRoom(room, clientId),
+          });
+        }
+        return;
+      }
       const chessCustom = isChessCustomMode(room.mode);
       if (room.mode !== "checkers-custom" && !chessCustom) {
         return ack && ack({ ok: false, error: "wrong_mode" });
@@ -1257,9 +1435,7 @@ io.on("connection", (socket) => {
 setInterval(() => {
   const now = Date.now();
   for (const room of [...rooms.values()]) {
-    const bothGone =
-      (!room.seats.w || !room.seats.w.connected) &&
-      (!room.seats.b || !room.seats.b.connected);
+    const bothGone = seatColorsOf(room).every((color) => !room.seats[color] || !room.seats[color].connected);
     if (bothGone && now - room.updatedAt > ROOM_TTL_MS) {
       destroyRoom(room, "idle_ttl");
     }

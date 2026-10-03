@@ -6,7 +6,6 @@
   var past = [];
   var human = "w";
   var first = "w";
-  var firstChoice = "lot";
   var selected = null;
   var locked = false;
   var botTimer = null;
@@ -17,7 +16,7 @@
     "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
   var PIECE_SIZE = 58;
 
-  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003d" });
+  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003b" });
 
   function t(key) { return BoardHackI18n.t(key); }
   function fill(template, map) {
@@ -31,7 +30,10 @@
     if (c === "b") return t("sideBlack");
     return "";
   }
-  function isHuman(c) { return human === "hot" || human === c; }
+  function isHuman(c) {
+    if (isMultiplayer()) return !mpSpectating && mpSeat === c;
+    return human === c;
+  }
 
   function setText(id, value) {
     var el = document.getElementById(id);
@@ -55,24 +57,41 @@
     setText("metaTurnK", t("metaTurn"));
     setText("historyTitle", t("history"));
     setText("settingsTitle", t("settingsTitle"));
-    setText("boardSettingsTitle", t("settingsTitle"));
-    setText("firstMoveLabel", t("firstMoveLabel"));
     setText("settingsLangLabel", t("settingsLangLabel"));
     var rules = document.getElementById("rulesBox");
     if (rules) rules.innerHTML = t("rulesHtml");
     var sel = document.getElementById("sideSelect");
     if (sel) {
       var opts = sel.options;
-      var labels = [t("sideWhite"), t("sideRed"), t("sideBlack"), t("sideHotseat")];
+      var labels = [t("sideWhite"), t("sideRed"), t("sideBlack")];
       for (var i = 0; i < opts.length && i < labels.length; i++) opts[i].textContent = labels[i];
     }
+    setText("mpTitle", t("mpTitle"));
+    setText("mpNickLabel", t("mpNickLabel"));
+    setText("mpCreateBtn", t("mpCreate"));
+    setText("mpJoinToggleBtn", t("mpJoin"));
+    setText("mpSpectateToggleBtn", t("mpSpectate"));
+    setText("mpJoinBtn", t("mpJoinOk"));
+    setText("mpSpectateBtn", t("mpSpectateOk"));
+    setText("mpHint", t("mpHint"));
+    setText("mpRoomsTitle", t("mpRooms"));
+    setText("mpRoomsRefreshBtn", t("mpRoomsRefresh"));
+    setText("mpCodeLabel", t("mpCodeLabel"));
+    setText("mpLeaveBtn", t("mpLeave"));
+    setText("mpResetBtn", t("newGame"));
+    setText("settingsCardTitle", t("settingsTitle"));
+    setText("firstMoveLabel", t("firstMoveLabel"));
     var firstSel = document.getElementById("firstMoveSelect");
-    if (firstSel) {
-      var flabels = [t("firstMoveLottery"), t("sideWhite"), t("sideRed"), t("sideBlack")];
-      for (var fi = 0; fi < firstSel.options.length && fi < flabels.length; fi++) {
-        firstSel.options[fi].textContent = flabels[fi];
-      }
+    if (firstSel && firstSel.options.length >= 4) {
+      firstSel.options[0].textContent = t("firstMoveLottery");
+      firstSel.options[1].textContent = t("sideWhite");
+      firstSel.options[2].textContent = t("sideRed");
+      firstSel.options[3].textContent = t("sideBlack");
     }
+    var nick = document.getElementById("mpNick");
+    if (nick) nick.setAttribute("placeholder", t("mpNickPlaceholder"));
+    if (mpConnState) setMpConn(mpConnState);
+    if (typeof updateMpUI === "function") updateMpUI();
     var gear = document.getElementById("settingsMenuBtn");
     if (gear) {
       gear.setAttribute("aria-label", t("settingsTitle"));
@@ -127,14 +146,23 @@
     locked = false;
   }
 
+  function readFirstPref() {
+    var sel = document.getElementById("firstMoveSelect");
+    var v = sel ? sel.value : firstPref;
+    firstPref = v === "w" || v === "r" || v === "b" ? v : "lot";
+    return firstPref;
+  }
+
+  function rollFirst(pref) {
+    if (pref === "w" || pref === "r" || pref === "b") return pref;
+    var order = ThreeChess.COLORS.slice();
+    return order[Math.floor(Math.random() * order.length)];
+  }
+
   function newGame() {
+    if (isMultiplayer()) return;
     clearBot();
-    if (firstChoice === "w" || firstChoice === "r" || firstChoice === "b") {
-      first = firstChoice;
-    } else {
-      var order = ThreeChess.COLORS.slice();
-      first = order[Math.floor(Math.random() * order.length)];
-    }
+    first = rollFirst(readFirstPref());
     state = ThreeChess.newGame(first);
     past = [];
     selected = null;
@@ -265,10 +293,12 @@
     note = notesToText(res.notes);
     playMoveSound();
     render();
-    scheduleBot();
+    if (isMultiplayer()) publishMpMove(from, to);
+    else scheduleBot();
   }
 
   function scheduleBot() {
+    if (isMultiplayer()) return;
     if (!state || state.over || isHuman(state.turn)) return;
     locked = true;
     render();
@@ -292,6 +322,8 @@
   var drag = null;
 
   function canMoveNow() {
+    if (isMultiplayer() && (!mpSeat || mpSpectating)) return false;
+    if (isMultiplayer() && mpRoom && mpRoom.status !== "playing") return false;
     return !!(state && !state.over && !locked && isHuman(state.turn));
   }
 
@@ -553,7 +585,9 @@
     }
     setText("statusText", status);
     setText("noteText", note);
-    setText("firstLabel", colorName(first));
+    var shownFirst = first;
+    if (isMultiplayer() && mpRoom && mpRoom.firstRolled) shownFirst = mpRoom.firstRolled;
+    setText("firstLabel", shownFirst ? colorName(shownFirst) : t("firstMoveLottery"));
     setText("turnLabel", state.over ? t("turnOver") : turnName);
     var movesK = document.getElementById("metaMovesK");
     if (movesK) movesK.textContent = t("metaMoves") || "Moves";
@@ -600,16 +634,21 @@
   document.getElementById("newGameBtn").addEventListener("click", newGame);
   document.getElementById("undoBtn").addEventListener("click", undo);
   document.getElementById("sideSelect").addEventListener("change", function (e) {
-    human = e.target.value;
+    if (isMultiplayer()) return;
+    human = e.target.value === "r" || e.target.value === "b" ? e.target.value : "w";
     selected = null;
     clearBot();
     render();
     scheduleBot();
   });
-  document.getElementById("firstMoveSelect").addEventListener("change", function (e) {
-    firstChoice = e.target.value || "lot";
-    newGame();
-  });
+  var firstMoveSelect = document.getElementById("firstMoveSelect");
+  if (firstMoveSelect) {
+    firstMoveSelect.addEventListener("change", function () {
+      readFirstPref();
+      if (isMultiplayer()) pushFirstMove();
+      else newGame();
+    });
+  }
 
   try {
     var u = new URL(window.location.href);
@@ -619,9 +658,575 @@
     }
   } catch (err) {}
 
+
+  var CLIENT_ID_KEY = "boardhack-client-id";
+  var MP_ROOM_KEY = "boardhack-mp-room-three";
+  var NICK_KEY = "boardhack-nick";
+  var mpActive = false;
+  var mpSocket = null;
+  var mpRoomCode = null;
+  var mpSeat = null;
+  var mpRoom = null;
+  var mpSpectating = false;
+  var mpConnState = "offline";
+  var mpServerUrl = "https://chessboard-ulhg.onrender.com";
+  var mpRoomListTimer = null;
+  var mpApplyingRemote = false;
+
+  function isMultiplayer() { return mpActive && (!!mpSeat || mpSpectating); }
+  function canMpAct() { return mpActive && !!mpSeat && !mpSpectating; }
+
+  function sanitizeNickClient(raw) {
+    return String(raw == null ? "" : raw).replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, 24);
+  }
+  function getOrCreateClientId() {
+    var id = null;
+    try { id = localStorage.getItem(CLIENT_ID_KEY); } catch (e) {}
+    if (!id || id.length < 8) {
+      id = "c_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      try { localStorage.setItem(CLIENT_ID_KEY, id); } catch (e2) {}
+    }
+    return id;
+  }
+  function getNick() {
+    var el = document.getElementById("mpNick");
+    var n = sanitizeNickClient(el ? el.value : "");
+    if (!n) { try { n = sanitizeNickClient(localStorage.getItem(NICK_KEY) || ""); } catch (e) {} }
+    if (el && el.value !== n) el.value = n;
+    try { if (n) localStorage.setItem(NICK_KEY, n); } catch (e2) {}
+    return n;
+  }
+  function loadNickIntoInput() {
+    var el = document.getElementById("mpNick");
+    if (!el) return;
+    try {
+      var saved = sanitizeNickClient(localStorage.getItem(NICK_KEY) || "");
+      if (saved && !el.value) el.value = saved;
+    } catch (e) {}
+    el.setAttribute("placeholder", t("mpNickPlaceholder"));
+  }
+  function persistNickFromInput() {
+    var el = document.getElementById("mpNick");
+    if (!el) return;
+    var n = sanitizeNickClient(el.value);
+    el.value = n;
+    try { localStorage.setItem(NICK_KEY, n); } catch (e) {}
+  }
+  function resolveServerUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var srv = params.get("server");
+    if (srv) {
+      srv = srv.trim();
+      if (srv.indexOf("://") === -1) srv = "http://" + srv;
+      return srv.replace(/\/$/, "");
+    }
+    return "https://chessboard-ulhg.onrender.com";
+  }
+  function mpAllSeated() {
+    if (!mpRoom || !mpRoom.seats) return false;
+    return ["w", "r", "b"].every(function (c) {
+      return mpRoom.seats[c] && mpRoom.seats[c].occupied;
+    });
+  }
+  function setMpConn(state, detail) {
+    mpConnState = state;
+    var dot = document.getElementById("mpConnDot");
+    if (dot) dot.className = "mp-conn-dot " + (state === "playing" || state === "connected" ? "online" : state === "error" ? "error" : state === "offline" ? "offline" : "waiting");
+    var label = t("mpOffline");
+    if (state === "connecting") label = t("mpConnecting");
+    else if (state === "connected") label = t("mpConnected");
+    else if (state === "waiting") label = t("mpWaiting");
+    else if (state === "playing") label = t("mpPlaying");
+    else if (state === "error") label = detail || t("mpError");
+    setText("mpConnText", label);
+  }
+  function displayNickOrStub(raw) {
+    return sanitizeNickClient(raw || "") || t("mpPlayerStub");
+  }
+  function roomListSeatText(raw) {
+    if (raw == null) return t("mpSeatEmpty");
+    return displayNickOrStub(raw);
+  }
+  function seatLabel(color) {
+    if (!mpRoom || !mpRoom.seats) return t("mpSeatEmpty");
+    var seat = mpRoom.seats[color];
+    if (!seat || !seat.occupied) return t("mpSeatEmpty");
+    var nick = displayNickOrStub(seat.nick || "");
+    if (mpSeat === color) return nick + " (" + t("mpSeatYou") + ")";
+    if (!seat.connected) return nick + " (" + t("mpSeatOffline") + ")";
+    return nick;
+  }
+  function buildShareLink(code) {
+    var u = new URL(window.location.href);
+    if (/\/index\.html$/i.test(u.pathname)) u.pathname = u.pathname.replace(/\/index\.html$/i, "/");
+    u.searchParams.delete("room");
+    u.searchParams.delete("join");
+    u.searchParams.delete("spectate");
+    if (mpAllSeated()) u.searchParams.set("spectate", code);
+    else u.searchParams.set("join", code);
+    if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") u.searchParams.set("server", mpServerUrl);
+    else u.searchParams.delete("server");
+    return u.toString();
+  }
+  function copyBtnLabel() {
+    return mpAllSeated() ? t("mpCopySpectate") : t("mpCopyInvite");
+  }
+  function syncFirstControl() {
+    var sel = document.getElementById("firstMoveSelect");
+    if (!sel) return;
+    if (isMultiplayer() && mpRoom && mpRoom.firstMove) {
+      sel.value = mpRoom.firstMove === "w" || mpRoom.firstMove === "r" || mpRoom.firstMove === "b" ? mpRoom.firstMove : "lot";
+    }
+    var host = !isMultiplayer() || (mpRoom && mpRoom.hostId === getOrCreateClientId());
+    var locked = isMultiplayer() && mpRoom && (mpRoom.threeStarted || mpRoom.settingsLocked);
+    sel.disabled = isMultiplayer() && (!host || locked || mpSpectating);
+  }
+  function adoptServerState(raw) {
+    if (!raw) return;
+    state = ThreeChess.cloneState(raw);
+    if (raw.log && raw.log.length) {
+      var last = raw.log[raw.log.length - 1];
+      if (last && last.notes) note = notesToText(last.notes);
+    }
+    if (mpRoom && mpRoom.firstRolled) first = mpRoom.firstRolled;
+    else if (raw.turn) first = first || raw.turn;
+  }
+  function updateMpUI() {
+    var lobby = document.getElementById("mpLobby");
+    var active = document.getElementById("mpActive");
+    var sideWrap = document.getElementById("sideSelectWrap");
+    var newBtn = document.getElementById("newGameBtn");
+    var undoBtn = document.getElementById("undoBtn");
+    if (!mpActive) {
+      if (lobby) lobby.classList.remove("mp-hidden");
+      if (active) active.classList.add("mp-hidden");
+      if (sideWrap) sideWrap.classList.remove("mp-hidden");
+      if (newBtn) newBtn.disabled = false;
+      if (undoBtn) undoBtn.disabled = false;
+      syncFirstControl();
+      return;
+    }
+    if (lobby) lobby.classList.add("mp-hidden");
+    if (active) active.classList.remove("mp-hidden");
+    if (sideWrap) sideWrap.classList.add("mp-hidden");
+    if (newBtn) newBtn.disabled = true;
+    if (undoBtn) undoBtn.disabled = true;
+    setText("mpCodeValue", mpRoomCode || "------");
+    var share = document.getElementById("mpShareLink");
+    if (share) share.textContent = mpRoomCode ? buildShareLink(mpRoomCode) : "";
+    setText("mpCopyBtn", mpRoomCode ? copyBtnLabel() : t("mpCopyInvite"));
+    var started = mpRoom && (mpRoom.threeStarted || mpRoom.settingsLocked);
+    ["w", "r", "b"].forEach(function (color) {
+      var el = document.getElementById(color === "w" ? "mpSeatW" : color === "r" ? "mpSeatR" : "mpSeatB");
+      if (!el) return;
+      var occ = mpRoom && mpRoom.seats && mpRoom.seats[color] && mpRoom.seats[color].occupied;
+      var pickable = canMpAct() && !started && mpSeat !== color && !occ;
+      el.textContent = colorName(color) + " — " + seatLabel(color);
+      el.classList.toggle("you", mpSeat === color);
+      el.classList.toggle("filled", !!occ);
+      el.classList.toggle("pickable", pickable);
+    });
+    var hint = document.getElementById("mpSeatPickHint");
+    if (hint) {
+      var anyPick = canMpAct() && !started;
+      hint.classList.toggle("mp-hidden", !anyPick);
+      hint.textContent = anyPick ? t("mpSeatPickHint") : "";
+    }
+    var both = mpAllSeated();
+    var activeHint = document.getElementById("mpActiveHint");
+    if (activeHint) {
+      activeHint.classList.toggle("mp-hidden", both);
+      activeHint.textContent = both ? "" : t("mpWaitingHint");
+    }
+    var resetBtn = document.getElementById("mpResetBtn");
+    if (resetBtn) resetBtn.classList.toggle("mp-hidden", !(canMpAct() && mpRoom && mpRoom.hostId === getOrCreateClientId()));
+    var specN = mpRoom && typeof mpRoom.spectatorCount === "number" ? mpRoom.spectatorCount : 0;
+    var specEl = document.getElementById("mpSpectatorCount");
+    if (specEl) {
+      specEl.classList.toggle("mp-hidden", specN <= 0);
+      specEl.textContent = specN > 0 ? t("mpSpectatorCount").replace("{n}", String(specN)) : "";
+    }
+    var banner = document.getElementById("mpSpectateBanner");
+    if (banner) {
+      banner.classList.toggle("mp-hidden", !mpSpectating);
+      banner.textContent = mpSpectating ? t("mpYouSpectate") : "";
+    }
+    syncFirstControl();
+  }
+  function applyMpRoom(res) {
+    if (!res) return;
+    if (res.room) mpRoom = res.room;
+    if (res.code) mpRoomCode = res.code;
+    var role = res.role || (res.room && res.room.yourRole) || null;
+    if (role === "spectator") {
+      mpSpectating = true;
+      mpSeat = null;
+    } else if (res.seat) {
+      mpSpectating = false;
+      mpSeat = res.seat;
+      human = res.seat;
+    } else if (res.room && res.room.yourSeat) {
+      mpSpectating = false;
+      mpSeat = res.room.yourSeat;
+      human = mpSeat;
+    }
+    mpActive = true;
+    try { localStorage.setItem(MP_ROOM_KEY, mpRoomCode); } catch (e) {}
+    setMpConn(mpAllSeated() && mpRoom && mpRoom.status === "playing" ? "playing" : "waiting");
+    clearBot();
+    if (mpRoom && mpRoom.threeState) {
+      var remoteLen = mpRoom.threeState.log ? mpRoom.threeState.log.length : 0;
+      var localLen = state && state.log ? state.log.length : 0;
+      if (!state || remoteLen !== localLen || (mpRoom.threeState.turn && state.turn !== mpRoom.threeState.turn)) {
+        adoptServerState(mpRoom.threeState);
+      }
+      if (mpRoom.firstRolled) first = mpRoom.firstRolled;
+    }
+    updateMpUI();
+    render();
+  }
+  function ensureMpSocket(cb) {
+    mpServerUrl = resolveServerUrl();
+    if (mpSocket && mpSocket.connected) { if (cb) cb(null); return; }
+    if (typeof io === "undefined") {
+      setMpConn("error", t("mpError"));
+      if (cb) cb(new Error("socket.io missing"));
+      return;
+    }
+    setMpConn("connecting");
+    if (mpSocket) {
+      try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
+      mpSocket = null;
+    }
+    mpSocket = io(mpServerUrl, { transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 12, timeout: 8000 });
+    mpSocket.on("connect", function () {
+      setMpConn(mpActive ? (mpAllSeated() ? "playing" : "waiting") : "connected");
+      if (mpActive && mpRoomCode) {
+        mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: mpRoomCode, nick: getNick() }, function (res) {
+          if (res && res.ok) applyMpRoom(res);
+        });
+      } else if (!mpActive) requestRoomList();
+      if (cb) { var f = cb; cb = null; f(null); }
+    });
+    mpSocket.on("connect_error", function () {
+      setMpConn("error", t("mpError"));
+      if (cb) { var f = cb; cb = null; f(new Error("connect_error")); }
+    });
+    mpSocket.on("disconnect", function () {
+      setMpConn(mpActive ? "error" : "offline", t("mpError"));
+    });
+    mpSocket.on("roomState", function (msg) {
+      if (msg && msg.room && mpActive) applyMpRoom({ room: msg.room, seat: msg.room.yourSeat || mpSeat, code: msg.room.code, role: msg.room.yourRole });
+    });
+    mpSocket.on("moveApplied", function (msg) {
+      if (!mpActive || !msg) return;
+      if (msg.by === mpSeat) return;
+      mpApplyingRemote = true;
+      try {
+        if (msg.threeState) adoptServerState(msg.threeState);
+        if (msg.notes) note = notesToText(msg.notes);
+        playMoveSound();
+        selected = null;
+        render();
+      } finally { mpApplyingRemote = false; }
+    });
+    mpSocket.on("gameReset", function (msg) {
+      if (!mpActive) return;
+      past = [];
+      note = "";
+      if (msg && msg.room) applyMpRoom({ room: msg.room, seat: mpSeat, code: mpRoomCode, role: mpSpectating ? "spectator" : "player" });
+    });
+    mpSocket.on("customSettingsUpdated", function (msg) {
+      if (!mpActive || !msg) return;
+      if (msg.room) mpRoom = msg.room;
+      else if (mpRoom && msg.firstMove) mpRoom.firstMove = msg.firstMove;
+      syncFirstControl();
+      render();
+    });
+    mpSocket.on("opponentJoined", function () { updateMpUI(); render(); });
+    mpSocket.on("roomEnded", function () { clearMpSession(false); newGame(); });
+    mpSocket.on("opponentLeft", function () { setMpConn("waiting"); updateMpUI(); render(); });
+    mpSocket.on("opponentDisconnected", function () { setMpConn("waiting"); updateMpUI(); render(); });
+    mpSocket.on("opponentReconnected", function () { setMpConn(mpAllSeated() ? "playing" : "waiting"); updateMpUI(); render(); });
+    mpSocket.on("roomList", function (msg) {
+      if (msg && Array.isArray(msg.rooms) && (!msg.mode || msg.mode === "three")) renderRoomList(msg.rooms);
+    });
+  }
+  function publishMpMove(from, to) {
+    if (!canMpAct() || !mpSocket || mpApplyingRemote) return;
+    var snapshot = past.length ? past[past.length - 1] : null;
+    mpSocket.emit("makeMove", {
+      clientId: getOrCreateClientId(),
+      code: mpRoomCode,
+      from: from,
+      to: to,
+      san: ThreeChess.label(from) + "-" + ThreeChess.label(to)
+    }, function (res) {
+      if (res && res.ok) {
+        if (res.room) mpRoom = res.room;
+        return;
+      }
+      if (snapshot) {
+        state = snapshot;
+        past.pop();
+        note = "";
+        render();
+      }
+      setMpConn("error", (res && res.error) || t("mpError"));
+    });
+  }
+  function pushFirstMove() {
+    if (!canMpAct() || !mpSocket || !mpRoom || mpRoom.hostId !== getOrCreateClientId()) {
+      syncFirstControl();
+      return;
+    }
+    if (mpRoom.threeStarted || mpRoom.settingsLocked) { syncFirstControl(); return; }
+    mpSocket.emit("updateCustomSettings", {
+      clientId: getOrCreateClientId(),
+      code: mpRoomCode,
+      firstMove: readFirstPref()
+    }, function (res) {
+      if (res && res.room) applyMpRoom({ room: res.room, seat: mpSeat, code: mpRoomCode });
+      else syncFirstControl();
+    });
+  }
+  function requestRoomList() {
+    if (mpActive || !mpSocket || !mpSocket.connected) return;
+    mpSocket.emit("listRooms", { mode: "three" }, function (res) {
+      if (res && Array.isArray(res.rooms)) renderRoomList(res.rooms);
+    });
+  }
+  function startRoomListPolling() {
+    stopRoomListPolling();
+    ensureMpSocket(function (err) {
+      if (err) return;
+      requestRoomList();
+      mpRoomListTimer = setInterval(function () { if (!mpActive) requestRoomList(); }, 6000);
+    });
+  }
+  function stopRoomListPolling() {
+    if (mpRoomListTimer) { clearInterval(mpRoomListTimer); mpRoomListTimer = null; }
+  }
+  function renderRoomList(rooms) {
+    var list = document.getElementById("mpRoomsList");
+    var empty = document.getElementById("mpRoomsEmpty");
+    if (!list) return;
+    list.innerHTML = "";
+    rooms = Array.isArray(rooms) ? rooms : [];
+    if (!rooms.length) {
+      if (empty) { empty.classList.remove("mp-hidden"); empty.textContent = t("mpRoomsEmpty"); }
+      return;
+    }
+    if (empty) empty.classList.add("mp-hidden");
+    rooms.forEach(function (r) {
+      if (!r || !r.code) return;
+      var seats = r.seats || {};
+      var txt = roomListSeatText(seats.w) + " · " + roomListSeatText(seats.r) + " · " + roomListSeatText(seats.b);
+      var row = document.createElement("div");
+      row.className = "mp-room-row";
+      var info = document.createElement("div");
+      info.className = "mp-room-info";
+      var code = document.createElement("span");
+      code.className = "mp-room-code";
+      code.textContent = r.code;
+      var seatEl = document.createElement("span");
+      seatEl.className = "mp-room-seats";
+      seatEl.textContent = txt;
+      info.appendChild(code);
+      info.appendChild(seatEl);
+      if (r.spectatorCount) {
+        var spec = document.createElement("span");
+        spec.className = "mp-room-specs";
+        spec.textContent = t("mpSpectators") + ": " + r.spectatorCount;
+        info.appendChild(spec);
+      }
+      var actions = document.createElement("div");
+      actions.className = "mp-room-actions btn-row";
+      if (r.joinable) {
+        var join = document.createElement("button");
+        join.type = "button";
+        join.className = "btn btn-primary";
+        join.textContent = t("mpJoin");
+        join.addEventListener("click", function () { enterMpFromJoin(r.code); });
+        actions.appendChild(join);
+      }
+      var watch = document.createElement("button");
+      watch.type = "button";
+      watch.className = "btn btn-ghost";
+      watch.textContent = t("mpSpectate");
+      watch.addEventListener("click", function () { enterMpFromSpectate(r.code); });
+      actions.appendChild(watch);
+      row.appendChild(info);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+  }
+  function enterMpFromCreate() {
+    persistNickFromInput();
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("createRoom", {
+        clientId: getOrCreateClientId(),
+        mode: "three",
+        preferredSeat: human === "r" || human === "b" ? human : "w",
+        nick: getNick(),
+        firstMove: readFirstPref()
+      }, function (res) {
+        if (!res || !res.ok) { setMpConn("error", (res && res.error) || t("mpError")); return; }
+        stopRoomListPolling();
+        applyMpRoom(res);
+      });
+    });
+  }
+  function normalizeCode(code) {
+    return String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  }
+  function enterMpFromJoin(code) {
+    code = normalizeCode(code);
+    if (!code) return;
+    persistNickFromInput();
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("joinRoom", { clientId: getOrCreateClientId(), code: code, mode: "three", nick: getNick() }, function (res) {
+        if (!res || !res.ok) {
+          var msg = t("mpError");
+          if (res && res.error === "room_not_found") msg = t("mpNotFound");
+          if (res && res.error === "room_full") msg = t("mpRoomFull");
+          if (res && res.error === "wrong_mode") msg = t("mpWrongMode");
+          setMpConn("error", msg);
+          return;
+        }
+        stopRoomListPolling();
+        applyMpRoom(res);
+      });
+    });
+  }
+  function enterMpFromSpectate(code) {
+    code = normalizeCode(code);
+    if (!code) return;
+    persistNickFromInput();
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("spectateRoom", { clientId: getOrCreateClientId(), code: code, mode: "three", nick: getNick() }, function (res) {
+        if (!res || !res.ok) {
+          var msg = t("mpError");
+          if (res && res.error === "room_not_found") msg = t("mpNotFound");
+          if (res && res.error === "wrong_mode") msg = t("mpWrongMode");
+          setMpConn("error", msg);
+          return;
+        }
+        stopRoomListPolling();
+        applyMpRoom(res);
+      });
+    });
+  }
+  function claimMpSeat(color) {
+    if (!canMpAct() || !mpSocket || !mpRoomCode) return;
+    if (mpRoom && (mpRoom.threeStarted || mpRoom.settingsLocked)) return;
+    mpSocket.emit("claimSeat", { clientId: getOrCreateClientId(), code: mpRoomCode, seat: color, nick: getNick() }, function (res) {
+      if (!res || !res.ok) return;
+      applyMpRoom(res);
+    });
+  }
+  function clearMpSession(disconnectSocket) {
+    mpActive = false;
+    mpSpectating = false;
+    mpRoomCode = null;
+    mpSeat = null;
+    mpRoom = null;
+    try { localStorage.removeItem(MP_ROOM_KEY); } catch (e) {}
+    if (disconnectSocket && mpSocket) {
+      try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e2) {}
+      mpSocket = null;
+    }
+    setMpConn("offline");
+    updateMpUI();
+    startRoomListPolling();
+  }
+  function leaveMultiplayer() {
+    if (mpSocket && mpRoomCode) {
+      try { mpSocket.emit("leaveRoom", { clientId: getOrCreateClientId(), code: mpRoomCode }); } catch (e) {}
+    }
+    clearMpSession(true);
+    newGame();
+  }
+  function resetMpGame() {
+    if (!canMpAct() || !mpSocket || !mpRoom || mpRoom.hostId !== getOrCreateClientId()) return;
+    mpSocket.emit("resetGame", { clientId: getOrCreateClientId(), code: mpRoomCode }, function (res) {
+      if (res && res.ok && res.room) {
+        past = [];
+        note = "";
+        applyMpRoom({ room: res.room, seat: mpSeat, code: mpRoomCode });
+      }
+    });
+  }
+  function tryAutoRejoin() {
+    var params = new URLSearchParams(window.location.search);
+    var spectateParam = params.get("spectate");
+    if (spectateParam) { enterMpFromSpectate(spectateParam); return; }
+    var roomParam = params.get("join") || params.get("room");
+    var saved = null;
+    try { saved = localStorage.getItem(MP_ROOM_KEY); } catch (e) {}
+    var code = normalizeCode(roomParam || saved || "");
+    if (!code) return;
+    ensureMpSocket(function (err) {
+      if (err) return;
+      mpSocket.emit("reconnectRoom", { clientId: getOrCreateClientId(), code: code, nick: getNick() }, function (res) {
+        if (res && res.ok) { stopRoomListPolling(); applyMpRoom(res); return; }
+        if (!roomParam) return;
+        mpSocket.emit("joinRoom", { clientId: getOrCreateClientId(), code: code, mode: "three", nick: getNick() }, function (res2) {
+          if (res2 && res2.ok) { stopRoomListPolling(); applyMpRoom(res2); }
+          else setMpConn("error", t("mpNotFound"));
+        });
+      });
+    });
+  }
+  function wireMultiplayer() {
+    var createBtn = document.getElementById("mpCreateBtn");
+    if (createBtn) createBtn.addEventListener("click", enterMpFromCreate);
+    var joinToggle = document.getElementById("mpJoinToggleBtn");
+    var specToggle = document.getElementById("mpSpectateToggleBtn");
+    if (joinToggle) joinToggle.addEventListener("click", function () {
+      document.getElementById("mpJoinPanel").classList.toggle("mp-hidden");
+    });
+    if (specToggle) specToggle.addEventListener("click", function () {
+      document.getElementById("mpSpectatePanel").classList.toggle("mp-hidden");
+    });
+    var joinBtn = document.getElementById("mpJoinBtn");
+    if (joinBtn) joinBtn.addEventListener("click", function () { enterMpFromJoin(document.getElementById("mpJoinCode").value); });
+    var specBtn = document.getElementById("mpSpectateBtn");
+    if (specBtn) specBtn.addEventListener("click", function () { enterMpFromSpectate(document.getElementById("mpSpectateCode").value); });
+    ["w", "r", "b"].forEach(function (color) {
+      var el = document.getElementById(color === "w" ? "mpSeatW" : color === "r" ? "mpSeatR" : "mpSeatB");
+      if (!el) return;
+      el.addEventListener("click", function () { claimMpSeat(color); });
+    });
+    var copyBtn = document.getElementById("mpCopyBtn");
+    if (copyBtn) copyBtn.addEventListener("click", function () {
+      var link = mpRoomCode ? buildShareLink(mpRoomCode) : "";
+      if (!link || !navigator.clipboard) return;
+      navigator.clipboard.writeText(link).then(function () {
+        setText("mpCopyToast", t("mpCopied"));
+        setTimeout(function () { setText("mpCopyToast", ""); }, 1600);
+      }).catch(function () {});
+    });
+    var leaveBtn = document.getElementById("mpLeaveBtn");
+    if (leaveBtn) leaveBtn.addEventListener("click", leaveMultiplayer);
+    var resetBtn = document.getElementById("mpResetBtn");
+    if (resetBtn) resetBtn.addEventListener("click", resetMpGame);
+    var refresh = document.getElementById("mpRoomsRefreshBtn");
+    if (refresh) refresh.addEventListener("click", function () { startRoomListPolling(); });
+    var nick = document.getElementById("mpNick");
+    if (nick) nick.addEventListener("change", persistNickFromInput);
+  }
+
   wireSettings();
   i18nReady.then(function () {
     applyLang();
+    loadNickIntoInput();
     newGame();
+    wireMultiplayer();
+    tryAutoRejoin();
+    if (!isMultiplayer()) startRoomListPolling();
   });
 })();
