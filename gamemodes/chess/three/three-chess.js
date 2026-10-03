@@ -416,7 +416,7 @@
 
   function toSvg(p, size) {
     var cx = size / 2, cy = size / 2;
-    var scale = (size * 0.46) / R;
+    var scale = (size * 0.49) / R;
     return [cx + p[0] * scale, cy - p[1] * scale];
   }
 

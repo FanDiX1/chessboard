@@ -9,7 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../../css/boardhack.css" />
   <style>
-    .three-board { width: min(100%, 680px); margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .three-page .board-wrap { max-width: 100%; }
+    .three-board { width: 100%; margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
     .three-board svg { width: 100%; height: auto; display: block; }
     .three-board .sq { stroke: #0b0e11; stroke-width: 1.2; cursor: pointer; }
     .three-board .sq.light { fill: #d9c7a4; }
@@ -17,19 +18,16 @@
     .three-board .sq.sel { stroke: #9fef00; stroke-width: 3; }
     .three-board .sq.last { stroke: #ffbf00; stroke-width: 2.4; }
     .three-board .pc {
-      font-size: 28px;
-      text-anchor: middle;
-      dominant-baseline: central;
       pointer-events: none;
-      filter: drop-shadow(0 1px 0 rgba(0,0,0,.85));
+      -webkit-touch-callout: none;
+      user-select: none;
     }
     .three-board .dot { pointer-events: none; }
     .three-note { margin-top: 0.45rem; color: var(--warn); font-size: 0.92rem; min-height: 1.2em; }
-    .rules-panel .rules-box { max-height: min(52vh, 460px); overflow: auto; }
-    .rules-panel .rules-box p { margin: 0 0 0.7rem; color: var(--text-muted); }
+    .rules-dialog .rules-box p { margin: 0 0 0.7rem; color: var(--text-muted); }
   </style>
 </head>
-<body>
+<body class="three-page">
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -60,7 +58,7 @@
         <p class="three-note" id="noteText"></p>
         <div class="board-wrap">
           <div class="three-board" id="boardMount">
-            <svg id="boardSvg" viewBox="0 0 640 640" role="img" aria-label="Three-player board"></svg>
+            <svg id="boardSvg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 640 640" role="img" aria-label="Three-player board"></svg>
           </div>
         </div>
       </section>
@@ -81,13 +79,9 @@
             <div class="btn-row">
               <button type="button" class="btn btn-primary" id="newGameBtn">Новая игра</button>
               <button type="button" class="btn btn-ghost" id="undoBtn">Отмена</button>
+              <button type="button" class="btn btn-ghost" id="rulesBtn">Правила</button>
             </div>
           </div>
-        </section>
-
-        <section class="card rules-panel">
-          <div class="card-title" id="rulesPanelTitle">Правила</div>
-          <div class="rules-box" id="rulesBox"></div>
         </section>
 
         <section class="card">
@@ -134,8 +128,16 @@
     </div>
   </dialog>
 
-  <script src="../../../js/i18n.js?v=20261003a"></script>
-  <script src="three-chess.js?v=20261003a"></script>
-  <script src="three-ui.js?v=20261003a"></script>
+  <dialog class="rules-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+    <div class="rules-dialog-head">
+      <h2 class="card-title" id="rulesTitle">Шахматы на троих</h2>
+      <button type="button" class="rules-dialog-close" id="rulesCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="rules-box" id="rulesBox"></div>
+  </dialog>
+
+  <script src="../../../js/i18n.js?v=20261003b"></script>
+  <script src="three-chess.js?v=20261003b"></script>
+  <script src="three-ui.js?v=20261003b"></script>
 </body>
 </html>

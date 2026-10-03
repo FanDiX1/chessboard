@@ -12,7 +12,11 @@
   var note = "";
   var lang = "ru";
 
-  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003a" });
+  var PIECE_THEME =
+    "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
+  var PIECE_SIZE = 58;
+
+  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003b" });
 
   function t(key) { return BoardHackI18n.t(key); }
   function fill(template, map) {
@@ -43,7 +47,8 @@
     setText("sideSelectLabel", t("sideSelectLabel"));
     setText("newGameBtn", t("newGame"));
     setText("undoBtn", t("undo"));
-    setText("rulesPanelTitle", t("rulesPanelTitle"));
+    setText("rulesBtn", t("rulesButton"));
+    setText("rulesTitle", t("rulesTitle"));
     setText("sessionTitle", t("session"));
     setText("metaFirstK", t("metaFirst"));
     setText("metaTurnK", t("metaTurn"));
@@ -65,6 +70,8 @@
     }
     var closeBtn = document.getElementById("settingsCloseBtn");
     if (closeBtn) closeBtn.setAttribute("aria-label", t("settingsTitle"));
+    var rulesClose = document.getElementById("rulesCloseBtn");
+    if (rulesClose) rulesClose.setAttribute("aria-label", t("rulesClose"));
     document.getElementById("langRu").classList.toggle("active", lang === "ru");
     document.getElementById("langEn").classList.toggle("active", lang === "en");
     render();
@@ -82,6 +89,18 @@
     if (closeBtn) closeBtn.addEventListener("click", function () { dialog.close(); });
     dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });
     dialog.addEventListener("close", function () { btn.setAttribute("aria-expanded", "false"); });
+    var rulesDialog = document.getElementById("rulesDialog");
+    var rulesBtn = document.getElementById("rulesBtn");
+    var rulesCloseBtn = document.getElementById("rulesCloseBtn");
+    if (rulesDialog && rulesBtn) {
+      rulesBtn.addEventListener("click", function () {
+        if (!rulesDialog.open) rulesDialog.showModal();
+      });
+      if (rulesCloseBtn) rulesCloseBtn.addEventListener("click", function () { rulesDialog.close(); });
+      rulesDialog.addEventListener("click", function (e) {
+        if (e.target === rulesDialog) rulesDialog.close();
+      });
+    }
     document.getElementById("langRu").addEventListener("click", function () {
       BoardHackI18n.setLang("ru").then(applyLang);
     });
@@ -216,6 +235,12 @@
     render();
   }
 
+  function pieceSprite(pc) {
+    var tone = pc.color === "b" ? "b" : "w";
+    var code = tone + pc.type.toUpperCase();
+    return PIECE_THEME.replace("{piece}", code);
+  }
+
   function render() {
     if (!state) return;
     var svg = document.getElementById("boardSvg");
@@ -252,13 +277,24 @@
       var center = ThreeChess.toSvg(ThreeChess.cellCenter(parsed.c, parsed.r, parsed.f), SIZE);
       chunks.push('<circle class="dot" data-key="' + di + '" cx="' + center[0].toFixed(1) + '" cy="' + center[1].toFixed(1) + '" r="7" fill="#9fef00" fill-opacity="0.9" />');
     }
+    chunks.unshift(
+      '<defs><filter id="redPiece" color-interpolation-filters="sRGB">' +
+      '<feColorMatrix type="matrix" values="' +
+      '1.15 0 0 0 0.05  0 0.22 0 0 0  0 0 0.22 0 0  0 0 0 1 0"/>' +
+      "</filter></defs>"
+    );
     for (var sq in state.board) {
       if (!Object.prototype.hasOwnProperty.call(state.board, sq)) continue;
       var pc = state.board[sq];
       var pp = ThreeChess.parse(sq);
       var ctr = ThreeChess.toSvg(ThreeChess.cellCenter(pp.c, pp.r, pp.f), SIZE);
-      var fill = pc.color === "w" ? "#f7f3ea" : pc.color === "r" ? "#ff4d4d" : "#8ec5ff";
-      chunks.push('<text class="pc" x="' + ctr[0].toFixed(1) + '" y="' + (ctr[1] + 1).toFixed(1) + '" fill="' + fill + '">' + ThreeChess.glyph(pc) + "</text>");
+      var half = PIECE_SIZE / 2;
+      var filter = pc.color === "r" ? ' filter="url(#redPiece)"' : "";
+      chunks.push(
+        '<image class="pc" href="' + pieceSprite(pc) + '" xlink:href="' + pieceSprite(pc) + '" x="' + (ctr[0] - half).toFixed(1) +
+        '" y="' + (ctr[1] - half).toFixed(1) + '" width="' + PIECE_SIZE + '" height="' + PIECE_SIZE +
+        '"' + filter + " />"
+      );
     }
     svg.innerHTML = chunks.join("");
 
