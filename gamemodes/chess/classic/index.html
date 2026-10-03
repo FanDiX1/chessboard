@@ -194,6 +194,7 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="../../../js/boardhack-config.js?v=20261003cfg"></script>
     <script src="../../../js/i18n.js?v=20261003a"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
@@ -218,9 +219,9 @@
 
       "use strict";
 
-      var COLOR_KEY = "boardhack-color";
-      var MODE_KEY = "boardhack-mode";
-      var DICE_COUNT_KEY = "boardhack-dice-count";
+      var COLOR_KEY = window.BoardHackConfig.storage.color;
+      var MODE_KEY = window.BoardHackConfig.storage.mode;
+      var DICE_COUNT_KEY = window.BoardHackConfig.storage.diceCount;
 
                   var i18nReady = BoardHackI18n.init({ page: "chess/classic", base: "../../../locales" });
       var lang = BoardHackI18n.getLang();
@@ -348,15 +349,9 @@ function applyStaticLang() {
       }
 
       // Standard FIDE starting position — white K e1 / Q d1, black K e8 / Q d8
-      var START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-      var START_POSITION = {
-        a8: "bR", b8: "bN", c8: "bB", d8: "bQ", e8: "bK", f8: "bB", g8: "bN", h8: "bR",
-        a7: "bP", b7: "bP", c7: "bP", d7: "bP", e7: "bP", f7: "bP", g7: "bP", h7: "bP",
-        a2: "wP", b2: "wP", c2: "wP", d2: "wP", e2: "wP", f2: "wP", g2: "wP", h2: "wP",
-        a1: "wR", b1: "wN", c1: "wB", d1: "wQ", e1: "wK", f1: "wB", g1: "wN", h1: "wR"
-      };
-      var PIECE_THEME =
-        "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
+      var START_FEN = window.BoardHackConfig.standardStartFen;
+      var START_POSITION = window.BoardHackConfig.standardStartPosition;
+      var PIECE_THEME = window.BoardHackConfig.pieceTheme;
 
 
       var game = new Chess();
@@ -409,8 +404,8 @@ function applyStaticLang() {
       var $botLabel = $("#botLabel");
 
       // ——— Multiplayer (room-by-code) ———
-      var CLIENT_ID_KEY = "boardhack-client-id";
-      var MP_ROOM_KEY = "boardhack-mp-room";
+      var CLIENT_ID_KEY = window.BoardHackConfig.storage.clientId;
+      var MP_ROOM_KEY = window.BoardHackConfig.storage.rooms.classic;
       var mpActive = false;
       var mpSocket = null;
       var mpRoomCode = null;
@@ -419,7 +414,7 @@ function applyStaticLang() {
       var mpConnState = "offline"; // offline|connecting|connected|waiting|playing|error
       var mpApplyingRemote = false;
 
-      var NICK_KEY = "boardhack-nick";
+      var NICK_KEY = window.BoardHackConfig.storage.nick;
       var mpSpectating = false;
 
       function sanitizeNickClient(raw) {
@@ -427,7 +422,7 @@ function applyStaticLang() {
           .replace(/[\u0000-\u001f\u007f]/g, "")
           .replace(/\s+/g, " ")
           .trim()
-          .slice(0, 24);
+          .slice(0, window.BoardHackConfig.nickMaxLength);
       }
 
       function getNick() {
@@ -459,7 +454,7 @@ function applyStaticLang() {
         try { localStorage.setItem(NICK_KEY, n); } catch (e) {}
       }
 
-      var mpServerUrl = "https://chessboard-ulhg.onrender.com";
+      var mpServerUrl = window.BoardHackConfig.defaultServer;
 
       function getOrCreateClientId() {
         var id = null;
@@ -479,7 +474,7 @@ function applyStaticLang() {
           if (s.indexOf("://") === -1) s = "http://" + s;
           return s.replace(/\/$/, "");
         }
-        return "https://chessboard-ulhg.onrender.com";
+        return window.BoardHackConfig.defaultServer;
       }
 
       function isMultiplayer() {
@@ -518,7 +513,7 @@ function applyStaticLang() {
         } else {
           u.searchParams.set("join", code);
         }
-        if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") {
+        if (mpServerUrl && mpServerUrl !== window.BoardHackConfig.defaultServer) {
           u.searchParams.set("server", mpServerUrl);
         } else {
           u.searchParams.delete("server");
@@ -673,12 +668,7 @@ function applyStaticLang() {
           try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
           mpSocket = null;
         }
-        mpSocket = io(mpServerUrl, {
-          transports: ["websocket", "polling"],
-          reconnection: true,
-          reconnectionAttempts: 12,
-          timeout: 8000
-        });
+        mpSocket = io(mpServerUrl, window.BoardHackConfig.socket);
         mpSocket.on("connect", function () {
           setMpConn(mpBothSeated() ? "playing" : (mpActive ? "waiting" : "connected"));
           if (mpActive && mpRoomCode) {

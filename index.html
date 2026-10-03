@@ -144,6 +144,7 @@
     </div>
   </dialog>
 
+  <script src="js/boardhack-config.js?v=20261003cfg"></script>
   <script src="js/i18n.js?v=20261003a"></script>
 <script>
 
@@ -159,7 +160,7 @@
 
     (function () {
       "use strict";
-      var GAME_KEY = "boardhack-hub-game";
+      var GAME_KEY = window.BoardHackConfig.storage.hubGame;
                   var i18nReady = BoardHackI18n.init({ page: "hub", base: "locales" });
       var lang = BoardHackI18n.getLang();
 

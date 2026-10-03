@@ -36,4 +36,4 @@
 3. Измените значение. HTML в значениях допустим там, где он уже был (например `rulesHtml`, `heroTitleHtml`).
 4. Сохраните файл и залейте на GitHub / обновите Desktop. При необходимости сделайте hard refresh (кэш сбрасывается параметром `?v=` у JSON).
 
-Язык пользователя хранится в `localStorage` под ключом `boardhack-lang` (`ru` | `en`), по умолчанию русский.
+Язык пользователя хранится в `localStorage` под ключом из `js/boardhack-config.js` (`storage.lang`, сейчас `boardhack-lang`, `ru` | `en`), по умолчанию русский.

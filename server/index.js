@@ -5,15 +5,16 @@ const express = require("express");
 const cors = require("cors");
 const { Server } = require("socket.io");
 
+const BoardHackConfig = require("../js/boardhack-config");
 const PORT = Number(process.env.PORT) || 3001;
-const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const START_FEN = BoardHackConfig.standardStartFen;
 const KNIGHTS_START_FEN = "nnnnknnn/pppppppp/8/8/8/8/PPPPPPPP/NNNNKNNN w - - 0 1";
 const ATOMIC_START_FEN = START_FEN;
 const ThreeChess = require("../gamemodes/chess/three/three-chess.js");
 const TWO_SEATS = ["w", "b"];
 const THREE_SEATS = ["w", "r", "b"];
 // Russian draughts: dark squares only; w/W white man/king, b/B black; white to move
-const CHECKERS_START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
+const CHECKERS_START_FEN = BoardHackConfig.checkersStartFen;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
 const CODE_LEN = 6;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000; // 6h idle cleanup
@@ -81,7 +82,7 @@ function sanitizeNick(raw) {
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 24);
+    .slice(0, BoardHackConfig.nickMaxLength);
   return n;
 }
 

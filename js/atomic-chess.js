@@ -9,7 +9,7 @@
   "use strict";
 
   var FILES = "abcdefgh";
-  var START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+  var START_FEN = global.BoardHackConfig.standardStartFen;
 
   var PIECE_VAL = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 0 };
 

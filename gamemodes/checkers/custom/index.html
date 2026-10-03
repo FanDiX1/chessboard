@@ -339,6 +339,7 @@
 </dialog>
 
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="../../../js/boardhack-config.js?v=20261003cfg"></script>
 <script src="../../../js/i18n.js?v=20261003a"></script>
 <script src="../../../js/drag-scroll-lock.js"></script>
 <script src="../../../js/board-context-guard.js"></script>
@@ -357,13 +358,13 @@
 (function () {
   "use strict";
 
-  var COLOR_KEY = "boardhack-checkers-custom-color";
-  var DIFF_KEY = "boardhack-checkers-custom-diff";
-  var CLIENT_ID_KEY = "boardhack-client-id";
-  var MP_ROOM_KEY = "boardhack-checkers-custom-mp-room";
+  var COLOR_KEY = window.BoardHackConfig.storage.colorCheckersCustom;
+  var DIFF_KEY = window.BoardHackConfig.storage.diffCheckersCustom;
+  var CLIENT_ID_KEY = window.BoardHackConfig.storage.clientId;
+  var MP_ROOM_KEY = window.BoardHackConfig.storage.rooms.checkersCustom;
   var GAME_MODE = "checkers-custom";
-  var DEFAULT_SERVER = "https://chessboard-ulhg.onrender.com";
-  var START_FEN = "1b1b1b1b/b1b1b1b1/1b1b1b1b/8/8/w1w1w1w1/1w1w1w1w/w1w1w1w1 w";
+  var DEFAULT_SERVER = window.BoardHackConfig.defaultServer;
+  var START_FEN = window.BoardHackConfig.checkersStartFen;
 
     var i18nReady = BoardHackI18n.init({ page: "checkers/custom", base: "../../../locales" });
   var lang = BoardHackI18n.getLang();
@@ -698,7 +699,7 @@
   }
 
 
-  var CUSTOM_SETTINGS_KEY = "boardhack-checkers-custom-settings";
+  var CUSTOM_SETTINGS_KEY = window.BoardHackConfig.storage.checkersCustomSettings;
   var customSettings = { backwardCapture: true, mandatoryCapture: true, moveTimer: 0 };
   try {
     var rawCs = localStorage.getItem(CUSTOM_SETTINGS_KEY);
@@ -892,7 +893,7 @@
   var captureChain = null; // { color, current: { r, c } } while a capture continues
   var mpApplyingRemote = false;
 
-  var NICK_KEY = "boardhack-nick";
+  var NICK_KEY = window.BoardHackConfig.storage.nick;
   var mpSpectating = false;
 
   function sanitizeNickClient(raw) {
@@ -900,7 +901,7 @@
       .replace(/[\u0000-\u001f\u007f]/g, "")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 24);
+      .slice(0, window.BoardHackConfig.nickMaxLength);
   }
 
   function getNick() {
@@ -1133,7 +1134,7 @@
     if (typeof io === "undefined") { setMpConn("error", t("mpError")); if (cb) cb(new Error("socket.io missing")); return; }
     setMpConn("connecting");
     if (mpSocket) { try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {} mpSocket = null; }
-    mpSocket = io(mpServerUrl, { transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 12, timeout: 8000 });
+    mpSocket = io(mpServerUrl, window.BoardHackConfig.socket);
     mpSocket.on("connect", function () {
       setMpConn(mpBothSeated() ? "playing" : (mpActive ? "waiting" : "connected"));
       if (mpActive && mpRoomCode) {

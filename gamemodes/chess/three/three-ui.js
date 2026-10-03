@@ -14,8 +14,7 @@
   var note = "";
   var lang = "ru";
 
-  var PIECE_THEME =
-    "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
+  var PIECE_THEME = window.BoardHackConfig.pieceTheme;
   var PIECE_SIZE = 58;
 
   var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003e" });
@@ -669,9 +668,9 @@
   } catch (err) {}
 
 
-  var CLIENT_ID_KEY = "boardhack-client-id";
-  var MP_ROOM_KEY = "boardhack-mp-room-three";
-  var NICK_KEY = "boardhack-nick";
+  var CLIENT_ID_KEY = window.BoardHackConfig.storage.clientId;
+  var MP_ROOM_KEY = window.BoardHackConfig.storage.rooms.three;
+  var NICK_KEY = window.BoardHackConfig.storage.nick;
   var mpActive = false;
   var mpSocket = null;
   var mpRoomCode = null;
@@ -679,7 +678,7 @@
   var mpRoom = null;
   var mpSpectating = false;
   var mpConnState = "offline";
-  var mpServerUrl = "https://chessboard-ulhg.onrender.com";
+  var mpServerUrl = window.BoardHackConfig.defaultServer;
   var mpRoomListTimer = null;
   var mpApplyingRemote = false;
 
@@ -687,7 +686,7 @@
   function canMpAct() { return mpActive && !!mpSeat && !mpSpectating; }
 
   function sanitizeNickClient(raw) {
-    return String(raw == null ? "" : raw).replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, 24);
+    return String(raw == null ? "" : raw).replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, window.BoardHackConfig.nickMaxLength);
   }
   function getOrCreateClientId() {
     var id = null;
@@ -730,7 +729,7 @@
       if (srv.indexOf("://") === -1) srv = "http://" + srv;
       return srv.replace(/\/$/, "");
     }
-    return "https://chessboard-ulhg.onrender.com";
+    return window.BoardHackConfig.defaultServer;
   }
   function mpAllSeated() {
     if (!mpRoom || !mpRoom.seats) return false;
@@ -774,7 +773,7 @@
     u.searchParams.delete("spectate");
     if (mpAllSeated()) u.searchParams.set("spectate", code);
     else u.searchParams.set("join", code);
-    if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") u.searchParams.set("server", mpServerUrl);
+    if (mpServerUrl && mpServerUrl !== window.BoardHackConfig.defaultServer) u.searchParams.set("server", mpServerUrl);
     else u.searchParams.delete("server");
     return u.toString();
   }
@@ -913,7 +912,7 @@
       try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
       mpSocket = null;
     }
-    mpSocket = io(mpServerUrl, { transports: ["websocket", "polling"], reconnection: true, reconnectionAttempts: 12, timeout: 8000 });
+    mpSocket = io(mpServerUrl, window.BoardHackConfig.socket);
     mpSocket.on("connect", function () {
       setMpConn(mpActive ? (mpAllSeated() ? "playing" : "waiting") : "connected");
       if (mpActive && mpRoomCode) {

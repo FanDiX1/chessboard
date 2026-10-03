@@ -8,7 +8,7 @@
 (function (global) {
   "use strict";
 
-  var LANG_KEY = "boardhack-lang";
+  var LANG_KEY = global.BoardHackConfig.storage.lang;
   var VERSION = "20261003a";
   var SUPPORTED = { ru: true, en: true };
 

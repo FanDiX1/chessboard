@@ -192,6 +192,7 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="../../../js/boardhack-config.js?v=20261003cfg"></script>
     <script src="../../../js/i18n.js?v=20261003a"></script>
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <script src="../../../js/atomic-chess.js?v=20260929-atomic2"></script>
@@ -217,7 +218,7 @@
       function beginDiceTurnFor(side) { return true; }
       function clearDiceState() {}
 
-      var COLOR_KEY = "boardhack-atomic-color";
+      var COLOR_KEY = window.BoardHackConfig.storage.colorAtomic;
 
                   var i18nReady = BoardHackI18n.init({ page: "chess/atomic", base: "../../../locales" });
       var lang = BoardHackI18n.getLang();
@@ -228,8 +229,7 @@
 
 var START_FEN = BoardHackAtomic.START_FEN;
       var START_POSITION = "start";
-      var PIECE_THEME =
-        "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
+      var PIECE_THEME = window.BoardHackConfig.pieceTheme;
 
       var game = BoardHackAtomic.createGame(START_FEN);
       var board = null;
@@ -254,8 +254,8 @@ var START_FEN = BoardHackAtomic.START_FEN;
       var $turnLabel = $("#turnLabel");
       var $botLabel = $("#botLabel");
 
-var CLIENT_ID_KEY = "boardhack-client-id";
-      var MP_ROOM_KEY = "boardhack-mp-room-atomic";
+var CLIENT_ID_KEY = window.BoardHackConfig.storage.clientId;
+      var MP_ROOM_KEY = window.BoardHackConfig.storage.rooms.atomic;
       var mpActive = false;
       var mpSocket = null;
       var mpRoomCode = null;
@@ -264,7 +264,7 @@ var CLIENT_ID_KEY = "boardhack-client-id";
       var mpConnState = "offline"; // offline|connecting|connected|waiting|playing|error
       var mpApplyingRemote = false;
 
-      var NICK_KEY = "boardhack-nick";
+      var NICK_KEY = window.BoardHackConfig.storage.nick;
       var mpSpectating = false;
 
       function sanitizeNickClient(raw) {
@@ -272,7 +272,7 @@ var CLIENT_ID_KEY = "boardhack-client-id";
           .replace(/[\u0000-\u001f\u007f]/g, "")
           .replace(/\s+/g, " ")
           .trim()
-          .slice(0, 24);
+          .slice(0, window.BoardHackConfig.nickMaxLength);
       }
 
       function getNick() {
@@ -304,7 +304,7 @@ var CLIENT_ID_KEY = "boardhack-client-id";
         try { localStorage.setItem(NICK_KEY, n); } catch (e) {}
       }
 
-      var mpServerUrl = "https://chessboard-ulhg.onrender.com";
+      var mpServerUrl = window.BoardHackConfig.defaultServer;
 
       function getOrCreateClientId() {
         var id = null;
@@ -324,7 +324,7 @@ var CLIENT_ID_KEY = "boardhack-client-id";
           if (s.indexOf("://") === -1) s = "http://" + s;
           return s.replace(/\/$/, "");
         }
-        return "https://chessboard-ulhg.onrender.com";
+        return window.BoardHackConfig.defaultServer;
       }
 
       function isMultiplayer() {
@@ -363,7 +363,7 @@ var CLIENT_ID_KEY = "boardhack-client-id";
         } else {
           u.searchParams.set("join", code);
         }
-        if (mpServerUrl && mpServerUrl !== "https://chessboard-ulhg.onrender.com") {
+        if (mpServerUrl && mpServerUrl !== window.BoardHackConfig.defaultServer) {
           u.searchParams.set("server", mpServerUrl);
         } else {
           u.searchParams.delete("server");
@@ -518,12 +518,7 @@ var CLIENT_ID_KEY = "boardhack-client-id";
           try { mpSocket.removeAllListeners(); mpSocket.disconnect(); } catch (e) {}
           mpSocket = null;
         }
-        mpSocket = io(mpServerUrl, {
-          transports: ["websocket", "polling"],
-          reconnection: true,
-          reconnectionAttempts: 12,
-          timeout: 8000
-        });
+        mpSocket = io(mpServerUrl, window.BoardHackConfig.socket);
         mpSocket.on("connect", function () {
           setMpConn(mpBothSeated() ? "playing" : (mpActive ? "waiting" : "connected"));
           if (mpActive && mpRoomCode) {
