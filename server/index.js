@@ -162,6 +162,7 @@ function publicRoom(room, forClientId) {
           b: seatPublic(room.seats.b),
         },
     firstMove: room.mode === "three" ? sanitizeFirstMove(room.firstMove) : null,
+    firstWinner: room.mode === "three" ? !!room.firstWinner : null,
     firstRolled: room.mode === "three" ? (room.firstRolled || null) : null,
     threeState: room.mode === "three" ? (room.threeState || null) : null,
     threeStarted: room.mode === "three" ? !!room.threeStarted : null,
@@ -226,7 +227,7 @@ function maybeStartThree(room) {
     const pref = sanitizeFirstMove(room.firstMove);
     const first = pref === "lot" ? THREE_SEATS[Math.floor(Math.random() * 3)] : pref;
     room.firstRolled = first;
-    room.threeState = ThreeChess.newGame(first);
+    room.threeState = ThreeChess.newGame(first, { firstWinner: !!room.firstWinner });
     room.fen = "three " + room.threeState.turn;
     room.plySans = [];
     room.lastMove = null;
@@ -410,6 +411,7 @@ function createRoom(clientId, mode) {
     diceTurnLog: [],
     seats: { w: null, r: null, b: null },
     firstMove: norm === "three" ? "lot" : null,
+    firstWinner: norm === "three" ? false : null,
     firstRolled: null,
     threeState: norm === "three" ? ThreeChess.newGame("w") : null,
     threeStarted: false,
@@ -702,6 +704,10 @@ io.on("connection", (socket) => {
       const room = createRoom(clientId, mode);
       if (room.mode === "three") {
         room.firstMove = sanitizeFirstMove(payload && (payload.firstMove || (payload.customSettings && payload.customSettings.firstMove)));
+        const fw = payload && (Object.prototype.hasOwnProperty.call(payload, "firstWinner")
+          ? payload.firstWinner
+          : (payload.customSettings && payload.customSettings.firstWinner));
+        room.firstWinner = !!fw;
       }
       const dc = payload && payload.diceCount;
       if (dc === 1 || dc === 2 || dc === 3) room.diceCount = dc;
@@ -1120,7 +1126,7 @@ io.on("connection", (socket) => {
       if (room.mode === "three") {
         room.threeStarted = false;
         room.firstRolled = null;
-        room.threeState = ThreeChess.newGame("w");
+        room.threeState = ThreeChess.newGame("w", { firstWinner: !!room.firstWinner });
         room.fen = "three w";
         room.lastMove = null;
         room.plySans = [];
@@ -1287,11 +1293,13 @@ io.on("connection", (socket) => {
         const member = findSeatByClient(room, clientId);
         if (!member) return ack && ack({ ok: false, error: "not_a_member" });
         const currentFirst = sanitizeFirstMove(room.firstMove);
+        const currentWinner = !!room.firstWinner;
         if (room.threeStarted) {
           return ack && ack({
             ok: false,
             error: "settings_locked",
             firstMove: currentFirst,
+            firstWinner: currentWinner,
             settingsLocked: true,
             room: publicRoom(room, clientId),
           });
@@ -1301,6 +1309,7 @@ io.on("connection", (socket) => {
             ok: false,
             error: "host_only",
             firstMove: currentFirst,
+            firstWinner: currentWinner,
             settingsLocked: false,
             room: publicRoom(room, clientId),
           });
@@ -1308,10 +1317,16 @@ io.on("connection", (socket) => {
         const rawFirst = (payload && payload.firstMove)
           || (payload && payload.customSettings && payload.customSettings.firstMove);
         room.firstMove = sanitizeFirstMove(rawFirst);
+        if (payload && Object.prototype.hasOwnProperty.call(payload, "firstWinner")) {
+          room.firstWinner = !!payload.firstWinner;
+        } else if (payload && payload.customSettings && Object.prototype.hasOwnProperty.call(payload.customSettings, "firstWinner")) {
+          room.firstWinner = !!payload.customSettings.firstWinner;
+        }
         touch(room);
         io.to(code).emit("customSettingsUpdated", {
           code: room.code,
           firstMove: room.firstMove,
+          firstWinner: !!room.firstWinner,
           settingsLocked: false,
           room: publicRoom(room, null),
         });
@@ -1320,6 +1335,7 @@ io.on("connection", (socket) => {
           ack({
             ok: true,
             firstMove: room.firstMove,
+            firstWinner: !!room.firstWinner,
             settingsLocked: false,
             room: publicRoom(room, clientId),
           });

@@ -7,6 +7,7 @@
   var human = "w";
   var first = "w";
   var firstPref = "lot";
+  var firstWinner = false;
   var selected = null;
   var locked = false;
   var botTimer = null;
@@ -17,7 +18,7 @@
     "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png";
   var PIECE_SIZE = 58;
 
-  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003b" });
+  var i18nReady = BoardHackI18n.init({ page: "chess/three", base: "../../../locales", version: "20261003e" });
 
   function t(key) { return BoardHackI18n.t(key); }
   function fill(template, map) {
@@ -82,6 +83,10 @@
     setText("mpResetBtn", t("newGame"));
     setText("settingsCardTitle", t("settingsTitle"));
     setText("firstMoveLabel", t("firstMoveLabel"));
+    setText("firstWinnerLabel", t("firstWinnerLabel"));
+    setText("firstWinnerHint", t("firstWinnerHint"));
+    var fwBtn = document.getElementById("firstWinnerToggle");
+    if (fwBtn) fwBtn.setAttribute("aria-label", t("firstWinnerLabel"));
     var firstSel = document.getElementById("firstMoveSelect");
     if (firstSel && firstSel.options.length >= 4) {
       firstSel.options[0].textContent = t("firstMoveLottery");
@@ -154,6 +159,18 @@
     return firstPref;
   }
 
+  function readFirstWinner() {
+    var btn = document.getElementById("firstWinnerToggle");
+    if (btn) firstWinner = btn.getAttribute("aria-checked") === "true";
+    return firstWinner;
+  }
+
+  function setFirstWinnerToggle(on) {
+    firstWinner = !!on;
+    var btn = document.getElementById("firstWinnerToggle");
+    if (btn) btn.setAttribute("aria-checked", firstWinner ? "true" : "false");
+  }
+
   function rollFirst(pref) {
     if (pref === "w" || pref === "r" || pref === "b") return pref;
     var order = ThreeChess.COLORS.slice();
@@ -164,7 +181,7 @@
     if (isMultiplayer()) return;
     clearBot();
     first = rollFirst(readFirstPref());
-    state = ThreeChess.newGame(first);
+    state = ThreeChess.newGame(first, { firstWinner: readFirstWinner() });
     past = [];
     selected = null;
     note = "";
@@ -221,7 +238,9 @@
     var lines = [];
     for (var i = 0; i < notes.length; i++) {
       var n = notes[i];
-      if (n.kind === "mate") {
+      if (n.kind === "firstWin") {
+        lines.push(fill(t("statusFirstWin"), { victim: colorName(n.victim), taker: colorName(n.taker) }));
+      } else if (n.kind === "mate") {
         lines.push(fill(t("statusMate"), { victim: colorName(n.victim), taker: colorName(n.taker) }));
       } else if (n.kind === "stale") {
         lines.push(fill(t("statusStale"), { name: colorName(n.victim) }));
@@ -400,66 +419,14 @@
     if (ghost) ghost.style.display = "none";
   }
 
-  function finishPointer(from, to, moved, already) {
-    if (!canMoveNow()) {
-      selected = null;
-      render();
-      return;
-    }
-    if (moved && from && to && from !== to) {
-      var legal = ThreeChess.legalMovesFor(state.board, state.turn);
-      for (var i = 0; i < legal.length; i++) {
-        if (legal[i].from === from && legal[i].to === to) {
-          play(from, to);
-          return;
-        }
-      }
-      selected = from;
-      render();
-      return;
-    }
-    if (moved) {
-      selected = from;
-      render();
-      return;
-    }
-    if (!moved) {
-      if (selected && to && to !== from) {
-        var legalClick = ThreeChess.legalMovesFor(state.board, state.turn);
-        for (var j = 0; j < legalClick.length; j++) {
-          if (legalClick[j].from === from && legalClick[j].to === to) {
-            play(from, to);
-            return;
-          }
-        }
-      }
-      var piece = to ? state.board[to] : null;
-      if (piece && piece.owner === state.turn) selected = already && to === from ? null : to;
-      else selected = null;
-      render();
-    }
-  }
-
   function onPointerDown(e) {
     if (e.button != null && e.button !== 0) return;
     if (!canMoveNow()) return;
     var key = squareAt(e.clientX, e.clientY);
     if (!key) return;
     var piece = state.board[key];
-    var own = piece && piece.owner === state.turn;
-    if (!own && !selected) return;
+    if (!piece || piece.owner !== state.turn) return;
     e.preventDefault();
-    if (!own) {
-      drag = {
-        pointerId: e.pointerId,
-        from: selected,
-        moved: false,
-        already: true,
-        clickOnly: true,
-        piece: null
-      };
-      return;
-    }
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
     drag = {
       pointerId: e.pointerId,
@@ -467,21 +434,19 @@
       startX: e.clientX,
       startY: e.clientY,
       moved: false,
-      already: selected === key,
-      clickOnly: false,
       piece: piece
     };
     if (typeof lockDragScroll === "function") lockDragScroll();
-    selected = key;
-    render();
   }
 
   function onPointerMove(e) {
-    if (!drag || drag.clickOnly || e.pointerId !== drag.pointerId) return;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (e.cancelable) e.preventDefault();
     var dx = e.clientX - drag.startX;
     var dy = e.clientY - drag.startY;
     if (!drag.moved && dx * dx + dy * dy > 36) {
       drag.moved = true;
+      selected = drag.from;
       var mount = document.getElementById("boardMount");
       if (mount) mount.classList.add("is-dragging");
       render();
@@ -496,9 +461,23 @@
     hideGhost();
     var mount = document.getElementById("boardMount");
     if (mount) mount.classList.remove("is-dragging");
-    if (!d.clickOnly && typeof unlockDragScroll === "function") unlockDragScroll();
+    if (typeof unlockDragScroll === "function") unlockDragScroll();
+    selected = null;
+    if (!d.moved || !canMoveNow()) {
+      render();
+      return;
+    }
     var to = squareAt(e.clientX, e.clientY);
-    finishPointer(d.from, to, d.clickOnly ? false : d.moved, d.already);
+    if (d.from && to && d.from !== to) {
+      var legal = ThreeChess.legalMovesFor(state.board, state.turn);
+      for (var i = 0; i < legal.length; i++) {
+        if (legal[i].from === d.from && legal[i].to === to) {
+          play(d.from, to);
+          return;
+        }
+      }
+    }
+    render();
   }
 
   function pieceSprite(pc) {
@@ -663,8 +642,21 @@
   if (firstMoveSelect) {
     firstMoveSelect.addEventListener("change", function () {
       readFirstPref();
-      if (isMultiplayer()) pushFirstMove();
+      if (isMultiplayer()) pushThreeSettings();
       else newGame();
+    });
+  }
+  var firstWinnerToggle = document.getElementById("firstWinnerToggle");
+  if (firstWinnerToggle) {
+    firstWinnerToggle.addEventListener("click", function () {
+      if (firstWinnerToggle.disabled) return;
+      setFirstWinnerToggle(firstWinnerToggle.getAttribute("aria-checked") !== "true");
+      if (isMultiplayer()) pushThreeSettings();
+      else if (state && !state.log.length) newGame();
+      else if (state) {
+        state.firstWinner = readFirstWinner();
+        render();
+      }
     });
   }
 
@@ -791,13 +783,18 @@
   }
   function syncFirstControl() {
     var sel = document.getElementById("firstMoveSelect");
-    if (!sel) return;
-    if (isMultiplayer() && mpRoom && mpRoom.firstMove) {
+    var fw = document.getElementById("firstWinnerToggle");
+    if (isMultiplayer() && mpRoom && mpRoom.firstMove && sel) {
       sel.value = mpRoom.firstMove === "w" || mpRoom.firstMove === "r" || mpRoom.firstMove === "b" ? mpRoom.firstMove : "lot";
+    }
+    if (isMultiplayer() && mpRoom && fw) {
+      setFirstWinnerToggle(!!mpRoom.firstWinner);
     }
     var host = !isMultiplayer() || (mpRoom && mpRoom.hostId === getOrCreateClientId());
     var locked = isMultiplayer() && mpRoom && (mpRoom.threeStarted || mpRoom.settingsLocked);
-    sel.disabled = isMultiplayer() && (!host || locked || mpSpectating);
+    var disabled = isMultiplayer() && (!host || locked || mpSpectating);
+    if (sel) sel.disabled = disabled;
+    if (fw) fw.disabled = disabled;
   }
   function adoptServerState(raw) {
     if (!raw) return;
@@ -957,7 +954,10 @@
     mpSocket.on("customSettingsUpdated", function (msg) {
       if (!mpActive || !msg) return;
       if (msg.room) mpRoom = msg.room;
-      else if (mpRoom && msg.firstMove) mpRoom.firstMove = msg.firstMove;
+      else if (mpRoom) {
+        if (msg.firstMove) mpRoom.firstMove = msg.firstMove;
+        if (typeof msg.firstWinner === "boolean") mpRoom.firstWinner = msg.firstWinner;
+      }
       syncFirstControl();
       render();
     });
@@ -993,7 +993,7 @@
       setMpConn("error", (res && res.error) || t("mpError"));
     });
   }
-  function pushFirstMove() {
+  function pushThreeSettings() {
     if (!canMpAct() || !mpSocket || !mpRoom || mpRoom.hostId !== getOrCreateClientId()) {
       syncFirstControl();
       return;
@@ -1002,7 +1002,8 @@
     mpSocket.emit("updateCustomSettings", {
       clientId: getOrCreateClientId(),
       code: mpRoomCode,
-      firstMove: readFirstPref()
+      firstMove: readFirstPref(),
+      firstWinner: readFirstWinner()
     }, function (res) {
       if (res && res.room) applyMpRoom({ room: res.room, seat: mpSeat, code: mpRoomCode });
       else syncFirstControl();
@@ -1088,7 +1089,8 @@
         mode: "three",
         preferredSeat: human === "r" || human === "b" ? human : "w",
         nick: getNick(),
-        firstMove: readFirstPref()
+        firstMove: readFirstPref(),
+        firstWinner: readFirstWinner()
       }, function (res) {
         if (!res || !res.ok) { setMpConn("error", (res && res.error) || t("mpError")); return; }
         stopRoomListPolling();

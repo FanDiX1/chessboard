@@ -108,7 +108,7 @@
     return { type: type, color: color, owner: color };
   }
 
-  function newGame(first) {
+  function newGame(first, opts) {
     var board = {};
     var back = ["r", "n", "b", "q", "k", "b", "n", "r"];
     for (var ci = 0; ci < COLORS.length; ci++) {
@@ -126,7 +126,8 @@
       winner: null,
       reason: "",
       log: [],
-      eliminated: {}
+      eliminated: {},
+      firstWinner: !!(opts && opts.firstWinner)
     };
   }
 
@@ -315,6 +316,15 @@
       var moves = legalMovesFor(board, next);
       var inCheck = ownerInCheck(board, next);
       if (moves.length === 0 && inCheck) {
+        if (state.firstWinner) {
+          notes.push({ kind: "firstWin", victim: next, taker: mover });
+          state.board = board;
+          state.over = true;
+          state.winner = mover;
+          state.turn = mover;
+          state.reason = "first";
+          return notes;
+        }
         notes.push({ kind: "mate", victim: next, taker: mover });
         board = transferArmy(board, next, mover);
         next = nextOwner(board, mover);
@@ -445,7 +455,8 @@
         log: state.log.map(function (e) {
           return { from: e.from, to: e.to, mover: e.mover, captured: e.captured, notes: e.notes.slice() };
         }),
-        eliminated: Object.assign({}, state.eliminated)
+        eliminated: Object.assign({}, state.eliminated),
+        firstWinner: !!state.firstWinner
       };
     }
   };
